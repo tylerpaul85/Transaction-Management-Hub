@@ -42,7 +42,7 @@ export const OpsDashboard: React.FC = () => {
 
   // Main Dashboard Tab: 'tc_escrows' | 'lc_listings' | 'all_files' | 'users'
   const [activeSection, setActiveSection] = useState<'tc_escrows' | 'lc_listings' | 'all_files' | 'users'>(
-    currentUser.role === 'listing_coordinator' ? 'lc_listings' : 'tc_escrows'
+    currentUser?.role === 'listing_coordinator' ? 'lc_listings' : 'tc_escrows'
   );
 
   // Filters
@@ -383,6 +383,8 @@ export const OpsDashboard: React.FC = () => {
       totalMilestonesCount,
     };
   }, [transactions, tcEscrows, lcListings]);
+
+  if (!currentUser) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">

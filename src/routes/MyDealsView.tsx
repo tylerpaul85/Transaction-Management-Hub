@@ -110,6 +110,7 @@ export const MyDealsView: React.FC = () => {
 
   // Filter deals to only this agent (enforced by RLS)
   const myDeals = useMemo(() => {
+    if (!currentUser) return [];
     return dealsList.filter((t) => {
       const isMyDeal =
         t.agent_name.toLowerCase() === currentUser.fullName.toLowerCase() ||
@@ -132,6 +133,8 @@ export const MyDealsView: React.FC = () => {
   const toggleExpand = (txId: string) => {
     setExpandedTxId((prev) => (prev === txId ? null : txId));
   };
+
+  if (!currentUser) return null;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">

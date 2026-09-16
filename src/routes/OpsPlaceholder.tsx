@@ -23,6 +23,8 @@ export const OpsPlaceholder: React.FC = () => {
     openCdaModal,
   } = useTransactions();
 
+  if (!currentUser) return null;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Route & Access Banner */}

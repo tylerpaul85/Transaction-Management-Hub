@@ -16,6 +16,8 @@ export const MyDealsPlaceholder: React.FC = () => {
   const { currentUser } = useAuth();
   const { transactions, setSelectedTransactionId } = useTransactions();
 
+  if (!currentUser) return null;
+
   // In real Supabase with RLS, the query `SELECT * FROM transactions` returns only deals where listing_agent_id = me or selling_agent_id = me.
   // We simulate this exact filtering:
   const agentName = currentUser.fullName;

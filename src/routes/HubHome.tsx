@@ -33,11 +33,8 @@ export const HubHome: React.FC<HubHomeProps> = ({ onNavigate }) => {
   };
 
   // Quick stats from transactions
-  const activeCount = transactions.filter(
-    (t) => t.status !== 'Closed' && t.status !== 'Cancelled' && t.status !== 'Withdrawn'
-  ).length;
-  const pendingCount = transactions.filter((t) => t.status === 'Pre-Listing' || t.status === 'Coming Soon').length;
-  const closedCount = transactions.filter((t) => t.status === 'Closed').length;
+  const activeCount = transactions.filter((t) => t.stage !== 'closed').length;
+  const closedCount = transactions.filter((t) => t.stage === 'closed').length;
 
   const getRoleLabel = (role: string) => {
     switch (role) {
@@ -214,14 +211,14 @@ export const HubHome: React.FC<HubHomeProps> = ({ onNavigate }) => {
               <tbody className="divide-y divide-[#334155]/40">
                 {transactions.slice(0, 5).map((txn) => (
                   <tr key={txn.id} className="hover:bg-[#131826]/50 transition-colors">
-                    <td className="py-3 px-4 text-[#f8fafc] font-medium">{txn.property_address}</td>
-                    <td className="py-3 px-4 text-[#94a3b8]">{txn.client_name}</td>
+                    <td className="py-3 px-4 text-[#f8fafc] font-medium">{txn.address}</td>
+                    <td className="py-3 px-4 text-[#94a3b8]">{txn.clientNames ? txn.clientNames.join(', ') : 'N/A'}</td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#d97706]/15 text-[#d97706] border border-[#d97706]/30">
-                        {txn.status}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#d97706]/15 text-[#d97706] border border-[#d97706]/30 uppercase">
+                        {txn.stage ? txn.stage.replace(/_/g, ' ') : 'N/A'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-[#94a3b8] capitalize">{txn.side}</td>
+                    <td className="py-3 px-4 text-[#94a3b8] capitalize">{txn.representation}</td>
                   </tr>
                 ))}
               </tbody>
