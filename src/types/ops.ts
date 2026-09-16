@@ -13,10 +13,12 @@ export interface OpsMilestone {
   updated_by?: string | null;
 }
 
+export type ListingStage = 'pre_listing' | 'coming_soon' | 'active_listing' | 'price_improved' | 'under_contract' | 'closed';
+
 export interface OpsTransaction {
   id: string;
   sisu_transaction_id: string | null;
-  status: 'active' | 'pending' | 'closed' | 'terminated' | 'under_contract';
+  status: 'active' | 'pending' | 'closed' | 'terminated' | 'under_contract' | 'pre_listing' | 'coming_soon';
   property_address: string;
   city: string;
   state?: string;
@@ -25,11 +27,27 @@ export interface OpsTransaction {
   client_name: string;
   client_phone: string | null;
   client_email?: string | null;
+  
+  // Listing & Financial Details
+  price?: number | null;
+  list_price?: number | null;
+  mls_number?: string | null;
+  listing_date?: string | null;
+  expiration_date?: string | null;
+  days_on_market?: number | null;
+  
+  // LC Checklist Status
+  photography_status?: 'pending' | 'scheduled' | 'completed';
+  sign_lockbox_status?: 'pending' | 'installed' | 'removed';
+  mls_status?: 'draft' | 'active' | 'pending' | 'closed';
+  open_house_date?: string | null;
+
   // Other Agent Info (always source='manual')
   other_party_name: string | null;
   other_party_agent: string | null;
   other_party_phone?: string | null;
   other_party_brokerage?: string | null;
+  
   // Relationships
   listing_agent_id: string | null;
   selling_agent_id: string | null;
@@ -38,6 +56,7 @@ export interface OpsTransaction {
   agent_email?: string;
   tc_name: string;
   tc_email?: string;
+  
   // Dates & Flags
   contract_date: string | null;
   target_closing_date?: string | null;

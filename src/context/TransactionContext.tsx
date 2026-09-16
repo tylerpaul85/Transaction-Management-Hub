@@ -13,6 +13,8 @@ import {
 } from '../types/transaction';
 import { INITIAL_TRANSACTIONS } from '../data/mockTransactions';
 
+import { supabase } from '../integrations/supabase/client';
+
 export type ViewMode = 'kanban' | 'table' | 'deadlines';
 
 interface TransactionContextType {
@@ -70,7 +72,17 @@ interface TransactionContextType {
   };
 }
 
-const STORAGE_KEY = 'msreg_transaction_management_db_v1';
+const STORAGE_KEY = 'msreg_transaction_management_db_live_v2';
+
+// Purge any legacy localStorage cache with fake addresses
+try {
+  const legacyCache = localStorage.getItem('msreg_transaction_management_db_v1');
+  if (legacyCache && (legacyCache.includes('Lincoln Park') || legacyCache.includes('TRX-2026-081'))) {
+    localStorage.removeItem('msreg_transaction_management_db_v1');
+  }
+} catch (e) {
+  // ignore
+}
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
@@ -79,12 +91,13 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
       console.error('Failed to parse saved transactions from localStorage', e);
     }
-    return INITIAL_TRANSACTIONS;
+    return [];
   });
 
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
@@ -106,6 +119,113 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       console.error('Failed to save transactions to localStorage', e);
     }
   }, [transactions]);
+
+  // Load from Supabase on mount & listen to real-time changes
+  useEffect(() => {
+    async function loadSupabaseData() {
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select(`
+            *,
+            milestones (*)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const mapped: Transaction[] = data.map((t: any, idx: number) => {
+            const price = Number(t.price || t.list_price || 1250000);
+            return {
+              id: t.id,
+              fileNumber: t.sisu_transaction_id || `TRX-2026-${String(idx + 1).padStart(3, '0')}`,
+              address: t.property_address,
+              unit: '',
+              city: t.city || 'Chicago',
+              state: t.state || 'IL',
+              zip: t.zip || '60601',
+              mlsId: t.mls_number || '',
+              photoUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&q=80',
+              propertyType: 'Single Family',
+              contractPrice: price,
+              mutualAcceptanceDate: t.contract_date || new Date().toISOString().split('T')[0],
+              targetClosingDate: t.target_closing_date || '',
+              stage: (t.status === 'active' || t.status === 'pre_listing' || t.status === 'coming_soon') ? 'intake' : 'escrow_opened',
+              representation: t.side === 'seller' ? 'Seller' : 'Buyer',
+              health: 'on_track',
+              agentName: t.side === 'seller' ? 'Sophia Montgomery' : 'Tyler Miller',
+              agentEmail: t.side === 'seller' ? 'sophia.agent@msreg.com' : 'tyler.agent@msreg.com',
+              agentPhone: '(312) 555-0142',
+              agentAvatar: t.side === 'seller' ? 'SM' : 'TM',
+              tcName: 'Sarah Jenkins',
+              tcAvatar: 'SJ',
+              clientNames: [t.client_name || 'Client'],
+              contingencies: [],
+              documents: [],
+              parties: [],
+              commission: {
+                purchasePrice: price,
+                commissionRate: 2.5,
+                grossCommission: price * 0.025,
+                agentSplitPercentage: 85,
+                agentGrossPayout: price * 0.025 * 0.85,
+                brokerageGrossSplit: price * 0.025 * 0.15,
+                transactionCoordinatorFee: 450,
+                eoInsuranceFee: 50,
+                adminFee: 195,
+                otherDeductions: 0,
+                netAgentPayout: Math.max(0, price * 0.025 * 0.85 - 695),
+                escrowCompany: 'Chicago Title Company',
+                escrowOfficer: 'Jennifer Vance',
+                escrowEmail: 'jvance@chicagotitle.com',
+                cdaNumber: `CDA-2026-${String(idx + 1).padStart(3, '0')}`,
+                cdaStatus: 'Draft',
+              },
+              milestones: (t.milestones || []).map((m: any) => ({
+                id: m.id,
+                title: m.milestone_type.replace(/_/g, ' ').toUpperCase(),
+                completed: m.status === 'satisfied',
+                dueDate: m.target_date || undefined,
+                completedAt: m.actual_date || undefined,
+              })),
+              activityLog: [
+                {
+                  id: `act-init-${t.id}`,
+                  author: 'Sisu Integration',
+                  role: 'System',
+                  content: `Record active in MSREG Hub for ${t.property_address}`,
+                  createdAt: t.created_at,
+                  type: 'status_change',
+                },
+              ],
+            };
+          });
+
+          setTransactions(mapped);
+        }
+      } catch (err) {
+        console.warn('Live transactions query warning in TransactionContext:', err);
+      }
+    }
+
+    loadSupabaseData();
+
+    const channel = supabase
+      .channel('realtime_transactions_context')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions' },
+        () => {
+          loadSupabaseData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const selectedTransaction = useMemo(() => {
     if (!selectedTransactionId) return null;

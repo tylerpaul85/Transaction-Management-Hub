@@ -59,10 +59,10 @@ const MainLayout: React.FC = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
               <div className="border-t border-[#334155] pt-6">
                 <h3 className="font-editorial text-lg font-bold text-[#f8fafc] mb-2">
-                  Interactive Transaction Workspace Preview
+                  Transaction Workspace & Pipeline Board
                 </h3>
                 <p className="text-xs text-[#94a3b8] mb-4">
-                  Visual Kanban and Table populated with seed data matching real-world schema.
+                  Visual Kanban, Table, and Deadlines views powered by live Supabase & Sisu data.
                 </p>
               </div>
             </div>
