@@ -128,38 +128,46 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
           .from('transactions')
           .select(`
             *,
+            listing_agent:agents!transactions_listing_agent_id_fkey(name, email),
+            selling_agent:agents!transactions_selling_agent_id_fkey(name, email),
+            assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
             milestones (*)
           `)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        if (data && data.length > 0) {
+        if (data) {
           const mapped: Transaction[] = data.map((t: any, idx: number) => {
-            const price = Number(t.price || t.list_price || 1250000);
+            const price = Number(t.price || t.list_price || 0);
+            const leadAgent = t.side === 'seller' ? t.listing_agent : (t.selling_agent || t.listing_agent);
+            const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
+            const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
+            const tcName = t.assigned_tc?.name || t.tc_name || 'Assigned TC';
+
             return {
               id: t.id,
-              fileNumber: t.sisu_transaction_id || `TRX-2026-${String(idx + 1).padStart(3, '0')}`,
-              address: t.property_address,
+              fileNumber: t.sisu_transaction_id ? `SISU-${t.sisu_transaction_id}` : `TRX-2026-${String(idx + 1).padStart(3, '0')}`,
+              address: t.property_address || 'Pending Address',
               unit: '',
-              city: t.city || 'Chicago',
-              state: t.state || 'IL',
-              zip: t.zip || '60601',
+              city: t.city || 'Waynesville',
+              state: t.state || 'MO',
+              zip: t.zip || '65583',
               mlsId: t.mls_number || '',
               photoUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&q=80',
               propertyType: 'Single Family',
               contractPrice: price,
               mutualAcceptanceDate: t.contract_date || new Date().toISOString().split('T')[0],
               targetClosingDate: t.target_closing_date || '',
-              stage: (t.status === 'active' || t.status === 'pre_listing' || t.status === 'coming_soon') ? 'intake' : 'escrow_opened',
+              stage: (t.status === 'active' || t.status === 'pre_listing' || t.status === 'coming_soon' || t.status === 'Appt Set' || t.status === 'N') ? 'intake' : 'escrow_opened',
               representation: t.side === 'seller' ? 'Seller' : 'Buyer',
               health: 'on_track',
-              agentName: t.side === 'seller' ? 'Sophia Montgomery' : 'Tyler Miller',
-              agentEmail: t.side === 'seller' ? 'sophia.agent@msreg.com' : 'tyler.agent@msreg.com',
-              agentPhone: '(312) 555-0142',
-              agentAvatar: t.side === 'seller' ? 'SM' : 'TM',
-              tcName: 'Sarah Jenkins',
-              tcAvatar: 'SJ',
+              agentName,
+              agentEmail,
+              agentPhone: t.client_phone || '(573) 555-0100',
+              agentAvatar: agentName.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+              tcName,
+              tcAvatar: tcName.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
               clientNames: [t.client_name || 'Client'],
               contingencies: [],
               documents: [],
@@ -176,9 +184,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 adminFee: 195,
                 otherDeductions: 0,
                 netAgentPayout: Math.max(0, price * 0.025 * 0.85 - 695),
-                escrowCompany: 'Chicago Title Company',
-                escrowOfficer: 'Jennifer Vance',
-                escrowEmail: 'jvance@chicagotitle.com',
+                escrowCompany: 'Matt Smith Real Estate Group Escrow',
+                escrowOfficer: 'Compliance Office',
+                escrowEmail: 'compliance@mattsmithrealestategroup.com',
                 cdaNumber: `CDA-2026-${String(idx + 1).padStart(3, '0')}`,
                 cdaStatus: 'Draft',
               },
@@ -192,9 +200,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
               activityLog: [
                 {
                   id: `act-init-${t.id}`,
-                  author: 'Sisu Integration',
+                  author: 'Sisu Sync',
                   role: 'System',
-                  content: `Record active in MSREG Hub for ${t.property_address}`,
+                  content: `Transaction active in MSREG Hub for ${t.property_address}`,
                   createdAt: t.created_at,
                   type: 'status_change',
                 },
