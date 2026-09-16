@@ -185,9 +185,30 @@ serve(async (req: Request) => {
       sisuSignature === sisuWebhookSecret ||
       authHeader === `Bearer ${sisuWebhookSecret}`;
 
+    // If payload is wrapped in an AWS SNS Notification envelope, unwrap the inner Message JSON
+    if ((payloadType === 'Notification' || snsMessageType === 'Notification' || payload.Type === 'Notification') && typeof payload.Message === 'string') {
+      try {
+        const innerPayload = JSON.parse(payload.Message);
+        console.log('[Sisu Webhook] Successfully unwrapped AWS SNS Notification Message.');
+        payload = { ...innerPayload, _snsEnvelope: payload };
+      } catch (unwrapErr) {
+        console.warn('[Sisu Webhook] Could not parse inner SNS Message JSON:', unwrapErr);
+      }
+    }
+
     // Extract transaction ID and event
-    const eventType = payloadEvent || 'transaction.updated';
-    const sisuTxId = payload.transaction_id || payload.data?.id || payload.id || null;
+    const eventType = payload.event || payload.event_type || payloadEvent || 'transaction.updated';
+    const sisuTxId =
+      payload.transaction_id ||
+      payload.transactionId ||
+      payload.id ||
+      payload.sisu_id ||
+      payload.sisu_transaction_id ||
+      payload.entity_id ||
+      payload.data?.id ||
+      payload.data?.transaction_id ||
+      payload.data?.transactionId ||
+      null;
 
     // Log raw transaction payload to sisu_webhook_log
     const { data: logEntry, error: logErr } = await supabase
