@@ -250,6 +250,9 @@ serve(async (req: Request) => {
       });
     }
 
+    // 3. Handle delta vs full payload or nested data_objects
+    const sisuData = payload.data || payload;
+
     if (!sisuTxId) {
       throw new Error('No transaction_id / client_id found in Sisu webhook payload');
     }
@@ -261,8 +264,19 @@ serve(async (req: Request) => {
     let sellingAgentId: string | null = null;
     let assignedTcId: string | null = null;
 
-    const primaryAgentEmail = agentRecord.email || payload.agents?.primary_agent_email || payload.agent_email;
-    const primaryAgentSisuId = agentRecord.agent_id || payload.agents?.primary_agent_id || payload.agent_id;
+    const primaryAgentEmail =
+      agentRecord.email ||
+      sisuData.agents?.primary_agent_email ||
+      payload.agents?.primary_agent_email ||
+      sisuData.agent_email ||
+      payload.agent_email;
+
+    const primaryAgentSisuId =
+      agentRecord.agent_id ||
+      sisuData.agents?.primary_agent_id ||
+      payload.agents?.primary_agent_id ||
+      sisuData.agent_id ||
+      payload.agent_id;
 
     if (primaryAgentEmail || primaryAgentSisuId) {
       let query = supabase.from('agents').select('id, email, sisu_agent_id');
@@ -273,7 +287,7 @@ serve(async (req: Request) => {
       }
       const { data: matchedAgent } = await query.limit(1).maybeSingle();
       if (matchedAgent) {
-        const sideType = (fullObj.type_id || updatedVals.type_id || payload.side || payload.transaction_side || '').toLowerCase();
+        const sideType = (sisuData.side || sisuData.transaction_side || fullObj.type_id || updatedVals.type_id || '').toLowerCase();
         if (sideType === 's' || sideType === 'seller' || sideType === 'listing') {
           listingAgentId = matchedAgent.id;
         } else {
@@ -282,7 +296,7 @@ serve(async (req: Request) => {
       }
     }
 
-    const tcEmail = payload.assigned_tc?.email || payload.tc_email;
+    const tcEmail = sisuData.assigned_tc?.email || payload.assigned_tc?.email || sisuData.tc_email || payload.tc_email;
     if (tcEmail) {
       const { data: matchedTc } = await supabase
         .from('ops_users')
@@ -297,32 +311,38 @@ serve(async (req: Request) => {
 
     // 5. Upsert Transactions record
     const address =
+      sisuData.property_address ||
+      sisuData.address ||
       fullObj.address_1 ||
       updatedVals.address_1 ||
       payload.property_address ||
       payload.address ||
       'Pending Address';
 
-    const city = fullObj.city || updatedVals.city || payload.city || 'Waynesville';
+    const city = sisuData.city || fullObj.city || updatedVals.city || payload.city || 'Chicago';
 
-    const sideType = (fullObj.type_id || updatedVals.type_id || payload.side || payload.transaction_side || '').toLowerCase();
+    const sideType = (sisuData.side || sisuData.transaction_side || fullObj.type_id || updatedVals.type_id || payload.side || '').toLowerCase();
     const side = (sideType === 's' || sideType === 'seller' || sideType === 'listing') ? 'seller' : 'buyer';
 
-    const rawStatus = (fullObj.pipeline_status || updatedVals.pipeline_status || payload.status || payload.stage || 'Pre-Listing');
+    const rawStatus = (sisuData.status || sisuData.stage || fullObj.pipeline_status || updatedVals.pipeline_status || payload.status || 'Pre-Listing');
     const status = rawStatus;
 
     const clientName =
+      sisuData.client?.name ||
+      sisuData.client?.full_name ||
+      sisuData.client_name ||
       fullObj.full_name ||
       (fullObj.first_name ? `${fullObj.first_name} ${fullObj.last_name || ''}`.trim() : null) ||
       (updatedVals.first_name ? `${updatedVals.first_name} ${updatedVals.last_name || ''}`.trim() : null) ||
-      payload.client_name ||
       'Unnamed Client';
 
     const clientPhone =
+      sisuData.client?.phone ||
+      sisuData.client_phone ||
       fullObj.mobile_phone ||
       updatedVals.mobile_phone ||
-      payload.client_phone ||
       null;
+
     const otherPartyName = sisuData.other_party?.name || sisuData.other_party_name || null;
     const otherPartyAgent =
       sisuData.other_party?.agent ||
