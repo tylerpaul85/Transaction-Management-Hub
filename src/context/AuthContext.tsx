@@ -29,7 +29,7 @@ interface AuthContextType {
   isListingCoordinator: boolean;
 }
 
-const GOOGLE_WORKSPACE_DOMAIN = import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'msreg.com';
+const GOOGLE_WORKSPACE_DOMAIN = import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 

@@ -205,7 +205,7 @@ export const AdminUserManagement: React.FC = () => {
             email: newProfile.email,
             role: newProfile.role,
             appBaseUrl: window.location.origin,
-            googleDomain: import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'msreg.com',
+            googleDomain: import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com',
           },
         });
       } catch (emailErr) {
@@ -496,7 +496,7 @@ export const AdminUserManagement: React.FC = () => {
                   className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-[#d97706]"
                 />
                 <p className="text-[11px] text-[#94a3b8] mt-1">
-                  Must belong to your Google Workspace organization (@{import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'msreg.com'}).
+                  Must belong to your Google Workspace organization (@{import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com'}).
                 </p>
               </div>
 

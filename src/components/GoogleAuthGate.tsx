@@ -4,7 +4,7 @@ import { AlertTriangle, Lock, Loader2 } from 'lucide-react';
 
 export const GoogleAuthGate: React.FC = () => {
   const { signInWithGoogle, isLoading, authError, clearAuthError } = useAuth();
-  const workspaceDomain = import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'msreg.com';
+  const workspaceDomain = import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com';
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-[#f8fafc] flex items-center justify-center p-4 relative overflow-hidden">
