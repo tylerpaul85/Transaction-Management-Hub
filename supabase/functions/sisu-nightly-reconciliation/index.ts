@@ -135,8 +135,12 @@ serve(async (req: Request) => {
       const sisuTxId = String(sisuData.id || sisuData.transaction_id);
       if (!sisuTxId) continue;
 
-      const address = sisuData.property_address || sisuData.address || 'Unknown Address';
-      const city = sisuData.city || 'Chicago';
+      const address = sisuData.property_address || sisuData.address || sisuData.address_1 || 'Unknown Address';
+      let state = sisuData.state || 'MO';
+      let city = sisuData.city || 'Waynesville';
+      if (city === 'Chicago') city = 'Waynesville';
+      if (state === 'IL') state = 'MO';
+
       const side = (sisuData.side || sisuData.transaction_side || 'buyer').toLowerCase();
       const status = (sisuData.status || sisuData.stage || 'pending').toLowerCase();
       const clientName =
@@ -170,6 +174,7 @@ serve(async (req: Request) => {
             status,
             property_address: address,
             city,
+            state,
             side,
             client_name: clientName,
             client_phone: clientPhone,
@@ -189,6 +194,7 @@ serve(async (req: Request) => {
             status,
             property_address: address,
             city,
+            state,
             side,
             client_name: clientName,
             client_phone: clientPhone,

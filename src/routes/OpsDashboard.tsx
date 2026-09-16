@@ -58,26 +58,28 @@ export const OpsDashboard: React.FC = () => {
 
   // Form states for New Escrow Deal
   const [newEscrowAddress, setNewEscrowAddress] = useState('');
-  const [newEscrowCity, setNewEscrowCity] = useState('Chicago');
+  const [newEscrowCity, setNewEscrowCity] = useState('Waynesville');
+  const [newEscrowState, setNewEscrowState] = useState('MO');
   const [newEscrowSide, setNewEscrowSide] = useState<'buyer' | 'seller'>('buyer');
   const [newEscrowClient, setNewEscrowClient] = useState('');
   const [newEscrowClientPhone, setNewEscrowClientPhone] = useState('');
   const [newEscrowContractDate, setNewEscrowContractDate] = useState('');
   const [newEscrowClosingDate, setNewEscrowClosingDate] = useState('');
-  const [newEscrowAgent, setNewEscrowAgent] = useState('Tyler Miller');
-  const [newEscrowTc, setNewEscrowTc] = useState('Sarah Jenkins');
+  const [newEscrowAgent, setNewEscrowAgent] = useState('');
+  const [newEscrowTc, setNewEscrowTc] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form states for New Listing (LC)
   const [newListingAddress, setNewListingAddress] = useState('');
-  const [newListingCity, setNewListingCity] = useState('Chicago');
+  const [newListingCity, setNewListingCity] = useState('Waynesville');
+  const [newListingState, setNewListingState] = useState('MO');
   const [newListingPrice, setNewListingPrice] = useState('');
   const [newListingMls, setNewListingMls] = useState('');
   const [newListingStatus, setNewListingStatus] = useState<'pre_listing' | 'coming_soon' | 'active'>('active');
   const [newListingClient, setNewListingClient] = useState('');
   const [newListingClientPhone, setNewListingClientPhone] = useState('');
   const [newListingDate, setNewListingDate] = useState('');
-  const [newListingAgent, setNewListingAgent] = useState('Sophia Montgomery');
+  const [newListingAgent, setNewListingAgent] = useState('');
   const [newListingPhotoStatus, setNewListingPhotoStatus] = useState<'pending' | 'scheduled' | 'completed'>('scheduled');
 
   const loadLiveTransactions = async () => {

@@ -228,19 +228,38 @@ export const CDAPrintModal: React.FC = () => {
                   </td>
                 </tr>
 
-                {/* Direct to House */}
                 <tr>
-                  <td className="p-2 font-medium text-slate-900">
-                    2. Brokerage Company Share & Administrative Fees
-                    <span className="block text-[10px] text-slate-500 font-normal">
-                      Includes TC fee (${comm.transactionCoordinatorFee}), E&O insurance ($
-                      {comm.eoInsuranceFee}) & Broker Split
-                    </span>
+                  <td className="py-2.5 px-2 font-medium text-slate-800">
+                    Gross Commission Rate ({comm.commissionRate}%)
                   </td>
-                  <td className="p-2 text-slate-800">Main Street Real Estate Group</td>
-                  <td className="p-2 text-right font-mono text-slate-600">Corporate Wire</td>
-                  <td className="p-2 text-right font-mono font-semibold text-slate-900">
+                  <td className="py-2.5 px-2 text-slate-600">Total Settlement Escrow</td>
+                  <td className="py-2.5 px-2 text-right font-mono">
+                    {formatCurrency(comm.purchasePrice)}
+                  </td>
+                  <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-900">
+                    {formatCurrency(comm.grossCommission)}
+                  </td>
+                </tr>
+
+                <tr className="bg-slate-50 font-bold">
+                  <td className="py-2.5 px-2 text-slate-900" colSpan={3}>
+                    Net MSREG Corporate Brokerage Income
+                  </td>
+                  <td className="py-2.5 px-2 text-right font-mono text-slate-900">
                     {formatCurrency(comm.grossCommission - comm.netAgentPayout)}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td className="py-2.5 px-2 font-medium text-slate-800 pl-4">
+                    • Agent Net Commission Split ({comm.agentSplitPercentage}%)
+                  </td>
+                  <td className="py-2.5 px-2 text-slate-600">
+                    {trx.agentName || 'Lead Agent'}
+                  </td>
+                  <td className="py-2.5 px-2 text-right font-mono">Net Payout</td>
+                  <td className="py-2.5 px-2 text-right font-mono text-emerald-700 font-bold">
+                    {formatCurrency(comm.netAgentPayout)}
                   </td>
                 </tr>
               </tbody>
@@ -254,10 +273,10 @@ export const CDAPrintModal: React.FC = () => {
             </span>
             <div className="grid grid-cols-2 gap-2 text-slate-600">
               <div>
-                Bank: <strong>JPMorgan Chase Bank, N.A. (Chicago)</strong>
+                Bank: <strong>Operating Bank</strong>
               </div>
               <div>
-                Account Name: <strong>Main Street Real Estate Group Operating</strong>
+                Account Name: <strong>Matt Smith Real Estate Group Operating</strong>
               </div>
               <div>
                 Routing (ABA): <strong className="font-mono">071000013</strong>
@@ -274,7 +293,7 @@ export const CDAPrintModal: React.FC = () => {
               <div>
                 <div className="border-b border-slate-400 pb-1 mb-1 h-8 flex items-end">
                   <span className="font-serif italic text-base text-slate-800">
-                    Tyler Miller (Managing Broker)
+                    Matt Smith (Managing Broker)
                   </span>
                 </div>
                 <span className="text-slate-600 block">Authorized Broker Signatory</span>
@@ -285,7 +304,9 @@ export const CDAPrintModal: React.FC = () => {
 
               <div>
                 <div className="border-b border-slate-400 pb-1 mb-1 h-8 flex items-end">
-                  <span className="font-serif italic text-base text-slate-800">Sarah Jenkins</span>
+                  <span className="font-serif italic text-base text-slate-800">
+                    {trx.tcName || 'Assigned Transaction Coordinator'}
+                  </span>
                 </div>
                 <span className="text-slate-600 block">Transaction Coordinator Verification</span>
                 <span className="text-[10px] text-slate-400 font-mono">

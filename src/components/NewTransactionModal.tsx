@@ -13,18 +13,18 @@ export const NewTransactionModal: React.FC = () => {
 
   const [address, setAddress] = useState('');
   const [unit, setUnit] = useState('');
-  const [city, setCity] = useState('Chicago');
-  const [state, setState] = useState('IL');
-  const [zip, setZip] = useState('60614');
+  const [city, setCity] = useState('Waynesville');
+  const [state, setState] = useState('MO');
+  const [zip, setZip] = useState('65583');
   const [mlsId, setMlsId] = useState('');
-  const [propertyType, setPropertyType] = useState<PropertyType>('Condo / Loft');
+  const [propertyType, setPropertyType] = useState<PropertyType>('Single Family');
   const [representation, setRepresentation] = useState<RepresentationType>('Buyer');
-  const [contractPrice, setContractPrice] = useState('1250000');
+  const [contractPrice, setContractPrice] = useState('350000');
   const [mutualAcceptanceDate, setMutualAcceptanceDate] = useState(todayStr);
   const [targetClosingDate, setTargetClosingDate] = useState(defaultCloseStr);
   const [clientNames, setClientNames] = useState('');
-  const [agentName, setAgentName] = useState('Tyler Miller');
-  const [tcName, setTcName] = useState('Sarah Jenkins');
+  const [agentName, setAgentName] = useState('');
+  const [tcName, setTcName] = useState('');
 
   if (!isNewModalOpen) return null;
 

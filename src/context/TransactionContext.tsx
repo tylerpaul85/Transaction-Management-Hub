@@ -262,7 +262,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       activityLog: [
         {
           id: `act-${Date.now()}`,
-          author: trxData.agentName || 'Tyler Miller',
+          author: trxData.agentName || 'Lead Agent',
           role: 'Lead Broker',
           content: `Transaction intake created for ${trxData.address} (${trxData.representation} representation). Initial timeline generated.`,
           createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
@@ -282,7 +282,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (t.id !== trxId) return t;
         const note: ActivityNote = {
           id: `act-${Date.now()}`,
-          author: 'Tyler Miller',
+          author: 'Lead Broker',
           role: 'Lead Broker',
           content: `Stage updated to: ${newStage.replace(/_/g, ' ').toUpperCase()}`,
           createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
@@ -322,7 +322,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         const targetContingency = t.contingencies.find((c) => c.id === contingencyId);
         const note: ActivityNote = {
           id: `act-${Date.now()}`,
-          author: 'Sarah Jenkins',
+          author: 'Transaction Coordinator',
           role: 'Transaction Coordinator',
           content: `Contingency "${targetContingency?.name || contingencyId}" status changed to ${status.toUpperCase()}${notes ? `: ${notes}` : ''}`,
           createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
@@ -354,7 +354,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         const targetDoc = t.documents.find((d) => d.id === docId);
         const note: ActivityNote = {
           id: `act-${Date.now()}`,
-          author: 'Sarah Jenkins',
+          author: 'Transaction Coordinator',
           role: 'Transaction Coordinator',
           content: `Document "${targetDoc?.name || docId}" marked as ${status.toUpperCase()}`,
           createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
@@ -380,7 +380,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (t.id !== trxId) return t;
         const note: ActivityNote = {
           id: `act-${Date.now()}`,
-          author: 'Tyler Miller',
+          author: 'Lead Agent',
           role: 'Lead Broker',
           content: `New compliance document uploaded: "${newDoc.name}" (${newDoc.category})`,
           createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
@@ -420,7 +420,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     trxId: string,
     content: string,
     type: ActivityNote['type'] = 'note',
-    author = 'Tyler Miller',
+    author = 'MSREG User',
     role = 'Lead Broker',
     isPinned = false
   ) => {
@@ -479,7 +479,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
         const note: ActivityNote = {
           id: `act-${Date.now()}`,
-          author: 'Sarah Jenkins',
+          author: 'Transaction Coordinator',
           role: 'Transaction Coordinator',
           content: `Commission calculations updated. Net payout: $${netAgentPayout.toLocaleString()}`,
           createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),

@@ -354,7 +354,22 @@ serve(async (req: Request) => {
       payload.address ||
       'Pending Address';
 
-    const city = sisuData.city || fullObj.city || updatedVals.city || payload.city || 'Chicago';
+    let state = sisuData.state || fullObj.state || updatedVals.state || payload.state || null;
+    let city = sisuData.city || fullObj.city || updatedVals.city || payload.city || null;
+
+    if (!state || !city) {
+      if (address && address.includes(' ')) {
+        const parts = address.split(' ');
+        if (/^\d{5}$/.test(parts[parts.length - 1])) {
+          if (!city && parts.length >= 2) {
+            city = parts[parts.length - 2];
+          }
+        }
+      }
+    }
+
+    if (!city || city === 'Chicago') city = 'Waynesville';
+    if (!state || state === 'IL') state = 'MO';
 
     const sideType = (sisuData.side || sisuData.transaction_side || fullObj.type_id || updatedVals.type_id || payload.side || '').toLowerCase();
     const side = (sideType === 's' || sideType === 'seller' || sideType === 'listing') ? 'seller' : 'buyer';
@@ -402,6 +417,7 @@ serve(async (req: Request) => {
           status,
           property_address: address,
           city,
+          state,
           side,
           client_name: clientName,
           client_phone: clientPhone,
@@ -424,6 +440,7 @@ serve(async (req: Request) => {
           status,
           property_address: address,
           city,
+          state,
           side,
           client_name: clientName,
           client_phone: clientPhone,

@@ -17,71 +17,10 @@ import {
   Send,
 } from 'lucide-react';
 
-const SEED_PROFILES: DbProfile[] = [
-  {
-    id: '11111111-1111-1111-1111-111111111111',
-    email: 'tyler.agent@msreg.com',
-    name: 'Tyler Miller',
-    full_name: 'Tyler Miller',
-    role: 'agent',
-    agent_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    ops_user_id: null,
-    active: true,
-    created_at: '2026-09-01T10:00:00Z',
-    updated_at: '2026-09-01T10:00:00Z',
-  },
-  {
-    id: '22222222-2222-2222-2222-222222222222',
-    email: 'sophia.agent@msreg.com',
-    name: 'Sophia Montgomery',
-    full_name: 'Sophia Montgomery',
-    role: 'agent',
-    agent_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    ops_user_id: null,
-    active: true,
-    created_at: '2026-09-01T10:00:00Z',
-    updated_at: '2026-09-01T10:00:00Z',
-  },
-  {
-    id: '44444444-4444-4444-4444-444444444444',
-    email: 'sarah.tc@msreg.com',
-    name: 'Sarah Jenkins',
-    full_name: 'Sarah Jenkins',
-    role: 'tc',
-    agent_id: null,
-    ops_user_id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
-    active: true,
-    created_at: '2026-09-01T10:00:00Z',
-    updated_at: '2026-09-01T10:00:00Z',
-  },
-  {
-    id: '55555555-5555-5555-5555-555555555555',
-    email: 'michael.lc@msreg.com',
-    name: 'Michael Chang',
-    full_name: 'Michael Chang',
-    role: 'listing_coordinator',
-    agent_id: null,
-    ops_user_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-    active: true,
-    created_at: '2026-09-01T10:00:00Z',
-    updated_at: '2026-09-01T10:00:00Z',
-  },
-  {
-    id: '66666666-6666-6666-6666-666666666666',
-    email: 'admin@msreg.com',
-    name: 'David Admin',
-    full_name: 'David Admin',
-    role: 'admin',
-    agent_id: null,
-    ops_user_id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
-    active: true,
-    created_at: '2026-09-01T10:00:00Z',
-    updated_at: '2026-09-01T10:00:00Z',
-  },
-];
+const SEED_PROFILES: DbProfile[] = [];
 
 export const AdminUserManagement: React.FC = () => {
-  const [profiles, setProfiles] = useState<DbProfile[]>(SEED_PROFILES);
+  const [profiles, setProfiles] = useState<DbProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | AppRole>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -111,11 +50,11 @@ export const AdminUserManagement: React.FC = () => {
     async function loadProfiles() {
       try {
         const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-        if (data && data.length > 0) {
+        if (data) {
           setProfiles(data as unknown as DbProfile[]);
         }
       } catch (err) {
-        console.warn('Using seeded profiles list', err);
+        console.warn('Error loading profiles list', err);
       }
     }
     loadProfiles();
