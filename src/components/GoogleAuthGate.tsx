@@ -1,27 +1,38 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Shield, AlertTriangle, Building, Lock, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertTriangle, Lock, Loader2 } from 'lucide-react';
 
 export const GoogleAuthGate: React.FC = () => {
   const { signInWithGoogle, isLoading, authError, clearAuthError } = useAuth();
   const workspaceDomain = import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'msreg.com';
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-[#f8fafc] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#1e293b] border border-[#334155] rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
-        
+    <div className="min-h-screen bg-[#0f172a] text-[#f8fafc] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background gradient accents */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-b from-[#d97706]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-gradient-to-tl from-sky-500/3 to-transparent rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative w-full max-w-md bg-[#1e293b] border border-[#334155] rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
+
         {/* Brand Logo & Title */}
         <div className="space-y-2">
-          <div className="h-16 w-16 mx-auto rounded-2xl bg-[#131826] border border-[#334155] p-2 flex items-center justify-center shadow-inner">
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-[#131826] border border-[#334155] p-2 flex items-center justify-center shadow-inner overflow-hidden">
             <img
               src="/msreg-logo.png"
               alt="MSREG Logo"
               className="h-full w-auto object-contain"
               onError={(e) => {
+                // Hide img tag on error, show fallback text
                 (e.target as HTMLElement).style.display = 'none';
+                const parent = (e.target as HTMLElement).parentElement;
+                if (parent) {
+                  const fallback = document.createElement('span');
+                  fallback.className = 'text-[#d97706] font-bold text-lg';
+                  fallback.textContent = 'MS';
+                  parent.appendChild(fallback);
+                }
               }}
             />
-            <Building className="h-8 w-8 text-[#d97706]" />
           </div>
 
           <div className="space-y-1">
@@ -39,7 +50,7 @@ export const GoogleAuthGate: React.FC = () => {
 
         {/* Access Denied / Authorization Error Callout */}
         {authError && (
-          <div className="p-4 bg-rose-500/15 border border-rose-500/40 rounded-2xl text-left space-y-1.5 animate-in fade-in duration-200">
+          <div className="p-4 bg-rose-500/15 border border-rose-500/40 rounded-2xl text-left space-y-1.5">
             <div className="flex items-center gap-2 text-rose-400 font-bold text-xs uppercase tracking-wider">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               <span>Access Denied</span>
@@ -61,7 +72,7 @@ export const GoogleAuthGate: React.FC = () => {
           </p>
         </div>
 
-        {/* Sole Sign-In Action: Google OAuth (with hd parameter) */}
+        {/* Sole Sign-In Action: Google OAuth */}
         <div className="space-y-3">
           <button
             onClick={() => signInWithGoogle()}
@@ -71,7 +82,7 @@ export const GoogleAuthGate: React.FC = () => {
             {isLoading ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin text-[#0f172a]" />
-                <span>Authorizing with Google...</span>
+                <span>Authorizing with Google…</span>
               </>
             ) : (
               <>
