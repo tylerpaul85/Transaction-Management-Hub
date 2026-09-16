@@ -16,6 +16,8 @@ import {
   Layers,
   Sparkles,
   AlertCircle,
+  Upload,
+  FileSpreadsheet,
 } from 'lucide-react';
 import sampleWebhook from '../../supabase/samples/sisu-webhook-sample.json';
 
@@ -298,6 +300,126 @@ export const AdminSyncDebug: React.FC = () => {
     }
   };
 
+  const [isImportingCsv, setIsImportingCsv] = useState(false);
+  const [csvStatusMessage, setCsvStatusMessage] = useState<string | null>(null);
+
+  const handleCsvFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImportingCsv(true);
+    setCsvStatusMessage('Processing Sisu CSV export...');
+
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      if (lines.length < 2) {
+        setCsvStatusMessage('CSV file is empty or invalid.');
+        setIsImportingCsv(false);
+        return;
+      }
+
+      const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, '').toLowerCase());
+
+      const getVal = (rowParts: string[], colNames: string[]) => {
+        for (const name of colNames) {
+          const idx = headers.findIndex((h) => h.includes(name));
+          if (idx !== -1 && rowParts[idx]) {
+            return rowParts[idx].trim().replace(/^"|"$/g, '');
+          }
+        }
+        return '';
+      };
+
+      let importedCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+        const cleanRow = row.map((cell) => cell.trim().replace(/^"|"$/g, ''));
+
+        const clientFirstName = getVal(cleanRow, ['first_name', 'first name', 'client_first']);
+        const clientLastName = getVal(cleanRow, ['last_name', 'last name', 'client_last']);
+        const clientFullName = getVal(cleanRow, ['client', 'full_name', 'name', 'client_name']) || `${clientFirstName} ${clientLastName}`.trim();
+
+        const sisuId = getVal(cleanRow, ['client_id', 'id', 'sisu_id', 'transaction_id']) || `SISU-CSV-${Date.now()}-${i}`;
+        const address = getVal(cleanRow, ['address_1', 'address', 'property_address']) || 'Pending Address';
+        const city = getVal(cleanRow, ['city']) || 'Waynesville';
+        const state = getVal(cleanRow, ['state']) || 'MO';
+        const sideVal = getVal(cleanRow, ['side', 'type', 'representation']).toLowerCase();
+        const side = (sideVal.includes('seller') || sideVal.includes('listing') || sideVal === 's') ? 'seller' : 'buyer';
+        const status = getVal(cleanRow, ['pipeline_status', 'status', 'stage']) || 'Under Contract';
+        const agentName = getVal(cleanRow, ['agent', 'agent_name', 'primary_agent']);
+        const agentEmail = getVal(cleanRow, ['agent_email', 'email']);
+        const clientPhone = getVal(cleanRow, ['phone', 'mobile_phone', 'mobile']);
+
+        let agentId: string | null = null;
+        if (agentName || agentEmail) {
+          const { data: existingAgent } = await (supabase.from('agents') as any)
+            .select('id')
+            .or(`email.eq.${(agentEmail || '').toLowerCase()},name.eq.${agentName}`)
+            .maybeSingle();
+
+          if (existingAgent) {
+            agentId = existingAgent.id;
+          } else if (agentName) {
+            const { data: newAgent } = await (supabase.from('agents') as any)
+              .insert({
+                name: agentName,
+                email: agentEmail ? agentEmail.toLowerCase() : `${agentName.toLowerCase().replace(/\s+/g, '.')}@mattsmithrealestategroup.com`,
+                active: true,
+              })
+              .select('id')
+              .maybeSingle();
+            if (newAgent) agentId = newAgent.id;
+          }
+        }
+
+        const { data: existingTx } = await (supabase.from('transactions') as any)
+          .select('id')
+          .eq('sisu_transaction_id', sisuId)
+          .maybeSingle();
+
+        if (existingTx) {
+          await (supabase.from('transactions') as any).update({
+            property_address: address,
+            city,
+            state,
+            side,
+            status,
+            client_name: clientFullName || 'Unnamed Client',
+            client_phone: clientPhone || null,
+            listing_agent_id: side === 'seller' ? agentId : undefined,
+            selling_agent_id: side === 'buyer' ? agentId : undefined,
+            updated_at: new Date().toISOString(),
+          }).eq('id', existingTx.id);
+        } else {
+          await (supabase.from('transactions') as any).insert({
+            sisu_transaction_id: sisuId,
+            property_address: address,
+            city,
+            state,
+            side,
+            status,
+            client_name: clientFullName || 'Unnamed Client',
+            client_phone: clientPhone || null,
+            listing_agent_id: side === 'seller' ? agentId : null,
+            selling_agent_id: side === 'buyer' ? agentId : null,
+          });
+        }
+
+        importedCount++;
+      }
+
+      setCsvStatusMessage(`Successfully imported ${importedCount} transactions from Sisu CSV!`);
+      await loadLiveData();
+    } catch (err: any) {
+      console.error('CSV import error:', err);
+      setCsvStatusMessage(`CSV import error: ${err.message || String(err)}`);
+    } finally {
+      setIsImportingCsv(false);
+    }
+  };
+
   const handleTriggerReconciliation = async () => {
     setIsSyncing(true);
     try {
@@ -334,7 +456,18 @@ export const AdminSyncDebug: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-[#f8fafc] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md min-h-[38px]">
+              <Upload className="h-3.5 w-3.5" />
+              <span>{isImportingCsv ? 'Importing CSV...' : 'Import Sisu CSV Export'}</span>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleCsvFileUpload}
+                disabled={isImportingCsv}
+                className="hidden"
+              />
+            </label>
             <button
               onClick={handleSimulateWebhook}
               disabled={isSimulating}
@@ -353,6 +486,13 @@ export const AdminSyncDebug: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {csvStatusMessage && (
+          <div className="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-xs text-emerald-300 flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4 text-emerald-400 shrink-0" />
+            <span>{csvStatusMessage}</span>
+          </div>
+        )}
 
         {/* Informative Sisu Historical Backfill Note */}
         <div className="p-3.5 bg-sky-950/40 border border-sky-500/30 rounded-xl flex items-start gap-3 text-xs text-sky-200">
