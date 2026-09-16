@@ -1,0 +1,109 @@
+{
+  "event": "transaction.updated",
+  "event_id": "evt_sisu_984721903",
+  "timestamp": "2026-09-16T17:30:00Z",
+  "entity": "transaction",
+  "transaction_id": "SISU-TRX-8901",
+  "changed_fields": [
+    "inspection_contingency_date",
+    "appraisal_received_date",
+    "status"
+  ],
+  "data": {
+    "id": "SISU-TRX-8901",
+    "status": "UNDER_CONTRACT",
+    "property_address": "2100 N Lincoln Park West, Unit 18A",
+    "city": "Chicago",
+    "state": "IL",
+    "zip": "60614",
+    "side": "BUYER",
+    "contract_date": "2026-09-08",
+    "closing_date": "2026-10-15",
+    "client": {
+      "name": "Dr. Marcus Vance & Elena Rostova",
+      "phone": "(312) 555-8921",
+      "email": "mvance@northwestern.edu"
+    },
+    "other_party": {
+      "name": "Vanderbilt Trust",
+      "agent": "Victoria Sterling",
+      "brokerage": "Jameson Sotheby’s Int. Realty"
+    },
+    "agents": {
+      "primary_agent_id": "SISU-AGT-101",
+      "primary_agent_email": "tyler.agent@msreg.com",
+      "co_agent_id": null
+    },
+    "assigned_tc": {
+      "tc_id": "SISU-TC-401",
+      "email": "sarah.tc@msreg.com"
+    },
+    "milestones": {
+      "earnest_money": {
+        "target_date": "2026-09-11",
+        "actual_date": "2026-09-10",
+        "status": "satisfied"
+      },
+      "inspection_ordered": {
+        "target_date": "2026-09-12",
+        "actual_date": "2026-09-11",
+        "status": "satisfied"
+      },
+      "inspection_notice_sent": {
+        "target_date": "2026-09-16",
+        "actual_date": "2026-09-15",
+        "status": "notice_sent"
+      },
+      "inspection_10day": {
+        "target_date": "2026-09-18",
+        "actual_date": null,
+        "status": "pending"
+      },
+      "sale_contingency": {
+        "target_date": null,
+        "actual_date": null,
+        "status": "na"
+      },
+      "financing_contingency": {
+        "target_date": "2026-10-06",
+        "actual_date": null,
+        "status": "pending"
+      },
+      "appraisal_ordered": {
+        "target_date": "2026-09-15",
+        "actual_date": "2026-09-14",
+        "status": "ordered"
+      },
+      "appraisal_received": {
+        "target_date": "2026-09-26",
+        "actual_date": null,
+        "status": "pending"
+      },
+      "appraisal_satisfied": {
+        "target_date": "2026-09-29",
+        "actual_date": null,
+        "status": "pending"
+      },
+      "title": {
+        "target_date": "2026-09-22",
+        "actual_date": null,
+        "status": "pending"
+      },
+      "walk_through": {
+        "target_date": "2026-10-14",
+        "actual_date": null,
+        "status": "pending"
+      },
+      "ctc": {
+        "target_date": "2026-10-09",
+        "actual_date": null,
+        "status": "pending"
+      },
+      "closing": {
+        "target_date": "2026-10-15",
+        "actual_date": null,
+        "status": "pending"
+      }
+    }
+  }
+}

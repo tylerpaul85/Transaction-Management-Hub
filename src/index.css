@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --canvas-bg: #0f172a;
+    --canvas-darker: #131826;
+    --card-surface: #1e293b;
+    --card-surface-subtle: #1a2235;
+    --card-border: #334155;
+    --card-border-subtle: #2a354c;
+    --accent-gold: #d97706;
+    --accent-copper: #c86d3b;
+    --text-primary: #f8fafc;
+    --text-muted: #94a3b8;
+    --font-outfit: "Outfit", sans-serif;
+    --font-fraunces: "Fraunces", serif;
+    --font-jetbrains: "JetBrains Mono", monospace;
+  }
+
+  body {
+    background-color: #0f172a;
+    color: #f8fafc;
+    font-family: var(--font-outfit);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Prevent iOS Safari auto-zoom by enforcing >= 16px font size on all inputs */
+  input, select, textarea, button {
+    font-size: 16px;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.font-editorial {
+  font-family: var(--font-fraunces);
+}
+
+.font-mono-code {
+  font-family: var(--font-jetbrains);
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+}
+
+.glass-modal {
+  background: rgba(26, 34, 53, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+}
+
+/* Print specific styles for CDA */
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

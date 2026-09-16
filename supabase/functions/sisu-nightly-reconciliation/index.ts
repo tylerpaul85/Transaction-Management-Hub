@@ -1,0 +1,317 @@
+// Follow this setup guide to integrate the Deno language server with your editor:
+// https://deno.land/manual/getting_started/setup_your_environment
+// This code runs in Supabase Edge Functions (Deno runtime)
+
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const MILESTONE_KEYS = [
+  'earnest_money',
+  'inspection_ordered',
+  'inspection_notice_sent',
+  'inspection_10day',
+  'sale_contingency',
+  'financing_contingency',
+  'appraisal_ordered',
+  'appraisal_received',
+  'appraisal_satisfied',
+  'title',
+  'walk_through',
+  'ctc',
+  'closing',
+] as const;
+
+serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  const startTime = Date.now();
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const sisuApiKey = Deno.env.get('SISU_API_KEY') || '';
+  const sisuApiBaseUrl = Deno.env.get('SISU_API_BASE_URL') || 'https://beta.sisu.co/api/v1';
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  let transactionsChecked = 0;
+  let transactionsUpdated = 0;
+  let conflictsFound = 0;
+  const runDetails: any[] = [];
+
+  try {
+    // 1. Fetch active transactions from Sisu API
+    let sisuTransactions: any[] = [];
+    if (sisuApiKey) {
+      const response = await fetch(`${sisuApiBaseUrl}/transactions?status=active,pending,under_contract`, {
+        headers: {
+          Authorization: `Bearer ${sisuApiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Sisu API returned ${response.status}: ${response.statusText}`);
+      }
+
+      const json = await response.json();
+      sisuTransactions = Array.isArray(json) ? json : json.data || json.transactions || [];
+    } else {
+      // In dev / mock fallback mode, query existing local transactions with sisu_transaction_id
+      console.warn('SISU_API_KEY not provided; checking local transactions with Sisu IDs');
+      const { data: localList } = await supabase
+        .from('transactions')
+        .select('*')
+        .not('sisu_transaction_id', 'is', null);
+
+      sisuTransactions = (localList || []).map((t) => ({
+        id: t.sisu_transaction_id,
+        status: t.status,
+        property_address: t.property_address,
+        city: t.city,
+        side: t.side,
+        client: { full_name: t.client_name, phone: t.client_phone },
+        other_party: { name: t.other_party_name, agent: t.other_party_agent },
+        contract_date: t.contract_date,
+        updated_at: t.updated_at,
+        milestones: {},
+      }));
+    }
+
+    transactionsChecked = sisuTransactions.length;
+
+    // 2. Iterate through each Sisu transaction and reconcile
+    for (const sisuData of sisuTransactions) {
+      const sisuTxId = String(sisuData.id || sisuData.transaction_id);
+      if (!sisuTxId) continue;
+
+      const address = sisuData.property_address || sisuData.address || 'Unknown Address';
+      const city = sisuData.city || 'Chicago';
+      const side = (sisuData.side || sisuData.transaction_side || 'buyer').toLowerCase();
+      const status = (sisuData.status || sisuData.stage || 'pending').toLowerCase();
+      const clientName =
+        sisuData.client?.full_name ||
+        sisuData.client?.name ||
+        sisuData.client_name ||
+        'Unnamed Client';
+      const clientPhone = sisuData.client?.phone || sisuData.client_phone || null;
+      const otherPartyName = sisuData.other_party?.name || sisuData.other_party_name || null;
+      const otherPartyAgent =
+        sisuData.other_party?.agent ||
+        sisuData.other_party?.agent_name ||
+        sisuData.other_party_agent ||
+        null;
+      const contractDate = sisuData.contract_date || null;
+      const sisuUpdatedAt = new Date(sisuData.updated_at || new Date()).getTime();
+
+      // Find in DB
+      const { data: existingTx } = await supabase
+        .from('transactions')
+        .select('id, sisu_transaction_id, updated_at')
+        .eq('sisu_transaction_id', sisuTxId)
+        .maybeSingle();
+
+      let transactionId = existingTx?.id;
+
+      if (existingTx) {
+        await supabase
+          .from('transactions')
+          .update({
+            status,
+            property_address: address,
+            city,
+            side,
+            client_name: clientName,
+            client_phone: clientPhone,
+            other_party_name: otherPartyName,
+            other_party_agent: otherPartyAgent,
+            contract_date: contractDate,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingTx.id);
+
+        transactionsUpdated++;
+      } else {
+        const { data: newTx } = await supabase
+          .from('transactions')
+          .insert({
+            sisu_transaction_id: sisuTxId,
+            status,
+            property_address: address,
+            city,
+            side,
+            client_name: clientName,
+            client_phone: clientPhone,
+            other_party_name: otherPartyName,
+            other_party_agent: otherPartyAgent,
+            contract_date: contractDate,
+          })
+          .select('id')
+          .single();
+
+        if (newTx) {
+          transactionId = newTx.id;
+          transactionsUpdated++;
+        }
+      }
+
+      if (!transactionId) continue;
+
+      // Reconcile milestones
+      const incomingMilestones = sisuData.milestones || {};
+      const { data: existingMilestones } = await supabase
+        .from('milestones')
+        .select('*')
+        .eq('transaction_id', transactionId);
+
+      const existingMap = new Map<string, any>();
+      (existingMilestones || []).forEach((m) => existingMap.set(m.milestone_type, m));
+
+      let txConflicts = 0;
+
+      for (const mKey of MILESTONE_KEYS) {
+        const incomingM = incomingMilestones[mKey];
+        if (!incomingM) continue;
+
+        const targetDate = incomingM.target_date || null;
+        const actualDate = incomingM.actual_date || null;
+        const mStatus = incomingM.status || 'pending';
+        const mNotes = incomingM.notes || null;
+
+        const existingM = existingMap.get(mKey);
+
+        if (existingM) {
+          const isManual = existingM.source === 'manual';
+          const manualUpdatedAt = new Date(existingM.updated_at).getTime();
+
+          if (isManual && manualUpdatedAt >= sisuUpdatedAt) {
+            const isDateDiff =
+              existingM.target_date !== targetDate || existingM.actual_date !== actualDate;
+            const isStatusDiff = existingM.status !== mStatus;
+
+            if (isDateDiff || isStatusDiff) {
+              conflictsFound++;
+              txConflicts++;
+
+              await supabase.from('sync_conflicts').insert({
+                transaction_id: transactionId,
+                sisu_transaction_id: sisuTxId,
+                milestone_type: mKey,
+                current_manual_value: {
+                  target_date: existingM.target_date,
+                  actual_date: existingM.actual_date,
+                  status: existingM.status,
+                  notes: existingM.notes,
+                  source: existingM.source,
+                  updated_at: existingM.updated_at,
+                },
+                incoming_sisu_value: {
+                  target_date: targetDate,
+                  actual_date: actualDate,
+                  status: mStatus,
+                  notes: mNotes,
+                  source: 'sisu',
+                  sisu_updated_at: sisuData.updated_at,
+                },
+                detected_at: new Date().toISOString(),
+                resolved: false,
+                resolution_notes: 'Reconciliation: manual edit preserved.',
+              });
+
+              continue;
+            }
+          }
+
+          // Safe to overwrite
+          await supabase
+            .from('milestones')
+            .update({
+              target_date: targetDate,
+              actual_date: actualDate,
+              status: mStatus,
+              source: 'sisu',
+              notes: mNotes || existingM.notes,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingM.id);
+        } else {
+          await supabase.from('milestones').insert({
+            transaction_id: transactionId,
+            milestone_type: mKey,
+            target_date: targetDate,
+            actual_date: actualDate,
+            status: mStatus,
+            source: 'sisu',
+            notes: mNotes,
+          });
+        }
+      }
+
+      runDetails.push({
+        sisu_transaction_id: sisuTxId,
+        address,
+        conflicts: txConflicts,
+      });
+    }
+
+    const durationMs = Date.now() - startTime;
+
+    // 3. Log summary to reconciliation_runs
+    const { data: runSummary } = await supabase
+      .from('reconciliation_runs')
+      .insert({
+        run_at: new Date().toISOString(),
+        transactions_checked: transactionsChecked,
+        transactions_updated: transactionsUpdated,
+        conflicts_found: conflictsFound,
+        duration_ms: durationMs,
+        status: 'completed',
+        details: { items: runDetails },
+      })
+      .select('id')
+      .single();
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        run_id: runSummary?.id,
+        transactions_checked: transactionsChecked,
+        transactions_updated: transactionsUpdated,
+        conflicts_found: conflictsFound,
+        duration_ms: durationMs,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  } catch (err: any) {
+    console.error('Error in sisu-nightly-reconciliation:', err);
+    const durationMs = Date.now() - startTime;
+
+    await supabase.from('reconciliation_runs').insert({
+      run_at: new Date().toISOString(),
+      transactions_checked: transactionsChecked,
+      transactions_updated: transactionsUpdated,
+      conflicts_found: conflictsFound,
+      duration_ms: durationMs,
+      status: 'failed',
+      details: { error: err.message || String(err) },
+    });
+
+    return new Response(
+      JSON.stringify({
+        error: err.message || 'Internal error in reconciliation run',
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});
