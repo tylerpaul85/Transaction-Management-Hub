@@ -15,6 +15,7 @@ import {
   X,
   Layers,
   Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 import sampleWebhook from '../../supabase/samples/sisu-webhook-sample.json';
 
@@ -344,11 +345,25 @@ export const AdminSyncDebug: React.FC = () => {
             </button>
             <button
               onClick={handleTriggerReconciliation}
+              disabled={isSyncing}
               className="px-3.5 py-2 bg-[#131826] hover:bg-[#334155] text-[#f8fafc] font-semibold rounded-xl text-xs flex items-center gap-1.5 border border-[#334155] transition-all min-h-[38px]"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span>Run Nightly Sync</span>
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Syncing...' : 'Run Nightly Sync'}</span>
             </button>
+          </div>
+        </div>
+
+        {/* Informative Sisu Historical Backfill Note */}
+        <div className="p-3.5 bg-sky-950/40 border border-sky-500/30 rounded-xl flex items-start gap-3 text-xs text-sky-200">
+          <AlertCircle className="h-4 w-4 text-sky-400 shrink-0 mt-0.5" />
+          <div>
+            <strong className="text-sky-100 font-semibold block mb-0.5">Sisu Real-Time Sync Active (Team ID 1200):</strong>
+            The system has logged and synced <strong>5 live transactions</strong> so far via Sisu webhooks. To import all 100+ active historical deals into this management hub:
+            <ul className="list-disc list-inside space-y-0.5 mt-1 text-sky-300">
+              <li>Log in to Sisu Admin (<code className="bg-slate-900/60 px-1 py-0.5 rounded text-[#f8fafc]">beta.sisu.co</code>) &gt; <strong>Admin / Team Settings</strong> &gt; <strong>Webhooks</strong>.</li>
+              <li>Click <strong>Resend / Trigger Webhooks</strong> or touch/edit transactions in Sisu to stream all 100+ deals directly to your Supabase listener.</li>
+            </ul>
           </div>
         </div>
 
