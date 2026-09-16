@@ -285,7 +285,27 @@ serve(async (req: Request) => {
       } else if (primaryAgentSisuId) {
         query = query.eq('sisu_agent_id', primaryAgentSisuId);
       }
-      const { data: matchedAgent } = await query.limit(1).maybeSingle();
+      let { data: matchedAgent } = await query.limit(1).maybeSingle();
+
+      if (!matchedAgent && primaryAgentEmail) {
+        const agentName =
+          agentRecord.full_name ||
+          (agentRecord.first_name ? `${agentRecord.first_name} ${agentRecord.last_name || ''}`.trim() : null) ||
+          primaryAgentEmail.split('@')[0];
+        const { data: newAgent } = await supabase
+          .from('agents')
+          .insert({
+            name: agentName,
+            email: primaryAgentEmail.toLowerCase(),
+            phone: agentRecord.mobile_phone || null,
+            sisu_agent_id: primaryAgentSisuId ? String(primaryAgentSisuId) : null,
+            active: true,
+          })
+          .select('id, email')
+          .maybeSingle();
+        matchedAgent = newAgent;
+      }
+
       if (matchedAgent) {
         const sideType = (sisuData.side || sisuData.transaction_side || fullObj.type_id || updatedVals.type_id || '').toLowerCase();
         if (sideType === 's' || sideType === 'seller' || sideType === 'listing') {
@@ -298,12 +318,27 @@ serve(async (req: Request) => {
 
     const tcEmail = sisuData.assigned_tc?.email || payload.assigned_tc?.email || sisuData.tc_email || payload.tc_email;
     if (tcEmail) {
-      const { data: matchedTc } = await supabase
+      let { data: matchedTc } = await supabase
         .from('ops_users')
         .select('id')
         .eq('email', tcEmail.toLowerCase())
         .limit(1)
         .maybeSingle();
+
+      if (!matchedTc) {
+        const tcName = tcEmail.split('@')[0].replace('.', ' ');
+        const { data: newTc } = await supabase
+          .from('ops_users')
+          .insert({
+            name: tcName,
+            email: tcEmail.toLowerCase(),
+            role: 'tc',
+          })
+          .select('id')
+          .maybeSingle();
+        matchedTc = newTc;
+      }
+
       if (matchedTc) {
         assignedTcId = matchedTc.id;
       }
