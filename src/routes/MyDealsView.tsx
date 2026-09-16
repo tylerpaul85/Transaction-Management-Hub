@@ -39,7 +39,8 @@ export const MyDealsView: React.FC = () => {
             assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
             milestones (*)
           `)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(5000);
 
         if (error) {
           console.warn('Could not fetch Supabase agent transactions:', error);

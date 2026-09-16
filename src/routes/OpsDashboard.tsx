@@ -93,7 +93,8 @@ export const OpsDashboard: React.FC = () => {
           assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
           milestones (*)
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10000);
 
       if (error) {
         console.warn('Could not fetch Supabase transactions:', error);
@@ -324,27 +325,55 @@ export const OpsDashboard: React.FC = () => {
   // Distinct Filter Options
   const tcOptions = useMemo(() => {
     const set = new Set<string>();
-    transactions.forEach((t) => set.add(t.tc_name));
-    return Array.from(set);
+    transactions.forEach((t) => { if (t.tc_name) set.add(t.tc_name); });
+    return Array.from(set).sort();
   }, [transactions]);
 
   const agentOptions = useMemo(() => {
     const set = new Set<string>();
-    transactions.forEach((t) => set.add(t.agent_name));
-    return Array.from(set);
+    transactions.forEach((t) => { if (t.agent_name) set.add(t.agent_name); });
+    return Array.from(set).sort();
+  }, [transactions]);
+
+  const allStatusOptions = useMemo(() => {
+    const set = new Set<string>();
+    transactions.forEach((t) => { if (t.status) set.add(t.status); });
+    return Array.from(set).sort();
   }, [transactions]);
 
   // Section Segmented Lists
   const tcEscrows = useMemo(() => {
-    return transactions.filter(
-      (t) => t.status === 'under_contract' || t.status === 'pending' || (t.contract_date && t.status !== 'closed')
-    );
+    return transactions.filter((t) => {
+      const s = (t.status || '').toLowerCase().replace(/_/g, ' ');
+      return (
+        s.includes('under contract') ||
+        s.includes('pending') ||
+        s.includes('escrow') ||
+        s.includes('close') ||
+        s.includes('needed') ||
+        s.includes('offer') ||
+        Boolean(t.contract_date && !s.includes('closed'))
+      );
+    });
   }, [transactions]);
 
   const lcListings = useMemo(() => {
-    return transactions.filter(
-      (t) => t.side === 'seller' || t.status === 'active' || t.status === 'pre_listing' || t.status === 'coming_soon'
-    );
+    return transactions.filter((t) => {
+      const s = (t.status || '').toLowerCase().replace(/_/g, ' ');
+      const isSeller = (t.side || '').toLowerCase() === 'seller';
+      return (
+        isSeller ||
+        s.includes('listing') ||
+        s.includes('active') ||
+        s.includes('signed') ||
+        s.includes('set') ||
+        s.includes('met') ||
+        s.includes('showing') ||
+        s.includes('pre') ||
+        s.includes('coming') ||
+        s.includes('pipeline')
+      );
+    });
   }, [transactions]);
 
   // Active Filtered List based on selected Tab
@@ -354,7 +383,11 @@ export const OpsDashboard: React.FC = () => {
     else if (activeSection === 'lc_listings') baseList = lcListings;
 
     return baseList.filter((t) => {
-      if (statusFilter !== 'All' && t.status !== statusFilter) return false;
+      if (statusFilter !== 'All') {
+        const s = (t.status || '').toLowerCase().replace(/_/g, ' ');
+        const f = statusFilter.toLowerCase().replace(/_/g, ' ');
+        if (s !== f && !s.includes(f) && !f.includes(s)) return false;
+      }
       if (tcFilter !== 'All' && t.tc_name !== tcFilter) return false;
       if (agentFilter !== 'All' && t.agent_name !== agentFilter) return false;
       if (reviewOnlyFilter && !t.flagged_for_review) return false;
@@ -601,13 +634,12 @@ export const OpsDashboard: React.FC = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706] cursor-pointer"
               >
-                <option value="All">All Statuses</option>
-                <option value="under_contract">Under Contract</option>
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="pre_listing">Pre-Listing</option>
-                <option value="coming_soon">Coming Soon</option>
-                <option value="closed">Closed</option>
+                <option value="All">All Statuses ({allStatusOptions.length})</option>
+                {allStatusOptions.map((st) => (
+                  <option key={st} value={st}>
+                    {st.replace(/_/g, ' ').toUpperCase()}
+                  </option>
+                ))}
               </select>
 
               <select
