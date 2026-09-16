@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sisu-signature, x-sisu-secret',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sisu-signature, x-sisu-secret, x-amz-sns-message-type',
 };
 
 const MILESTONE_KEYS = [
@@ -44,7 +44,139 @@ serve(async (req: Request) => {
   let logId: string | null = null;
 
   try {
-    // 1. Verify Secret / Signature
+    rawBodyText = await req.text();
+    try {
+      payload = JSON.parse(rawBodyText || '{}');
+    } catch {
+      payload = { raw: rawBodyText };
+    }
+
+    // Collect headers for debugging log
+    const headersObj: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      headersObj[key] = value;
+    });
+
+    const snsMessageType = req.headers.get('x-amz-sns-message-type') || '';
+    const payloadType = payload.Type || payload.type || '';
+    const payloadEvent = payload.event || payload.event_type || '';
+
+    // =========================================================================
+    // 1. Detect Sisu / AWS SNS SubscriptionConfirmation Message
+    // =========================================================================
+    const isSubscriptionConfirmation =
+      snsMessageType === 'SubscriptionConfirmation' ||
+      payloadType === 'SubscriptionConfirmation' ||
+      payloadType === 'subscription_confirmation' ||
+      payloadEvent === 'subscription_confirmation' ||
+      Boolean(payload.SubscribeURL || payload.subscribe_url || payload.SubscribeUrl || payload.subscribeUrl);
+
+    if (isSubscriptionConfirmation) {
+      console.log('[Sisu Webhook] Detected SubscriptionConfirmation message.');
+
+      // Extract SubscribeURL
+      let subscribeUrl: string | null =
+        payload.SubscribeURL ||
+        payload.subscribe_url ||
+        payload.SubscribeUrl ||
+        payload.subscribeUrl ||
+        payload.url ||
+        null;
+
+      // Check if nested in Message JSON string
+      if (!subscribeUrl && typeof payload.Message === 'string') {
+        try {
+          const nested = JSON.parse(payload.Message);
+          subscribeUrl =
+            nested.SubscribeURL ||
+            nested.subscribe_url ||
+            nested.SubscribeUrl ||
+            nested.subscribeUrl ||
+            nested.url ||
+            null;
+        } catch {
+          // ignore parsing error
+        }
+      }
+
+      // Log the initial confirmation payload
+      const { data: confLog, error: confLogErr } = await supabase
+        .from('sisu_webhook_log')
+        .insert({
+          payload,
+          headers: headersObj,
+          event_type: 'SubscriptionConfirmation',
+          transaction_id: null,
+          received_at: new Date().toISOString(),
+          processed: false,
+        })
+        .select('id')
+        .single();
+
+      if (confLog) logId = confLog.id;
+      if (confLogErr) console.warn('Could not insert confirmation sisu_webhook_log:', confLogErr);
+
+      let getStatus: number | null = null;
+      let getOk = false;
+      let getResponseText = '';
+      let getError: string | null = null;
+
+      if (subscribeUrl) {
+        try {
+          console.log(`[Sisu Webhook] Making outbound confirmation GET to: ${subscribeUrl}`);
+          const confirmRes = await fetch(subscribeUrl);
+          getStatus = confirmRes.status;
+          getOk = confirmRes.ok;
+          getResponseText = await confirmRes.text();
+          console.log(
+            `[Sisu Webhook] Confirmation GET response (status ${getStatus}): ${getResponseText.slice(0, 300)}`
+          );
+
+          if (!confirmRes.ok) {
+            getError = `Confirmation GET failed with HTTP status ${getStatus}: ${getResponseText.slice(0, 300)}`;
+          }
+        } catch (fetchErr: any) {
+          getError = `Confirmation GET network error: ${fetchErr.message || String(fetchErr)}`;
+          console.error('[Sisu Webhook] Error executing confirmation GET:', fetchErr);
+        }
+      } else {
+        getError = 'SubscriptionConfirmation detected, but no SubscribeURL field found in payload';
+        console.warn(getError, payload);
+      }
+
+      // Update log record with confirmation result
+      if (logId) {
+        await supabase
+          .from('sisu_webhook_log')
+          .update({
+            processed: getOk,
+            error: getError,
+            processed_at: new Date().toISOString(),
+          })
+          .eq('id', logId);
+      }
+
+      // Return 200 OK to Sisu's original POST either way
+      return new Response(
+        JSON.stringify({
+          success: true,
+          type: 'SubscriptionConfirmation',
+          message: getOk ? 'Subscription successfully confirmed' : 'Subscription confirmation attempted',
+          subscribe_url: subscribeUrl,
+          get_status: getStatus,
+          get_ok: getOk,
+          error: getError,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // =========================================================================
+    // 2. Standard Transaction Webhook Ingestion & Signature Verification
+    // =========================================================================
     const sisuSignature = req.headers.get('x-sisu-signature') || req.headers.get('x-sisu-secret') || '';
     const authHeader = req.headers.get('authorization') || '';
 
@@ -53,27 +185,18 @@ serve(async (req: Request) => {
       sisuSignature === sisuWebhookSecret ||
       authHeader === `Bearer ${sisuWebhookSecret}`;
 
-    rawBodyText = await req.text();
-    payload = JSON.parse(rawBodyText || '{}');
-
     // Extract transaction ID and event
-    const eventType = payload.event || payload.event_type || 'transaction.updated';
+    const eventType = payloadEvent || 'transaction.updated';
     const sisuTxId = payload.transaction_id || payload.data?.id || payload.id || null;
 
-    // Collect headers for debugging log
-    const headersObj: Record<string, string> = {};
-    req.headers.forEach((value, key) => {
-      headersObj[key] = value;
-    });
-
-    // 2. Log raw payload to sisu_webhook_log
+    // Log raw transaction payload to sisu_webhook_log
     const { data: logEntry, error: logErr } = await supabase
       .from('sisu_webhook_log')
       .insert({
         payload,
         headers: headersObj,
         event_type: eventType,
-        transaction_id: sisuTxId,
+        transaction_id: sisuTxId ? String(sisuTxId) : null,
         received_at: new Date().toISOString(),
         processed: false,
       })
