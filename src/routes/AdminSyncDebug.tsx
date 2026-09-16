@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../integrations/supabase/client';
 import {
   ShieldAlert,
   Activity,
@@ -150,46 +151,162 @@ const INITIAL_RUNS: MockReconciliationRun[] = [
 
 export const AdminSyncDebug: React.FC = () => {
   const { currentUser } = useAuth();
-  const [logs, setLogs] = useState<MockWebhookLog[]>(INITIAL_LOGS);
-  const [conflicts, setConflicts] = useState<MockConflict[]>(INITIAL_CONFLICTS);
-  const [runs, setRuns] = useState<MockReconciliationRun[]>(INITIAL_RUNS);
+  const [logs, setLogs] = useState<MockWebhookLog[]>([]);
+  const [conflicts, setConflicts] = useState<MockConflict[]>([]);
+  const [runs, setRuns] = useState<MockReconciliationRun[]>([]);
   const [activeTab, setActiveTab] = useState<'logs' | 'conflicts' | 'reconciliation'>('logs');
   const [selectedPayload, setSelectedPayload] = useState<any | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleSimulateWebhook = () => {
+  // Load real logs, conflicts, and runs from Supabase
+  const loadLiveData = async () => {
+    try {
+      const { data: logData } = await supabase
+        .from('sisu_webhook_log')
+        .select('*')
+        .order('received_at', { ascending: false })
+        .limit(20);
+
+      if (logData) {
+        setLogs(
+          logData.map((l: any) => ({
+            id: l.id,
+            event_type: l.event_type || 'transaction.updated',
+            transaction_id: l.transaction_id || 'SISU-RAW',
+            received_at: l.received_at ? l.received_at.replace('T', ' ').substring(0, 19) : '',
+            processed: l.processed,
+            payload: l.payload,
+          }))
+        );
+      }
+
+      const { data: conflictData } = await supabase
+        .from('sync_conflicts')
+        .select('*')
+        .order('detected_at', { ascending: false });
+
+      if (conflictData) {
+        setConflicts(
+          conflictData.map((c: any) => ({
+            id: c.id,
+            transaction_id: c.transaction_id,
+            property_address: '103 Ella St, Waynesville, MO',
+            sisu_transaction_id: c.sisu_transaction_id,
+            milestone_type: c.milestone_type,
+            current_manual_value: c.current_manual_value,
+            incoming_sisu_value: c.incoming_sisu_value,
+            detected_at: c.detected_at ? c.detected_at.replace('T', ' ').substring(0, 19) : '',
+            resolved: c.resolved,
+          }))
+        );
+      }
+
+      const { data: runData } = await supabase
+        .from('reconciliation_runs')
+        .select('*')
+        .order('run_at', { ascending: false });
+
+      if (runData) {
+        setRuns(
+          runData.map((r: any) => ({
+            id: r.id,
+            run_at: r.run_at ? r.run_at.replace('T', ' ').substring(0, 19) : '',
+            transactions_checked: r.transactions_checked || 0,
+            transactions_updated: r.transactions_updated || 0,
+            conflicts_found: r.conflicts_found || 0,
+            duration_ms: r.duration_ms || 0,
+            status: r.status || 'completed',
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn('Error loading sync debug data:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadLiveData();
+  }, []);
+
+  const handleSimulateWebhook = async () => {
     setIsSimulating(true);
-    setTimeout(() => {
-      const newLog: MockWebhookLog = {
-        id: `log-${Date.now()}`,
-        event_type: 'transaction.updated',
-        transaction_id: 'SISU-TRX-8901',
-        received_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        processed: true,
-        payload: sampleWebhook,
+    try {
+      const realMsregTestPayload = {
+        Type: "Notification",
+        Message: JSON.stringify({
+          bulk_guid: "0fb0304c-77a8-41ab-89b5-3aa5d4de1240",
+          model: "Client",
+          action: "insert",
+          team_id: 1200,
+          data_objects: [
+            {
+              updated_values: {
+                client_id: 6763992,
+                agent_id: 235141,
+                type_id: "s",
+                first_name: "William",
+                last_name: "Estilo",
+                address_1: "103 Ella St Waynesville 65583",
+                mobile_phone: "417-414-7029",
+                pipeline_status: "Appt Set"
+              },
+              object_data: {
+                agent_record: {
+                  agent_id: 235141,
+                  full_name: "Storm Kittel",
+                  email: "storm@mattsmithrealestategroup.com",
+                  mobile_phone: "5732615528"
+                },
+                full_object: {
+                  client_id: 6763992,
+                  type_id: "s",
+                  first_name: "William",
+                  last_name: "Estilo",
+                  full_name: "William Estilo",
+                  address_1: "103 Ella St Waynesville 65583",
+                  pipeline_status: "Appt Set"
+                }
+              }
+            }
+          ]
+        })
       };
-      setLogs((prev) => [newLog, ...prev]);
+
+      await supabase.functions.invoke('sisu-webhook-receiver', {
+        body: realMsregTestPayload,
+      });
+
+      await loadLiveData();
+    } catch (err) {
+      console.error('Error invoking sisu-webhook-receiver:', err);
+    } finally {
       setIsSimulating(false);
-    }, 600);
+    }
   };
 
-  const handleResolveConflict = (conflictId: string, action: 'kept_manual' | 'accepted_sisu') => {
-    setConflicts((prev) =>
-      prev.map((c) => (c.id === conflictId ? { ...c, resolved: true, resolution_action: action } : c))
-    );
+  const handleResolveConflict = async (conflictId: string, action: 'kept_manual' | 'accepted_sisu') => {
+    try {
+      await (supabase as any)
+        .from('sync_conflicts')
+        .update({ resolved: true, resolution_notes: `Resolved via admin console: ${action}` })
+        .eq('id', conflictId);
+      await loadLiveData();
+    } catch (err) {
+      console.error('Error resolving conflict:', err);
+    }
   };
 
-  const handleTriggerReconciliation = () => {
-    const newRun: MockReconciliationRun = {
-      id: `run-${Date.now()}`,
-      run_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      transactions_checked: 28,
-      transactions_updated: 3,
-      conflicts_found: conflicts.filter((c) => !c.resolved).length,
-      duration_ms: 840,
-      status: 'completed',
-    };
-    setRuns((prev) => [newRun, ...prev]);
+  const handleTriggerReconciliation = async () => {
+    setIsSyncing(true);
+    try {
+      await supabase.functions.invoke('sisu-nightly-reconciliation');
+      await loadLiveData();
+    } catch (err) {
+      console.error('Error triggering reconciliation:', err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (

@@ -35,7 +35,7 @@ serve(async (req: Request) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   const sisuApiKey = Deno.env.get('SISU_API_KEY') || '';
-  const sisuApiBaseUrl = Deno.env.get('SISU_API_BASE_URL') || 'https://beta.sisu.co/api/v1';
+  const sisuApiBaseUrl = Deno.env.get('SISU_API_BASE_URL') || 'https://api.sisu.co/api/v1';
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -48,39 +48,84 @@ serve(async (req: Request) => {
     // 1. Fetch active transactions from Sisu API
     let sisuTransactions: any[] = [];
     if (sisuApiKey) {
-      const response = await fetch(`${sisuApiBaseUrl}/transactions?status=active,pending,under_contract`, {
-        headers: {
-          Authorization: `Bearer ${sisuApiKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const endpointsToTry = [
+        `${sisuApiBaseUrl}/client`,
+        `${sisuApiBaseUrl}/client/list`,
+        `${sisuApiBaseUrl}/transaction`,
+        `${sisuApiBaseUrl}/transactions`,
+        `https://beta.sisu.co/api/v1/client`,
+      ];
 
-      if (!response.ok) {
-        throw new Error(`Sisu API returned ${response.status}: ${response.statusText}`);
+      let lastError = '';
+      for (const endpoint of endpointsToTry) {
+        try {
+          console.log(`[Reconciliation] Trying Sisu API endpoint: ${endpoint}`);
+          const response = await fetch(endpoint, {
+            headers: {
+              'Authorization': `Bearer ${sisuApiKey}`,
+              'x-api-key': sisuApiKey,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const json = await response.json();
+            sisuTransactions = Array.isArray(json) ? json : json.data || json.transactions || json.clients || [];
+            console.log(`[Reconciliation] Successfully fetched ${sisuTransactions.length} deals from ${endpoint}`);
+            if (sisuTransactions.length > 0) break;
+          } else {
+            lastError = `Status ${response.status} from ${endpoint}`;
+          }
+        } catch (err: any) {
+          lastError = err.message || String(err);
+        }
       }
 
-      const json = await response.json();
-      sisuTransactions = Array.isArray(json) ? json : json.data || json.transactions || [];
-    } else {
-      // In dev / mock fallback mode, query existing local transactions with sisu_transaction_id
-      console.warn('SISU_API_KEY not provided; checking local transactions with Sisu IDs');
-      const { data: localList } = await supabase
-        .from('transactions')
-        .select('*')
-        .not('sisu_transaction_id', 'is', null);
+      if (sisuTransactions.length === 0 && lastError) {
+        console.warn(`[Reconciliation] Sisu API endpoints returned no deals (${lastError}). Re-processing logged webhooks.`);
+      }
+    }
 
-      sisuTransactions = (localList || []).map((t) => ({
-        id: t.sisu_transaction_id,
-        status: t.status,
-        property_address: t.property_address,
-        city: t.city,
-        side: t.side,
-        client: { full_name: t.client_name, phone: t.client_phone },
-        other_party: { name: t.other_party_name, agent: t.other_party_agent },
-        contract_date: t.contract_date,
-        updated_at: t.updated_at,
-        milestones: {},
-      }));
+    // 2. Also re-process any unprocessed webhooks from sisu_webhook_log
+    const { data: unprocessedLogs } = await supabase
+      .from('sisu_webhook_log')
+      .select('*')
+      .order('received_at', { ascending: true });
+
+    if (unprocessedLogs && unprocessedLogs.length > 0) {
+      for (const log of unprocessedLogs) {
+        let payload = log.payload;
+        if ((payload.Type === 'Notification' || payload.type === 'Notification') && typeof payload.Message === 'string') {
+          try {
+            payload = JSON.parse(payload.Message);
+          } catch {
+            // ignore
+          }
+        }
+        const dataObj = Array.isArray(payload.data_objects) && payload.data_objects.length > 0 ? payload.data_objects[0] : null;
+        const fullObj = dataObj?.object_data?.full_object || payload.data || payload;
+        const updatedVals = dataObj?.updated_values || {};
+        const sisuTxId = String(
+          payload.transaction_id ||
+          payload.id ||
+          updatedVals.client_id ||
+          fullObj.client_id ||
+          dataObj?.object_data?.guid ||
+          ''
+        );
+        if (sisuTxId && !sisuTransactions.some((t) => String(t.id || t.client_id || t.transaction_id) === sisuTxId)) {
+          sisuTransactions.push({
+            id: sisuTxId,
+            property_address: fullObj.address_1 || updatedVals.address_1 || fullObj.property_address || payload.property_address,
+            city: fullObj.city || updatedVals.city || payload.city || 'Waynesville',
+            side: (fullObj.type_id || updatedVals.type_id || payload.side || 's') === 's' ? 'seller' : 'buyer',
+            status: fullObj.pipeline_status || updatedVals.pipeline_status || payload.status || 'Pre-Listing',
+            client: { full_name: fullObj.full_name || updatedVals.first_name ? `${updatedVals.first_name} ${updatedVals.last_name || ''}`.trim() : payload.client_name },
+            agent_email: dataObj?.object_data?.agent_record?.email || payload.agent_email,
+            milestones: fullObj.milestones || {},
+          });
+        }
+      }
     }
 
     transactionsChecked = sisuTransactions.length;
