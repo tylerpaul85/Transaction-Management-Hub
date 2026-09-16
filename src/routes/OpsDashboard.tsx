@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../integrations/supabase/client';
 import { OpsTransaction, OpsMilestone } from '../types/ops';
 import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
 import { OpsTransactionDetailModal } from '../components/OpsTransactionDetailModal';
@@ -360,6 +361,89 @@ export const OpsDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [reviewOnlyFilter, setReviewOnlyFilter] = useState<boolean>(false);
   const [opsTab, setOpsTab] = useState<'transactions' | 'users'>('transactions');
+
+  // Load live transactions from Supabase
+  useEffect(() => {
+    async function loadLiveTransactions() {
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select(`
+            *,
+            milestones (*)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.warn('Could not fetch Supabase transactions, using seed data:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const mapped: OpsTransaction[] = data.map((t: any) => ({
+            id: t.id,
+            sisu_transaction_id: t.sisu_transaction_id || undefined,
+            status: t.status,
+            property_address: t.property_address,
+            city: t.city,
+            state: 'IL',
+            zip: '60601',
+            side: t.side,
+            client_name: t.client_name,
+            client_phone: t.client_phone || undefined,
+            other_party_name: t.other_party_name || undefined,
+            other_party_agent: t.other_party_agent || undefined,
+            other_party_phone: undefined,
+            other_party_brokerage: undefined,
+            listing_agent_id: t.listing_agent_id,
+            selling_agent_id: t.selling_agent_id,
+            assigned_tc_id: t.assigned_tc_id,
+            agent_name: t.side === 'seller' ? 'Sophia Montgomery' : 'Tyler Miller',
+            agent_email: t.side === 'seller' ? 'sophia.agent@msreg.com' : 'tyler.agent@msreg.com',
+            tc_name: 'Sarah Jenkins',
+            tc_email: 'sarah.tc@msreg.com',
+            contract_date: t.contract_date || undefined,
+            target_closing_date: t.target_closing_date || undefined,
+            flagged_for_review: false,
+            created_at: t.created_at,
+            updated_at: t.updated_at,
+            milestones: (t.milestones || []).map((m: any) => ({
+              id: m.id,
+              transaction_id: m.transaction_id,
+              milestone_type: m.milestone_type,
+              target_date: m.target_date,
+              actual_date: m.actual_date,
+              status: m.status,
+              source: m.source,
+              notes: m.notes,
+              updated_at: m.updated_at,
+            })),
+          }));
+
+          setTransactions(mapped);
+        }
+      } catch (err) {
+        console.warn('Live transactions query error:', err);
+      }
+    }
+
+    loadLiveTransactions();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('realtime_ops_transactions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+        loadLiveTransactions();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'milestones' }, () => {
+        loadLiveTransactions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Toggle Friday review flag
   const handleToggleReviewFlag = (txId: string, e: React.MouseEvent) => {
