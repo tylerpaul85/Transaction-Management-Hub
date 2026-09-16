@@ -196,8 +196,14 @@ serve(async (req: Request) => {
       }
     }
 
-    // Extract transaction ID and event
-    const eventType = payload.event || payload.event_type || payloadEvent || 'transaction.updated';
+    // Extract transaction ID across root, data_objects, or SNS payload wrapper
+    const dataObj = Array.isArray(payload.data_objects) && payload.data_objects.length > 0 ? payload.data_objects[0] : null;
+    const fullObj = dataObj?.object_data?.full_object || {};
+    const updatedVals = dataObj?.updated_values || {};
+    const agentRecord = dataObj?.object_data?.agent_record || {};
+    const requiredVals = dataObj?.required_values || {};
+
+    const eventType = payload.event || payload.event_type || payload.action || payloadEvent || 'transaction.updated';
     const sisuTxId =
       payload.transaction_id ||
       payload.transactionId ||
@@ -205,6 +211,10 @@ serve(async (req: Request) => {
       payload.sisu_id ||
       payload.sisu_transaction_id ||
       payload.entity_id ||
+      updatedVals.client_id ||
+      requiredVals.client_id ||
+      fullObj.client_id ||
+      dataObj?.object_data?.guid ||
       payload.data?.id ||
       payload.data?.transaction_id ||
       payload.data?.transactionId ||
@@ -240,52 +250,31 @@ serve(async (req: Request) => {
       });
     }
 
-    // 3. Handle delta vs full payload
-    // If data is missing full property details, fetch full object from Sisu GET endpoint
-    let sisuData = payload.data || payload;
-    if ((!sisuData.property_address && !sisuData.address) && sisuTxId && sisuApiKey) {
-      try {
-        const getRes = await fetch(`${sisuApiBaseUrl}/transactions/${sisuTxId}`, {
-          headers: {
-            Authorization: `Bearer ${sisuApiKey}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (getRes.ok) {
-          sisuData = await getRes.json();
-        } else {
-          console.warn(`Sisu GET ${sisuTxId} returned ${getRes.status}`);
-        }
-      } catch (fetchErr) {
-        console.warn('Error fetching full transaction from Sisu:', fetchErr);
-      }
+    if (!sisuTxId) {
+      throw new Error('No transaction_id / client_id found in Sisu webhook payload');
     }
 
-    if (!sisuTxId && !sisuData.id) {
-      throw new Error('No transaction_id found in Sisu webhook payload');
-    }
-
-    const finalSisuId = String(sisuTxId || sisuData.id);
+    const finalSisuId = String(sisuTxId);
 
     // 4. Resolve Agent & TC relationships
     let listingAgentId: string | null = null;
     let sellingAgentId: string | null = null;
     let assignedTcId: string | null = null;
 
-    const primaryAgentEmail = sisuData.agents?.primary_agent_email || sisuData.agent_email;
-    const primaryAgentSisuId = sisuData.agents?.primary_agent_id || sisuData.agent_id;
+    const primaryAgentEmail = agentRecord.email || payload.agents?.primary_agent_email || payload.agent_email;
+    const primaryAgentSisuId = agentRecord.agent_id || payload.agents?.primary_agent_id || payload.agent_id;
 
     if (primaryAgentEmail || primaryAgentSisuId) {
       let query = supabase.from('agents').select('id, email, sisu_agent_id');
       if (primaryAgentEmail) {
-        query = query.eq('email', primaryAgentEmail);
+        query = query.eq('email', primaryAgentEmail.toLowerCase());
       } else if (primaryAgentSisuId) {
         query = query.eq('sisu_agent_id', primaryAgentSisuId);
       }
       const { data: matchedAgent } = await query.limit(1).maybeSingle();
       if (matchedAgent) {
-        const sideStr = (sisuData.side || sisuData.transaction_side || '').toLowerCase();
-        if (sideStr === 'seller' || sideStr === 'listing') {
+        const sideType = (fullObj.type_id || updatedVals.type_id || payload.side || payload.transaction_side || '').toLowerCase();
+        if (sideType === 's' || sideType === 'seller' || sideType === 'listing') {
           listingAgentId = matchedAgent.id;
         } else {
           sellingAgentId = matchedAgent.id;
@@ -293,12 +282,12 @@ serve(async (req: Request) => {
       }
     }
 
-    const tcEmail = sisuData.assigned_tc?.email || sisuData.tc_email;
+    const tcEmail = payload.assigned_tc?.email || payload.tc_email;
     if (tcEmail) {
       const { data: matchedTc } = await supabase
         .from('ops_users')
         .select('id')
-        .eq('email', tcEmail)
+        .eq('email', tcEmail.toLowerCase())
         .limit(1)
         .maybeSingle();
       if (matchedTc) {
@@ -307,16 +296,33 @@ serve(async (req: Request) => {
     }
 
     // 5. Upsert Transactions record
-    const address = sisuData.property_address || sisuData.address || 'Unknown Address';
-    const city = sisuData.city || 'Chicago';
-    const side = (sisuData.side || sisuData.transaction_side || 'buyer').toLowerCase();
-    const status = (sisuData.status || sisuData.stage || 'pending').toLowerCase();
+    const address =
+      fullObj.address_1 ||
+      updatedVals.address_1 ||
+      payload.property_address ||
+      payload.address ||
+      'Pending Address';
+
+    const city = fullObj.city || updatedVals.city || payload.city || 'Waynesville';
+
+    const sideType = (fullObj.type_id || updatedVals.type_id || payload.side || payload.transaction_side || '').toLowerCase();
+    const side = (sideType === 's' || sideType === 'seller' || sideType === 'listing') ? 'seller' : 'buyer';
+
+    const rawStatus = (fullObj.pipeline_status || updatedVals.pipeline_status || payload.status || payload.stage || 'Pre-Listing');
+    const status = rawStatus;
+
     const clientName =
-      sisuData.client?.full_name ||
-      sisuData.client?.name ||
-      sisuData.client_name ||
+      fullObj.full_name ||
+      (fullObj.first_name ? `${fullObj.first_name} ${fullObj.last_name || ''}`.trim() : null) ||
+      (updatedVals.first_name ? `${updatedVals.first_name} ${updatedVals.last_name || ''}`.trim() : null) ||
+      payload.client_name ||
       'Unnamed Client';
-    const clientPhone = sisuData.client?.phone || sisuData.client_phone || null;
+
+    const clientPhone =
+      fullObj.mobile_phone ||
+      updatedVals.mobile_phone ||
+      payload.client_phone ||
+      null;
     const otherPartyName = sisuData.other_party?.name || sisuData.other_party_name || null;
     const otherPartyAgent =
       sisuData.other_party?.agent ||
