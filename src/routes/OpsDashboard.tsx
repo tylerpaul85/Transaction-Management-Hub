@@ -86,6 +86,9 @@ export const OpsDashboard: React.FC = () => {
         .from('transactions')
         .select(`
           *,
+          listing_agent:agents!transactions_listing_agent_id_fkey(name, email),
+          selling_agent:agents!transactions_selling_agent_id_fkey(name, email),
+          assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
           milestones (*)
         `)
         .order('created_at', { ascending: false });
@@ -96,53 +99,60 @@ export const OpsDashboard: React.FC = () => {
       }
 
       if (data) {
-        const mapped: OpsTransaction[] = data.map((t: any) => ({
-          id: t.id,
-          sisu_transaction_id: t.sisu_transaction_id || undefined,
-          status: t.status,
-          property_address: t.property_address,
-          city: t.city || 'Chicago',
-          state: 'IL',
-          zip: '60601',
-          side: t.side || 'buyer',
-          client_name: t.client_name || 'Client',
-          client_phone: t.client_phone || undefined,
-          other_party_name: t.other_party_name || undefined,
-          other_party_agent: t.other_party_agent || undefined,
-          other_party_phone: undefined,
-          other_party_brokerage: undefined,
-          listing_agent_id: t.listing_agent_id,
-          selling_agent_id: t.selling_agent_id,
-          assigned_tc_id: t.assigned_tc_id,
-          agent_name: t.side === 'seller' ? 'Sophia Montgomery' : 'Tyler Miller',
-          agent_email: t.side === 'seller' ? 'sophia.agent@msreg.com' : 'tyler.agent@msreg.com',
-          tc_name: 'Sarah Jenkins',
-          tc_email: 'sarah.tc@msreg.com',
-          contract_date: t.contract_date || undefined,
-          target_closing_date: t.target_closing_date || undefined,
-          flagged_for_review: Boolean(t.flagged_for_review),
-          created_at: t.created_at,
-          updated_at: t.updated_at,
-          // LC Fields
-          price: t.price || undefined,
-          list_price: t.list_price || undefined,
-          mls_number: t.mls_number || undefined,
-          listing_date: t.listing_date || undefined,
-          photography_status: t.photography_status || 'scheduled',
-          sign_lockbox_status: t.sign_lockbox_status || 'installed',
-          days_on_market: t.days_on_market || (t.contract_date ? 14 : 7),
-          milestones: (t.milestones || []).map((m: any) => ({
-            id: m.id,
-            transaction_id: m.transaction_id,
-            milestone_type: m.milestone_type,
-            target_date: m.target_date,
-            actual_date: m.actual_date,
-            status: m.status,
-            source: m.source,
-            notes: m.notes,
-            updated_at: m.updated_at,
-          })),
-        }));
+        const mapped: OpsTransaction[] = data.map((t: any) => {
+          const leadAgent = t.side === 'seller' ? t.listing_agent : (t.selling_agent || t.listing_agent);
+          const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
+          const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
+          const tcName = t.assigned_tc?.name || t.tc_name || 'Unassigned TC';
+          const tcEmail = t.assigned_tc?.email || t.tc_email || '';
+
+          return {
+            id: t.id,
+            sisu_transaction_id: t.sisu_transaction_id || undefined,
+            status: t.status,
+            property_address: t.property_address,
+            city: t.city || 'Waynesville',
+            state: t.state || 'MO',
+            zip: t.zip || '65583',
+            side: t.side || 'buyer',
+            client_name: t.client_name || 'Client',
+            client_phone: t.client_phone || undefined,
+            other_party_name: t.other_party_name || undefined,
+            other_party_agent: t.other_party_agent || undefined,
+            other_party_phone: undefined,
+            other_party_brokerage: undefined,
+            listing_agent_id: t.listing_agent_id,
+            selling_agent_id: t.selling_agent_id,
+            assigned_tc_id: t.assigned_tc_id,
+            agent_name: agentName,
+            agent_email: agentEmail,
+            tc_name: tcName,
+            tc_email: tcEmail,
+            contract_date: t.contract_date || undefined,
+            target_closing_date: t.target_closing_date || undefined,
+            flagged_for_review: Boolean(t.flagged_for_review),
+            created_at: t.created_at,
+            updated_at: t.updated_at,
+            price: t.price || undefined,
+            list_price: t.list_price || undefined,
+            mls_number: t.mls_number || undefined,
+            listing_date: t.listing_date || undefined,
+            photography_status: t.photography_status || 'scheduled',
+            sign_lockbox_status: t.sign_lockbox_status || 'installed',
+            days_on_market: t.days_on_market || (t.contract_date ? 14 : 7),
+            milestones: (t.milestones || []).map((m: any) => ({
+              id: m.id,
+              transaction_id: m.transaction_id,
+              milestone_type: m.milestone_type,
+              target_date: m.target_date,
+              actual_date: m.actual_date,
+              status: m.status,
+              source: m.source,
+              notes: m.notes,
+              updated_at: m.updated_at,
+            })),
+          };
+        });
 
         setTransactions(mapped);
       }
