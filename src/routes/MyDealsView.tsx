@@ -128,6 +128,20 @@ export const MyDealsView: React.FC = () => {
     };
   }, []);
 
+  // Auto-select logged in user's agent profile if available
+  useEffect(() => {
+    if (currentUser && selectedAgentFilter === 'All' && agentRoster.length > 0) {
+      const match = agentRoster.find(
+        (a) =>
+          a.name.toLowerCase() === currentUser.fullName?.toLowerCase() ||
+          (currentUser.email && a.email.toLowerCase() === currentUser.email.toLowerCase())
+      );
+      if (match) {
+        setSelectedAgentFilter(match.name);
+      }
+    }
+  }, [currentUser, agentRoster]);
+
   // Filter deals to selected agent profile or current logged-in agent
   const myDeals = useMemo(() => {
     return dealsList.filter((t) => {

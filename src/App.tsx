@@ -110,7 +110,7 @@ const AuthenticatedLayout: React.FC = () => {
         )}
 
         {currentPath === '/my-deals' && (
-          <RoleGuard allowedRoles={['agent']} routeName="/my-deals" onNavigate={handleNavigate}>
+          <RoleGuard allowedRoles={['agent', 'admin', 'tc', 'listing_coordinator']} routeName="/my-deals" onNavigate={handleNavigate}>
             <MyDealsView />
           </RoleGuard>
         )}
