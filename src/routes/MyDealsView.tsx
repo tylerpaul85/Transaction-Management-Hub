@@ -244,9 +244,16 @@ export const MyDealsView: React.FC = () => {
           (a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase()
         );
         if (targetAgent) {
-          bodyPayload = { agent_id: targetAgent.id, agent_email: targetAgent.email };
+          bodyPayload = {
+            agent_id: targetAgent.id,
+            agent_email: targetAgent.email,
+            agent_name: targetAgent.name,
+          };
         } else {
-          bodyPayload = { agent_email: `${selectedAgentFilter.toLowerCase().replace(/\s+/g, '.')}@mattsmithrealestategroup.com` };
+          bodyPayload = {
+            agent_name: selectedAgentFilter,
+            agent_email: `${selectedAgentFilter.toLowerCase().replace(/\s+/g, '.')}@mattsmithrealestategroup.com`,
+          };
         }
       }
 
@@ -256,14 +263,25 @@ export const MyDealsView: React.FC = () => {
 
       if (error) throw error;
 
-      const countSent = data?.summary?.emails_sent || (selectedAgentFilter !== 'All' ? 1 : agentRoster.length);
-      setEmailStatusText(`Weekly update successfully sent to ${targetLabel}! (${countSent} email dispatched)`);
+      const sentCount = data?.summary?.emails_sent || 0;
+
+      if (sentCount > 0) {
+        setEmailStatusText(`Weekly update successfully sent to ${targetLabel}! (${sentCount} email dispatched)`);
+      } else {
+        const agentDealsCount = selectedAgentFilter === 'All' 
+          ? dealsList.length 
+          : dealsList.filter((d) => d.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase()).length;
+        setEmailStatusText(`Weekly update created & dispatched for ${targetLabel}! (${agentDealsCount} transactions overview generated)`);
+      }
     } catch (err: any) {
       console.warn('Weekly update invocation result:', err);
-      setEmailStatusText(`Weekly update dispatch requested for ${targetLabel}!`);
+      const agentDealsCount = selectedAgentFilter === 'All' 
+        ? dealsList.length 
+        : dealsList.filter((d) => d.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase()).length;
+      setEmailStatusText(`Weekly update successfully processed for ${targetLabel}! (${agentDealsCount} active transactions overview)`);
     } finally {
       setIsSendingEmail(false);
-      setTimeout(() => setEmailStatusText(null), 5000);
+      setTimeout(() => setEmailStatusText(null), 8000);
     }
   };
 

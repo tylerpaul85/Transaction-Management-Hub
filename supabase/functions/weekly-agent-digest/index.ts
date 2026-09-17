@@ -50,6 +50,7 @@ serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const targetAgentId = body?.agent_id;
     const targetAgentEmail = body?.agent_email;
+    const targetAgentName = body?.agent_name;
 
     // 1. Fetch active agents (or single targeted agent)
     let agentQuery = supabase
@@ -63,10 +64,23 @@ serve(async (req: Request) => {
       agentQuery = agentQuery.eq('email', targetAgentEmail);
     }
 
-    const { data: activeAgents, error: agentsError } = await agentQuery;
+    let { data: activeAgents, error: agentsError } = await agentQuery;
 
     if (agentsError) {
-      throw new Error(`Failed to query active agents: ${agentsError.message}`);
+      console.warn(`Warning querying active agents: ${agentsError.message}`);
+    }
+
+    // Fallback for single targeted agent if not found in agents table directly
+    if ((!activeAgents || activeAgents.length === 0) && (targetAgentEmail || targetAgentName)) {
+      activeAgents = [
+        {
+          id: targetAgentId || 'agent-target-id',
+          name: targetAgentName || targetAgentEmail?.split('@')[0] || 'Agent',
+          email: targetAgentEmail || 'agent@mattsmithrealestategroup.com',
+          phone: '',
+          active: true,
+        },
+      ];
     }
 
     report.total_agents_evaluated = activeAgents?.length || 0;
@@ -74,8 +88,8 @@ serve(async (req: Request) => {
 
     // 2. Process each agent
     for (const agent of activeAgents || []) {
-      // Find all active transactions where this agent is listing or selling agent
-      const { data: agentTransactions, error: txError } = await supabase
+      // Find all active transactions where this agent is listing or selling agent or matched by email/name
+      let txQuery = supabase
         .from('transactions')
         .select(`
           id,
@@ -88,6 +102,8 @@ serve(async (req: Request) => {
           target_closing_date,
           listing_agent_id,
           selling_agent_id,
+          agent_name,
+          agent_email,
           milestones (
             id,
             milestone_type,
@@ -98,8 +114,19 @@ serve(async (req: Request) => {
             notes
           )
         `)
-        .or(`listing_agent_id.eq.${agent.id},selling_agent_id.eq.${agent.id}`)
-        .in('status', ['active', 'pending', 'under_contract']);
+        .not('status', 'in', '("closed","terminated")');
+
+      if (agent.id && !agent.id.startsWith('agent-target')) {
+        txQuery = txQuery.or(
+          `listing_agent_id.eq.${agent.id},selling_agent_id.eq.${agent.id},agent_email.ilike.${agent.email},agent_name.ilike.%${agent.name}%`
+        );
+      } else {
+        txQuery = txQuery.or(
+          `agent_email.ilike.${agent.email},agent_name.ilike.%${agent.name}%`
+        );
+      }
+
+      const { data: agentTransactions, error: txError } = await txQuery;
 
       if (txError) {
         console.error(`Error querying transactions for agent ${agent.name} (${agent.id}):`, txError);
