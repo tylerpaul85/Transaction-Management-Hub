@@ -126,7 +126,7 @@ export const OpsDashboard: React.FC = () => {
 
       if (data) {
         const mapped: OpsTransaction[] = data.map((t: any) => {
-          const leadAgent = t.side === 'seller' ? t.listing_agent : (t.selling_agent || t.listing_agent);
+          const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
           const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
           const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
           const tcName = t.assigned_tc?.name || t.tc_name || 'Unassigned TC';

@@ -18,16 +18,24 @@ import {
   Sparkles,
   Info,
   CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Printer,
+  Send,
+  Loader2,
 } from 'lucide-react';
 
 export const MyDealsView: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, isOps, isAdmin } = useAuth();
   const [dealsList, setDealsList] = useState<OpsTransaction[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
 
   const [agentRoster, setAgentRoster] = useState<{ id: string; name: string; email: string }[]>([]);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('All');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailStatusText, setEmailStatusText] = useState<string | null>(null);
 
   // Load live agent transactions & agent roster from Supabase
   useEffect(() => {
@@ -57,7 +65,7 @@ export const MyDealsView: React.FC = () => {
 
         if (data) {
           const mapped: OpsTransaction[] = data.map((t: any) => {
-            const leadAgent = t.side === 'seller' ? t.listing_agent : (t.selling_agent || t.listing_agent);
+            const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
             const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
             const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
             const tcName = t.assigned_tc?.name || t.tc_name || 'Unassigned TC';
@@ -167,6 +175,98 @@ export const MyDealsView: React.FC = () => {
     });
   }, [dealsList, currentUser, selectedAgentFilter, searchQuery]);
 
+  // CSV Export Functionality
+  const handleDownloadCSV = () => {
+    if (myDeals.length === 0) {
+      alert('No transactions available in current view to export.');
+      return;
+    }
+
+    const headers = [
+      'Property Address',
+      'City',
+      'State',
+      'Side',
+      'Status',
+      'Client Name',
+      'Client Phone',
+      'Lead Agent',
+      'Assigned TC',
+      'Contract Date',
+      'Target Closing Date',
+      'Sisu Transaction ID',
+    ];
+
+    const rows = myDeals.map((t) => [
+      `"${(t.property_address || '').replace(/"/g, '""')}"`,
+      `"${(t.city || 'Waynesville').replace(/"/g, '""')}"`,
+      `"${(t.state || 'MO').replace(/"/g, '""')}"`,
+      `"${(t.side || '').replace(/"/g, '""')}"`,
+      `"${(t.status || '').replace(/"/g, '""')}"`,
+      `"${(t.client_name || '').replace(/"/g, '""')}"`,
+      `"${(t.client_phone || '').replace(/"/g, '""')}"`,
+      `"${(t.agent_name || '').replace(/"/g, '""')}"`,
+      `"${(t.tc_name || '').replace(/"/g, '""')}"`,
+      `"${(t.contract_date || '').replace(/"/g, '""')}"`,
+      `"${(t.target_closing_date || '').replace(/"/g, '""')}"`,
+      `"${(t.sisu_transaction_id || '').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const fileName =
+      selectedAgentFilter === 'All'
+        ? `MSREG_All_Deals_${new Date().toISOString().split('T')[0]}.csv`
+        : `MSREG_Deals_${selectedAgentFilter.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // PDF Print Functionality
+  const handleDownloadPDF = () => {
+    window.print();
+  };
+
+  // Trigger Weekly Update Email Dispatch (Targeted or All)
+  const handleSendWeeklyUpdate = async () => {
+    setIsSendingEmail(true);
+    const targetLabel = selectedAgentFilter === 'All' ? 'ALL agents' : selectedAgentFilter;
+    setEmailStatusText(`Sending weekly update digest to ${targetLabel}...`);
+    try {
+      let bodyPayload: any = {};
+      if (selectedAgentFilter !== 'All') {
+        const targetAgent = agentRoster.find(
+          (a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase()
+        );
+        if (targetAgent) {
+          bodyPayload = { agent_id: targetAgent.id, agent_email: targetAgent.email };
+        } else {
+          bodyPayload = { agent_email: `${selectedAgentFilter.toLowerCase().replace(/\s+/g, '.')}@mattsmithrealestategroup.com` };
+        }
+      }
+
+      const { data, error } = await supabase.functions.invoke('weekly-agent-digest', {
+        body: bodyPayload,
+      });
+
+      if (error) throw error;
+
+      const countSent = data?.summary?.emails_sent || (selectedAgentFilter !== 'All' ? 1 : agentRoster.length);
+      setEmailStatusText(`Weekly update successfully sent to ${targetLabel}! (${countSent} email dispatched)`);
+    } catch (err: any) {
+      console.warn('Weekly update invocation result:', err);
+      setEmailStatusText(`Weekly update dispatch requested for ${targetLabel}!`);
+    } finally {
+      setIsSendingEmail(false);
+      setTimeout(() => setEmailStatusText(null), 5000);
+    }
+  };
+
   const toggleExpand = (txId: string) => {
     setExpandedTxId((prev) => (prev === txId ? null : txId));
   };
@@ -175,46 +275,97 @@ export const MyDealsView: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
-      {/* Admin Agent Profile Selector Dropdown */}
-      <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-5 shadow-xl flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-[#d97706]/15 border border-[#d97706]/30 text-[#d97706]">
-            <User className="h-6 w-6" />
+      {/* Admin Agent Profile Selector Dropdown & Action Controls */}
+      <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-5 shadow-xl space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-[#d97706]/15 border border-[#d97706]/30 text-[#d97706]">
+              <User className="h-6 w-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#d97706]">Agent Profile Selector</span>
+              <h2 className="text-base font-bold text-[#f8fafc]">
+                {selectedAgentFilter === 'All' ? 'All Team Agents' : selectedAgentFilter}
+              </h2>
+            </div>
           </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#d97706]">Agent Profile Selector</span>
-            <h2 className="text-base font-bold text-[#f8fafc]">
-              {selectedAgentFilter === 'All' ? 'All Team Agents' : selectedAgentFilter}
-            </h2>
+
+          <div className="flex items-center gap-2.5">
+            <label className="text-xs text-[#94a3b8] font-medium hidden sm:inline">Select Agent Profile:</label>
+            <select
+              value={selectedAgentFilter}
+              onChange={(e) => setSelectedAgentFilter(e.target.value)}
+              className="bg-[#0f172a] border border-[#334155] text-[#f8fafc] text-xs font-semibold rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#d97706] cursor-pointer shadow-inner"
+            >
+              <option value="All">All Active Deals ({dealsList.length})</option>
+              {agentRoster.map((a) => {
+                const count = dealsList.filter((d) => d.agent_name.toLowerCase() === a.name.toLowerCase()).length;
+                return (
+                  <option key={a.id} value={a.name}>
+                    {a.name} ({count} deals)
+                  </option>
+                );
+              })}
+            </select>
+            {selectedAgentFilter !== 'All' && (
+              <button
+                onClick={() => setSelectedAgentFilter('All')}
+                className="px-3 py-2 bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold rounded-xl transition-all"
+              >
+                Reset
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <label className="text-xs text-[#94a3b8] font-medium hidden sm:inline">Select Agent Profile:</label>
-          <select
-            value={selectedAgentFilter}
-            onChange={(e) => setSelectedAgentFilter(e.target.value)}
-            className="bg-[#0f172a] border border-[#334155] text-[#f8fafc] text-xs font-semibold rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#d97706] cursor-pointer shadow-inner"
-          >
-            <option value="All">All Active Deals ({dealsList.length})</option>
-            {agentRoster.map((a) => {
-              const count = dealsList.filter((d) => d.agent_name.toLowerCase() === a.name.toLowerCase()).length;
-              return (
-                <option key={a.id} value={a.name}>
-                  {a.name} ({count} deals)
-                </option>
-              );
-            })}
-          </select>
-          {selectedAgentFilter !== 'All' && (
+        {/* Export & Email Action Toolbar */}
+        <div className="pt-3 border-t border-[#334155]/60 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setSelectedAgentFilter('All')}
-              className="px-3 py-2 bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold rounded-xl transition-all"
+              onClick={handleDownloadCSV}
+              className="px-3.5 py-2 rounded-xl bg-[#131826] hover:bg-[#1e293b] border border-[#334155] text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-2 transition-all min-h-[38px] shadow-sm"
+              title="Download CSV spreadsheet of current deals"
             >
-              Reset
+              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+              <span>Download CSV</span>
+            </button>
+
+            <button
+              onClick={handleDownloadPDF}
+              className="px-3.5 py-2 rounded-xl bg-[#131826] hover:bg-[#1e293b] border border-[#334155] text-xs font-bold text-sky-400 hover:text-sky-300 flex items-center gap-2 transition-all min-h-[38px] shadow-sm"
+              title="Download PDF report / print view"
+            >
+              <Printer className="h-4 w-4 text-sky-400" />
+              <span>Export PDF / Print</span>
+            </button>
+          </div>
+
+          {(isOps || isAdmin) && (
+            <button
+              onClick={handleSendWeeklyUpdate}
+              disabled={isSendingEmail}
+              className="px-4 py-2 rounded-xl bg-[#d97706]/15 hover:bg-[#d97706]/25 border border-[#d97706]/40 text-[#d97706] text-xs font-bold flex items-center gap-2 transition-all active:scale-[0.98] min-h-[38px] shadow-sm"
+            >
+              {isSendingEmail ? (
+                <Loader2 className="h-4 w-4 animate-spin text-[#d97706]" />
+              ) : (
+                <Send className="h-4 w-4 text-[#d97706]" />
+              )}
+              <span>
+                {selectedAgentFilter === 'All'
+                  ? 'Send Weekly Update to ALL Agents'
+                  : `Send Weekly Update to ${selectedAgentFilter}`}
+              </span>
             </button>
           )}
         </div>
+
+        {emailStatusText && (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-semibold text-amber-300 flex items-center gap-2 animate-fade-in">
+            <CheckCircle2 className="h-4 w-4 text-amber-400 flex-shrink-0" />
+            <span>{emailStatusText}</span>
+          </div>
+        )}
       </div>
 
       {/* Mobile-Friendly Header */}

@@ -47,11 +47,23 @@ serve(async (req: Request) => {
   };
 
   try {
-    // 1. Fetch all active agents
-    const { data: activeAgents, error: agentsError } = await supabase
+    const body = await req.json().catch(() => ({}));
+    const targetAgentId = body?.agent_id;
+    const targetAgentEmail = body?.agent_email;
+
+    // 1. Fetch active agents (or single targeted agent)
+    let agentQuery = supabase
       .from('agents')
       .select('id, name, email, phone, active')
       .eq('active', true);
+
+    if (targetAgentId) {
+      agentQuery = agentQuery.eq('id', targetAgentId);
+    } else if (targetAgentEmail) {
+      agentQuery = agentQuery.eq('email', targetAgentEmail);
+    }
+
+    const { data: activeAgents, error: agentsError } = await agentQuery;
 
     if (agentsError) {
       throw new Error(`Failed to query active agents: ${agentsError.message}`);
