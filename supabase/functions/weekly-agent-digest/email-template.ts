@@ -56,6 +56,7 @@ export function renderAgentDigestEmail(params: DigestEmailParams): {
 } {
   const {
     agentName,
+    agentEmail = 'agent@mattsmithrealestategroup.com',
     transactions,
     appBaseUrl = 'https://hub.msreg.com',
     frequencyName = 'Weekly',

@@ -52,6 +52,7 @@ serve(async (req: Request) => {
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY') || body?.resend_api_key || '';
     const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || body?.from_email || 'MSREG Operations <onboarding@resend.dev>';
+    const appBaseUrl = Deno.env.get('APP_BASE_URL') || body?.app_base_url || 'https://hub.msreg.com';
 
     // 1. Fetch active agents (or single targeted agent, or explicit list)
     let activeAgents: Array<{ id: string; name: string; email: string; phone?: string; active?: boolean }> = [];
@@ -74,6 +75,8 @@ serve(async (req: Request) => {
         agentQuery = agentQuery.eq('id', targetAgentId);
       } else if (targetAgentEmail) {
         agentQuery = agentQuery.eq('email', targetAgentEmail);
+      } else if (targetAgentName) {
+        agentQuery = agentQuery.ilike('name', `%${targetAgentName}%`);
       }
 
       const { data: dbAgents, error: agentsError } = await agentQuery;
@@ -103,7 +106,24 @@ serve(async (req: Request) => {
 
     // 2. Process each agent
     for (const agent of activeAgents || []) {
-      // Find all active transactions where this agent is listing or selling agent or matched by email/name
+      let resolvedAgentId = agent.id;
+      if (!resolvedAgentId || resolvedAgentId.startsWith('agent-target')) {
+        const { data: matchedAgent } = await supabase
+          .from('agents')
+          .select('id, name, email')
+          .or(`email.ilike.${agent.email},name.ilike.%${agent.name}%`)
+          .limit(1);
+        if (matchedAgent && matchedAgent.length > 0) {
+          resolvedAgentId = matchedAgent[0].id;
+          agent.id = resolvedAgentId;
+          agent.name = matchedAgent[0].name || agent.name;
+          if (!targetAgentEmail) {
+            agent.email = matchedAgent[0].email || agent.email;
+          }
+        }
+      }
+
+      // Find all active transactions where this agent is listing or selling agent
       let txQuery = supabase
         .from('transactions')
         .select(`
@@ -117,8 +137,6 @@ serve(async (req: Request) => {
           target_closing_date,
           listing_agent_id,
           selling_agent_id,
-          agent_name,
-          agent_email,
           milestones (
             id,
             milestone_type,
@@ -131,13 +149,9 @@ serve(async (req: Request) => {
         `)
         .not('status', 'in', '("closed","terminated")');
 
-      if (agent.id && !agent.id.startsWith('agent-target')) {
+      if (resolvedAgentId && !resolvedAgentId.startsWith('agent-target')) {
         txQuery = txQuery.or(
-          `listing_agent_id.eq.${agent.id},selling_agent_id.eq.${agent.id},agent_email.ilike.${agent.email},agent_name.ilike.%${agent.name}%`
-        );
-      } else {
-        txQuery = txQuery.or(
-          `agent_email.ilike.${agent.email},agent_name.ilike.%${agent.name}%`
+          `listing_agent_id.eq.${resolvedAgentId},selling_agent_id.eq.${resolvedAgentId}`
         );
       }
 
