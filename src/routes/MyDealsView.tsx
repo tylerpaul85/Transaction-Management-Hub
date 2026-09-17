@@ -26,10 +26,18 @@ export const MyDealsView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
 
-  // Load live agent transactions from Supabase
+  const [agentRoster, setAgentRoster] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('All');
+
+  // Load live agent transactions & agent roster from Supabase
   useEffect(() => {
     async function loadLiveAgentDeals() {
       try {
+        const { data: dbAgents } = await supabase.from('agents').select('id, name, email').order('name');
+        if (dbAgents) {
+          setAgentRoster(dbAgents);
+        }
+
         const { data, error } = await supabase
           .from('transactions')
           .select(`
@@ -120,15 +128,18 @@ export const MyDealsView: React.FC = () => {
     };
   }, []);
 
-  // Filter deals to only this agent (enforced by RLS)
+  // Filter deals to selected agent profile or current logged-in agent
   const myDeals = useMemo(() => {
-    if (!currentUser) return [];
     return dealsList.filter((t) => {
-      const isMyDeal =
-        t.agent_name.toLowerCase() === currentUser.fullName.toLowerCase() ||
-        t.agent_email === currentUser.email;
-
-      if (!isMyDeal) return false;
+      if (selectedAgentFilter !== 'All') {
+        const isSelectedAgent = t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase();
+        if (!isSelectedAgent) return false;
+      } else if (currentUser && currentUser.role === 'agent') {
+        const isMyDeal =
+          t.agent_name.toLowerCase() === currentUser.fullName.toLowerCase() ||
+          t.agent_email === currentUser.email;
+        if (!isMyDeal) return false;
+      }
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -140,7 +151,7 @@ export const MyDealsView: React.FC = () => {
 
       return true;
     });
-  }, [dealsList, currentUser, searchQuery]);
+  }, [dealsList, currentUser, selectedAgentFilter, searchQuery]);
 
   const toggleExpand = (txId: string) => {
     setExpandedTxId((prev) => (prev === txId ? null : txId));
@@ -150,6 +161,48 @@ export const MyDealsView: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
+      {/* Admin Agent Profile Selector Dropdown */}
+      <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-5 shadow-xl flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-[#d97706]/15 border border-[#d97706]/30 text-[#d97706]">
+            <User className="h-6 w-6" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#d97706]">Agent Profile Selector</span>
+            <h2 className="text-base font-bold text-[#f8fafc]">
+              {selectedAgentFilter === 'All' ? 'All Team Agents' : selectedAgentFilter}
+            </h2>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <label className="text-xs text-[#94a3b8] font-medium hidden sm:inline">Select Agent Profile:</label>
+          <select
+            value={selectedAgentFilter}
+            onChange={(e) => setSelectedAgentFilter(e.target.value)}
+            className="bg-[#0f172a] border border-[#334155] text-[#f8fafc] text-xs font-semibold rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#d97706] cursor-pointer shadow-inner"
+          >
+            <option value="All">All Active Deals ({dealsList.length})</option>
+            {agentRoster.map((a) => {
+              const count = dealsList.filter((d) => d.agent_name.toLowerCase() === a.name.toLowerCase()).length;
+              return (
+                <option key={a.id} value={a.name}>
+                  {a.name} ({count} deals)
+                </option>
+              );
+            })}
+          </select>
+          {selectedAgentFilter !== 'All' && (
+            <button
+              onClick={() => setSelectedAgentFilter('All')}
+              className="px-3 py-2 bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold rounded-xl transition-all"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Mobile-Friendly Header */}
       <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-5 sm:p-6 shadow-xl space-y-3">
         <div className="flex items-center justify-between">
@@ -159,10 +212,10 @@ export const MyDealsView: React.FC = () => {
             </div>
             <div>
               <h1 className="font-editorial text-xl sm:text-2xl font-bold text-[#f8fafc]">
-                My Deals
+                {selectedAgentFilter !== 'All' ? `${selectedAgentFilter}'s Deals` : 'My Deals'}
               </h1>
               <p className="text-xs text-[#94a3b8]">
-                {currentUser.fullName} • Read-Only Escrow Checklist
+                {selectedAgentFilter !== 'All' ? selectedAgentFilter : currentUser.fullName} • Live Agent Portal
               </p>
             </div>
           </div>
@@ -176,8 +229,7 @@ export const MyDealsView: React.FC = () => {
         <div className="p-3 bg-[#131826]/70 rounded-xl border border-[#334155] text-xs text-[#94a3b8] flex items-start gap-2">
           <Info className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
           <span>
-            This is your live, mobile-ready escrow tracker. Milestone updates and compliance checks
-            are managed directly by your assigned Transaction Coordinator (TC).
+            This is the live, mobile-ready escrow tracker for <strong>{selectedAgentFilter !== 'All' ? selectedAgentFilter : currentUser.fullName}</strong>. Milestone updates are managed directly by your assigned TC.
           </span>
         </div>
       </div>
@@ -202,8 +254,7 @@ export const MyDealsView: React.FC = () => {
             <p className="font-semibold text-[#f8fafc]">No active deals found</p>
             <p className="text-xs max-w-sm mx-auto">
               There are currently no active transactions linked to{' '}
-              <strong className="text-[#f8fafc]">{currentUser.fullName}</strong>. Switch to Tyler
-              Miller or Sophia Montgomery in the top bar to inspect live deals.
+              <strong className="text-[#f8fafc]">{selectedAgentFilter !== 'All' ? selectedAgentFilter : currentUser.fullName}</strong>. Use the Agent Profile Selector at the top to preview any team agent's profile.
             </p>
           </div>
         ) : (

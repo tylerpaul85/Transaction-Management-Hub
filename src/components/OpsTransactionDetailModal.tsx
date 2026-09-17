@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../integrations/supabase/client';
 import { OpsTransaction, OpsMilestone, ALL_MILESTONES_CONFIG } from '../types/ops';
 import { MilestoneStatus, MilestoneSource } from '../types/database.types';
 import {
@@ -42,6 +43,67 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
   const [clientName, setClientName] = useState(transaction.client_name);
   const [clientPhone, setClientPhone] = useState(transaction.client_phone || '');
   const [clientEmail, setClientEmail] = useState(transaction.client_email || '');
+
+  // Agent & TC Selection state
+  const initialAgentId =
+    transaction.side === 'seller'
+      ? transaction.listing_agent_id || transaction.selling_agent_id
+      : transaction.selling_agent_id || transaction.listing_agent_id;
+  const [agentId, setAgentId] = useState<string | null>(initialAgentId || null);
+  const [agentName, setAgentName] = useState<string>(transaction.agent_name || 'Lead Agent');
+  const [agentEmail, setAgentEmail] = useState<string>(transaction.agent_email || '');
+
+  const [tcId, setTcId] = useState<string | null>(transaction.assigned_tc_id || null);
+  const [tcName, setTcName] = useState<string>(transaction.tc_name || 'Unassigned TC');
+  const [tcEmail, setTcEmail] = useState<string>(transaction.tc_email || '');
+
+  // Account Rosters from Supabase
+  const [agentRoster, setAgentRoster] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [tcRoster, setTcRoster] = useState<{ id: string; name: string; email: string; role?: string }[]>([]);
+
+  useEffect(() => {
+    async function fetchRosters() {
+      try {
+        const { data: agentsData } = await (supabase
+          .from('agents') as any)
+          .select('id, name, email')
+          .order('name', { ascending: true });
+        if (agentsData && agentsData.length > 0) {
+          setAgentRoster(agentsData as { id: string; name: string; email: string }[]);
+          // If agentId is missing but agentName matches an agent in roster, resolve ID
+          if (!agentId && transaction.agent_name) {
+            const matched = (agentsData as any[]).find(
+              (a) => a.name.toLowerCase() === transaction.agent_name.toLowerCase()
+            );
+            if (matched) {
+              setAgentId(matched.id);
+              setAgentEmail(matched.email);
+            }
+          }
+        }
+
+        const { data: tcData } = await (supabase
+          .from('ops_users') as any)
+          .select('id, name, email, role')
+          .order('name', { ascending: true });
+        if (tcData && tcData.length > 0) {
+          setTcRoster(tcData as { id: string; name: string; email: string; role?: string }[]);
+          if (!tcId && transaction.tc_name) {
+            const matchedTc = (tcData as any[]).find(
+              (t) => t.name.toLowerCase() === transaction.tc_name.toLowerCase()
+            );
+            if (matchedTc) {
+              setTcId(matchedTc.id);
+              setTcEmail(matchedTc.email);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch agent/TC rosters:', err);
+      }
+    }
+    fetchRosters();
+  }, []);
 
   // Other Agent Info (always manual)
   const [otherPartyName, setOtherPartyName] = useState(transaction.other_party_name || '');
@@ -129,6 +191,13 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
       flagged_for_review: flaggedForReview,
       reviewed_at: flaggedForReview ? new Date().toISOString() : null,
       reviewed_by: flaggedForReview ? 'Sarah Jenkins (TC)' : null,
+      listing_agent_id: side === 'seller' ? agentId : (transaction.listing_agent_id || agentId),
+      selling_agent_id: side === 'buyer' ? agentId : (transaction.selling_agent_id || agentId),
+      assigned_tc_id: tcId,
+      agent_name: agentName,
+      agent_email: agentEmail,
+      tc_name: tcName,
+      tc_email: tcEmail,
       updated_at: new Date().toISOString(),
       milestones,
     };
@@ -170,8 +239,8 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                 {address || 'Standardized Transaction Sheet'}
               </h2>
               <p className="text-xs text-[#94a3b8]">
-                Assigned Agent: <strong className="text-[#f8fafc]">{transaction.agent_name}</strong>{' '}
-                • Coordinator: <strong className="text-sky-400">{transaction.tc_name}</strong>
+                Assigned Agent: <strong className="text-[#f8fafc]">{agentName}</strong>{' '}
+                • Coordinator: <strong className="text-sky-400">{tcName}</strong>
               </p>
             </div>
 
@@ -326,6 +395,85 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                       onChange={(e) => setClientName(e.target.value)}
                       className="w-full px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
                     />
+                  </div>
+                </div>
+
+                {/* Agent & TC Selection Dropdowns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[#334155]/60">
+                  <div>
+                    <label className="block text-xs font-bold text-amber-400 mb-1 flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5 text-amber-400" />
+                      <span>Lead Team Agent (Account)</span>
+                    </label>
+                    <select
+                      value={agentId || (agentRoster.find((a) => a.name.toLowerCase() === agentName.toLowerCase())?.id || 'custom')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'unassigned' || !val) {
+                          setAgentId(null);
+                          setAgentName('Unassigned Agent');
+                          setAgentEmail('');
+                        } else if (val !== 'custom') {
+                          const matched = agentRoster.find((a) => a.id === val);
+                          if (matched) {
+                            setAgentId(matched.id);
+                            setAgentName(matched.name);
+                            setAgentEmail(matched.email);
+                          }
+                        }
+                      }}
+                      className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    >
+                      <option value="unassigned">-- Unassigned Agent --</option>
+                      {agentRoster.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name} ({a.email})
+                        </option>
+                      ))}
+                      {!agentRoster.some((a) => a.id === agentId || a.name.toLowerCase() === agentName.toLowerCase()) && agentName && (
+                        <option value="custom">
+                          {agentName} (Current)
+                        </option>
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-sky-400 mb-1 flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-sky-400" />
+                      <span>Assigned Coordinator / TC (Account)</span>
+                    </label>
+                    <select
+                      value={tcId || (tcRoster.find((t) => t.name.toLowerCase() === tcName.toLowerCase())?.id || 'unassigned')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'unassigned' || !val) {
+                          setTcId(null);
+                          setTcName('Unassigned TC');
+                          setTcEmail('');
+                        } else if (val !== 'custom') {
+                          const matched = tcRoster.find((t) => t.id === val);
+                          if (matched) {
+                            setTcId(matched.id);
+                            setTcName(matched.name);
+                            setTcEmail(matched.email);
+                          }
+                        }
+                      }}
+                      className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    >
+                      <option value="unassigned">-- Unassigned TC --</option>
+                      {tcRoster.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.email})
+                        </option>
+                      ))}
+                      {!tcRoster.some((t) => t.id === tcId || t.name.toLowerCase() === tcName.toLowerCase()) && tcName && tcName !== 'Unassigned TC' && (
+                        <option value="custom">
+                          {tcName} (Current)
+                        </option>
+                      )}
+                    </select>
                   </div>
                 </div>
               </div>

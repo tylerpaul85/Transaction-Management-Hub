@@ -39,50 +39,234 @@ serve(async (req: Request) => {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  let transactionsChecked = 0;
-  let transactionsUpdated = 0;
-  let conflictsFound = 0;
-  const runDetails: any[] = [];
+  // Check if request is sending CSV data directly
+  let rawBody = '';
+  try {
+    rawBody = await req.text();
+  } catch {
+    rawBody = '';
+  }
+
+  if (rawBody && (rawBody.trim().startsWith('ID,') || rawBody.includes('Address Line 1') || rawBody.includes('Transaction Amount'))) {
+    console.log('[Reconciliation] Direct CSV payload received. Ingesting transactions...');
+    const lines = rawBody.split(/\r?\n/).filter((l) => l.trim());
+    const resultRows: any[] = [];
+
+    if (lines.length > 1) {
+      const headerLine = lines[0];
+      const header: string[] = [];
+      let inQuote = false;
+      let cur = '';
+      for (let c = 0; c < headerLine.length; c++) {
+        const ch = headerLine[c];
+        if (ch === '"') inQuote = !inQuote;
+        else if (ch === ',' && !inQuote) {
+          header.push(cur.trim().replace(/^"|"$/g, ''));
+          cur = '';
+        } else {
+          cur += ch;
+        }
+      }
+      header.push(cur.trim().replace(/^"|"$/g, ''));
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line || line.startsWith('Below are') || line.startsWith('Total')) break;
+
+        const row: string[] = [];
+        inQuote = false;
+        cur = '';
+        for (let c = 0; c < line.length; c++) {
+          const ch = line[c];
+          if (ch === '"') inQuote = !inQuote;
+          else if (ch === ',' && !inQuote) {
+            row.push(cur.trim().replace(/^"|"$/g, ''));
+            cur = '';
+          } else {
+            cur += ch;
+          }
+        }
+        row.push(cur.trim().replace(/^"|"$/g, ''));
+
+        if (row.length >= 5 && row[0]) {
+          const obj: any = {};
+          header.forEach((h, idx) => {
+            obj[h] = row[idx] || '';
+          });
+          resultRows.push(obj);
+        }
+      }
+    }
+
+    const toUpsert = resultRows.map((r, idx) => {
+      const sisuId = String(r['ID'] || `BATCH-${Date.now()}-${idx}`).trim();
+      const addr = r['Address Line 1'] || r['address'] || 'TBD Address';
+      const city = r['City'] || 'Waynesville';
+      const state = 'MO';
+      const zip = r['Postal Code'] || '';
+      const side = String(r['Transaction Type'] || r['type'] || 'buyer').toLowerCase().includes('sell') ? 'seller' : 'buyer';
+      
+      let status = 'under_contract';
+      const rawStat = String(r['Status'] || r['status'] || '').toLowerCase();
+      if (rawStat.includes('list') || rawStat.includes('active')) {
+        status = 'active';
+      }
+
+      const firstName = r['First Name'] || '';
+      const lastName = r['Last Name'] || '';
+      const clientName = `${firstName} ${lastName}`.trim() || r['client_name'] || 'Client';
+      const clientEmail = r['Contact Email'] || null;
+      const clientPhone = r['Mobile Phone Number'] || null;
+
+      const priceNum = parseFloat(String(r['Transaction Amount'] || '0').replace(/[^0-9.]/g, '')) || null;
+      const contractDate = String(r['Under Contract Date'] || '').slice(0, 10) || new Date().toISOString().split('T')[0];
+      const closingDate = String(r['Forecasted Closed Date'] || r['Closed (Settlement) Date'] || '').slice(0, 10) || null;
+
+      return {
+        sisu_transaction_id: sisuId.startsWith('SISU-') ? sisuId : `SISU-${sisuId}`,
+        property_address: addr,
+        city,
+        state,
+        side,
+        status,
+        client_name: clientName,
+        client_phone: clientPhone,
+        contract_date: contractDate,
+        other_party_agent: r['Cooperating Agent Name'] || null,
+      };
+    });
+
+    if (toUpsert.length > 0) {
+      const { data: inserted, error: insErr } = await supabase
+        .from('transactions')
+        .upsert(toUpsert, { onConflict: 'sisu_transaction_id' })
+        .select();
+
+      if (insErr) {
+        return new Response(JSON.stringify({ error: insErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Successfully ingested ${inserted?.length || toUpsert.length} deals from CSV!`,
+          count: inserted?.length || toUpsert.length,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  }
 
   try {
-    // 1. Fetch active transactions from Sisu API
     let sisuTransactions: any[] = [];
+    const apiAttemptLogs: any[] = [];
+
     if (sisuApiKey) {
+      let rawToken = sisuApiKey;
+      let decodedStr = '';
+      try {
+        decodedStr = atob(sisuApiKey);
+      } catch {
+        decodedStr = '';
+      }
+
+      const tokenParts = decodedStr ? decodedStr.split(':') : [];
+      const extractedToken = tokenParts.length > 1 ? tokenParts[1] : sisuApiKey;
+
+      const authHeaderVariants = [
+        { 'x-api-key': sisuApiKey, 'Authorization': `Bearer ${sisuApiKey}` },
+        { 'x-api-key': extractedToken, 'Authorization': `Bearer ${extractedToken}` },
+        { 'x-api-key': sisuApiKey, 'x-team-id': '1200' },
+        { 'Authorization': `Bearer ${sisuApiKey}`, 'x-team-id': '1200' },
+        { 'Authorization': `Bearer ${extractedToken}` },
+        { 'api-key': sisuApiKey },
+      ];
+
       const endpointsToTry = [
+        `https://beta.sisu.co/api/v2/client`,
+        `https://api.sisu.co/api/v2/client`,
+        `https://my.sisu.co/api/v1/client`,
+        `https://services.sisu.co/api/v1/client`,
+        `${sisuApiBaseUrl}/client?team_id=1200`,
+        `${sisuApiBaseUrl}/clients?team_id=1200`,
+        `${sisuApiBaseUrl}/team/1200/client`,
+        `${sisuApiBaseUrl}/team/1200/clients`,
+        `${sisuApiBaseUrl}/team/1200/transaction`,
+        `${sisuApiBaseUrl}/team/1200/transactions`,
+        `${sisuApiBaseUrl}/transaction?team_id=1200`,
+        `${sisuApiBaseUrl}/transactions?team_id=1200`,
         `${sisuApiBaseUrl}/client`,
+        `${sisuApiBaseUrl}/clients`,
         `${sisuApiBaseUrl}/client/list`,
-        `${sisuApiBaseUrl}/transaction`,
-        `${sisuApiBaseUrl}/transactions`,
-        `https://beta.sisu.co/api/v1/client`,
+        `${sisuApiBaseUrl}/client/list?team_id=1200`,
+        `https://api.sisu.co/api/v1/client?team_id=1200`,
+        `https://api.sisu.co/api/v1/client`,
       ];
 
       let lastError = '';
       for (const endpoint of endpointsToTry) {
-        try {
-          console.log(`[Reconciliation] Trying Sisu API endpoint: ${endpoint}`);
-          const response = await fetch(endpoint, {
-            headers: {
-              'Authorization': `Bearer ${sisuApiKey}`,
-              'x-api-key': sisuApiKey,
-              'Content-Type': 'application/json',
-            },
-          });
+        for (const headersObj of authHeaderVariants) {
+          try {
+            console.log(`[Reconciliation] Requesting Sisu API: ${endpoint}`);
+            const response = await fetch(endpoint, {
+              headers: {
+                ...headersObj,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+            });
 
-          if (response.ok) {
-            const json = await response.json();
-            sisuTransactions = Array.isArray(json) ? json : json.data || json.transactions || json.clients || [];
-            console.log(`[Reconciliation] Successfully fetched ${sisuTransactions.length} deals from ${endpoint}`);
-            if (sisuTransactions.length > 0) break;
-          } else {
-            lastError = `Status ${response.status} from ${endpoint}`;
+            const status = response.status;
+            let responseText = '';
+            try {
+              responseText = await response.text();
+            } catch {
+              responseText = '';
+            }
+
+            let json: any = null;
+            try {
+              json = JSON.parse(responseText);
+            } catch {
+              json = null;
+            }
+
+            apiAttemptLogs.push({
+              endpoint,
+              status,
+              headers: Object.keys(headersObj).join(','),
+              snippet: responseText.slice(0, 150),
+            });
+
+            if (response.ok && json) {
+              const fetchedList = Array.isArray(json)
+                ? json
+                : json.data || json.transactions || json.clients || json.results || [];
+
+              if (Array.isArray(fetchedList) && fetchedList.length > 0) {
+                sisuTransactions = fetchedList;
+                console.log(`[Reconciliation] Successfully pulled ${sisuTransactions.length} deals from ${endpoint}`);
+                break;
+              }
+            } else {
+              lastError = `Status ${status} from ${endpoint}: ${responseText.slice(0, 150)}`;
+            }
+          } catch (err: any) {
+            lastError = err.message || String(err);
+            apiAttemptLogs.push({ endpoint, error: lastError });
           }
-        } catch (err: any) {
-          lastError = err.message || String(err);
         }
+        if (sisuTransactions.length > 0) break;
       }
 
       if (sisuTransactions.length === 0 && lastError) {
-        console.warn(`[Reconciliation] Sisu API endpoints returned no deals (${lastError}). Re-processing logged webhooks.`);
+        console.warn(`[Reconciliation] Sisu API endpoints returned no deals (${lastError}). Diagnostic logs recorded.`);
       }
     }
 
@@ -322,7 +506,7 @@ serve(async (req: Request) => {
         conflicts_found: conflictsFound,
         duration_ms: durationMs,
         status: 'completed',
-        details: { items: runDetails },
+        details: { items: runDetails, api_attempts: apiAttemptLogs },
       })
       .select('id')
       .single();
@@ -335,6 +519,7 @@ serve(async (req: Request) => {
         transactions_updated: transactionsUpdated,
         conflicts_found: conflictsFound,
         duration_ms: durationMs,
+        api_attempts: apiAttemptLogs,
       }),
       {
         status: 200,

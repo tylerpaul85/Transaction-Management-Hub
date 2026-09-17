@@ -107,42 +107,80 @@ export const AdminUserManagement: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const newProfile: DbProfile = {
-        id: crypto.randomUUID ? crypto.randomUUID() : `p-${Date.now()}`,
-        email: emailNormalized,
-        name: formData.name.trim(),
-        full_name: formData.name.trim(),
-        role: formData.role,
-        agent_id: formData.role === 'agent' && formData.agentId ? formData.agentId : null,
-        ops_user_id: (formData.role === 'tc' || formData.role === 'listing_coordinator' || formData.role === 'admin') && formData.opsUserId ? formData.opsUserId : null,
-        active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      let agentId = formData.role === 'agent' && formData.agentId ? formData.agentId : null;
+      let opsUserId = (formData.role === 'tc' || formData.role === 'listing_coordinator' || formData.role === 'admin') && formData.opsUserId ? formData.opsUserId : null;
 
-      // 1. Insert into Supabase profiles
-      const { error: insertError } = await (supabase.from('profiles') as any).insert({
-        id: newProfile.id,
-        email: newProfile.email,
-        name: newProfile.name,
-        full_name: newProfile.full_name,
-        role: newProfile.role,
-        agent_id: newProfile.agent_id,
-        ops_user_id: newProfile.ops_user_id,
-        active: true,
-      });
+      // Auto-create agent record if adding an agent and no agent linked yet
+      if (formData.role === 'agent' && !agentId) {
+        const { data: existingAgent } = await (supabase
+          .from('agents') as any)
+          .select('id')
+          .eq('email', emailNormalized)
+          .maybeSingle();
 
-      if (insertError) {
-        console.warn('Supabase profile insert error, saving locally:', insertError);
+        if (existingAgent) {
+          agentId = (existingAgent as any).id;
+        } else {
+          const { data: newAgent } = await (supabase.from('agents') as any)
+            .insert({
+              name: formData.name.trim(),
+              email: emailNormalized,
+              active: true,
+            })
+            .select('id')
+            .single();
+          if (newAgent) agentId = (newAgent as any).id;
+        }
       }
 
-      // 2. Trigger Welcome Email via Resend edge function / API
+      // Auto-create ops_user record if adding TC/LC/Admin and no ops user linked yet
+      if (formData.role !== 'agent' && !opsUserId) {
+        const { data: existingOps } = await (supabase
+          .from('ops_users') as any)
+          .select('id')
+          .eq('email', emailNormalized)
+          .maybeSingle();
+
+        if (existingOps) {
+          opsUserId = (existingOps as any).id;
+        } else {
+          const { data: newOps } = await (supabase.from('ops_users') as any)
+            .insert({
+              name: formData.name.trim(),
+              email: emailNormalized,
+              role: formData.role === 'admin' ? 'admin' : formData.role === 'listing_coordinator' ? 'listing_coordinator' : 'tc',
+            })
+            .select('id')
+            .single();
+          if (newOps) opsUserId = (newOps as any).id;
+        }
+      }
+
+      // Insert into Supabase profiles
+      const { data: insertedProfile, error: insertError } = await (supabase.from('profiles') as any)
+        .insert({
+          email: emailNormalized,
+          name: formData.name.trim(),
+          full_name: formData.name.trim(),
+          role: formData.role,
+          agent_id: agentId,
+          ops_user_id: opsUserId,
+          active: true,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        throw new Error(`Failed to create profile: ${insertError.message}`);
+      }
+
+      // Trigger Welcome Email via Resend edge function / API
       try {
         await supabase.functions.invoke('send-user-welcome', {
           body: {
-            name: newProfile.name,
-            email: newProfile.email,
-            role: newProfile.role,
+            name: formData.name.trim(),
+            email: emailNormalized,
+            role: formData.role,
             appBaseUrl: window.location.origin,
             googleDomain: import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com',
           },
@@ -151,9 +189,13 @@ export const AdminUserManagement: React.FC = () => {
         console.warn('Could not dispatch welcome email:', emailErr);
       }
 
-      // Update state
-      setProfiles((prev) => [newProfile, ...prev]);
-      showToast(`User ${newProfile.name} added and welcome notification sent!`);
+      // Re-fetch profiles from Supabase to guarantee state matches DB
+      const { data: updatedProfiles } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      if (updatedProfiles) {
+        setProfiles(updatedProfiles as unknown as DbProfile[]);
+      }
+
+      showToast(`User ${formData.name.trim()} added and saved to database!`);
 
       // Reset form
       setFormData({
@@ -166,6 +208,7 @@ export const AdminUserManagement: React.FC = () => {
       });
       setIsAddModalOpen(false);
     } catch (err: any) {
+      console.error('Add user error:', err);
       showToast(err.message || 'Failed to add user', 'error');
     } finally {
       setIsSubmitting(false);

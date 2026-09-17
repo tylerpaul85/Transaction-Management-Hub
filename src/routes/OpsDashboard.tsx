@@ -92,8 +92,21 @@ export const OpsDashboard: React.FC = () => {
   const [newListingAgent, setNewListingAgent] = useState('');
   const [newListingPhotoStatus, setNewListingPhotoStatus] = useState<'pending' | 'scheduled' | 'completed'>('scheduled');
 
+  const [allAgentProfiles, setAllAgentProfiles] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [allOpsUsers, setAllOpsUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+
   const loadLiveTransactions = async () => {
     try {
+      const { data: agentsData } = await supabase.from('agents').select('id, name, email').order('name');
+      if (agentsData) {
+        setAllAgentProfiles(agentsData);
+      }
+
+      const { data: opsData } = await supabase.from('ops_users').select('id, name, email').order('name');
+      if (opsData) {
+        setAllOpsUsers(opsData);
+      }
+
       const { data, error } = await supabase
         .from('transactions')
         .select(`
@@ -333,6 +346,9 @@ export const OpsDashboard: React.FC = () => {
           client_phone: newEscrowClientPhone || null,
           contract_date: newEscrowContractDate || new Date().toISOString().split('T')[0],
           target_closing_date: newEscrowClosingDate || null,
+          listing_agent_id: newEscrowSide === 'seller' ? (newEscrowAgent || null) : null,
+          selling_agent_id: newEscrowSide === 'buyer' ? (newEscrowAgent || null) : null,
+          assigned_tc_id: newEscrowTc || null,
         })
         .select()
         .single();
@@ -356,10 +372,12 @@ export const OpsDashboard: React.FC = () => {
       setNewEscrowAddress('');
       setNewEscrowClient('');
       setNewEscrowClientPhone('');
+      setNewEscrowAgent('');
+      setNewEscrowTc('');
       await loadLiveTransactions();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create escrow transaction:', err);
-      alert('Could not save transaction. Check console for details.');
+      alert(`Could not save transaction: ${err?.message || String(err)}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -383,6 +401,7 @@ export const OpsDashboard: React.FC = () => {
         client_phone: newListingClientPhone || null,
         price: numericPrice,
         contract_date: newListingDate || new Date().toISOString().split('T')[0],
+        listing_agent_id: newListingAgent || null,
       });
 
       if (txErr) throw txErr;
@@ -393,10 +412,11 @@ export const OpsDashboard: React.FC = () => {
       setNewListingMls('');
       setNewListingClient('');
       setNewListingClientPhone('');
+      setNewListingAgent('');
       await loadLiveTransactions();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create listing:', err);
-      alert('Could not save listing. Check console for details.');
+      alert(`Could not save listing: ${err?.message || String(err)}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -424,9 +444,71 @@ export const OpsDashboard: React.FC = () => {
     }
   };
 
-  const handleSaveTransaction = (updatedTx: OpsTransaction) => {
+  const handleSaveTransaction = async (updatedTx: OpsTransaction) => {
     setTransactions((prev) => prev.map((t) => (t.id === updatedTx.id ? updatedTx : t)));
     setSelectedTx(updatedTx);
+
+    try {
+      const updatePayload: any = {
+        property_address: updatedTx.property_address,
+        city: updatedTx.city,
+        status: updatedTx.status,
+        side: updatedTx.side,
+        contract_date: updatedTx.contract_date || null,
+        client_name: updatedTx.client_name,
+        client_phone: updatedTx.client_phone || null,
+        client_email: updatedTx.client_email || null,
+        other_party_name: updatedTx.other_party_name || null,
+        other_party_agent: updatedTx.other_party_agent || null,
+        other_party_phone: updatedTx.other_party_phone || null,
+        other_party_brokerage: updatedTx.other_party_brokerage || null,
+        flagged_for_review: updatedTx.flagged_for_review,
+        listing_agent_id: updatedTx.listing_agent_id || null,
+        selling_agent_id: updatedTx.selling_agent_id || null,
+        assigned_tc_id: updatedTx.assigned_tc_id || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: txErr } = await (supabase
+        .from('transactions') as any)
+        .update(updatePayload)
+        .eq('id', updatedTx.id);
+
+      if (txErr) {
+        console.error('Error persisting transaction edit to Supabase:', txErr);
+      }
+
+      if (updatedTx.milestones && updatedTx.milestones.length > 0) {
+        const milestoneUpserts = updatedTx.milestones.map((m) => {
+          const payload: any = {
+            transaction_id: updatedTx.id,
+            milestone_type: m.milestone_type,
+            target_date: m.target_date || null,
+            actual_date: m.actual_date || null,
+            status: m.status,
+            source: m.source,
+            notes: m.notes || null,
+            updated_at: m.updated_at || new Date().toISOString(),
+          };
+          if (m.id && !m.id.startsWith('m-new-')) {
+            payload.id = m.id;
+          }
+          return payload;
+        });
+
+        const { error: msErr } = await (supabase
+          .from('milestones') as any)
+          .upsert(milestoneUpserts, { onConflict: 'transaction_id,milestone_type' });
+
+        if (msErr) {
+          console.error('Error persisting milestones edit to Supabase:', msErr);
+        }
+      }
+
+      await loadLiveTransactions();
+    } catch (err) {
+      console.error('Failed to save transaction to Supabase:', err);
+    }
   };
 
   // Distinct Filter Options
@@ -438,9 +520,10 @@ export const OpsDashboard: React.FC = () => {
 
   const agentOptions = useMemo(() => {
     const set = new Set<string>();
+    allAgentProfiles.forEach((a) => { if (a.name) set.add(a.name); });
     transactions.forEach((t) => { if (t.agent_name) set.add(t.agent_name); });
     return Array.from(set).sort();
-  }, [transactions]);
+  }, [allAgentProfiles, transactions]);
 
   const allStatusOptions = useMemo(() => {
     const set = new Set<string>();
@@ -1151,6 +1234,43 @@ export const OpsDashboard: React.FC = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-amber-400 uppercase mb-1">
+                    Lead Team Agent
+                  </label>
+                  <select
+                    value={newEscrowAgent}
+                    onChange={(e) => setNewEscrowAgent(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                  >
+                    <option value="">-- Select Team Agent --</option>
+                    {allAgentProfiles.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} ({a.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-sky-400 uppercase mb-1">
+                    Assigned TC / Coordinator
+                  </label>
+                  <select
+                    value={newEscrowTc}
+                    onChange={(e) => setNewEscrowTc(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                  >
+                    <option value="">-- Unassigned TC --</option>
+                    {allOpsUsers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#334155]">
                 <button
                   type="button"
@@ -1211,6 +1331,24 @@ export const OpsDashboard: React.FC = () => {
                   placeholder="e.g. 1428 N State Parkway"
                   className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-amber-400 uppercase mb-1">
+                  Listing Team Agent (Account)
+                </label>
+                <select
+                  value={newListingAgent}
+                  onChange={(e) => setNewListingAgent(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                >
+                  <option value="">-- Select Team Agent --</option>
+                  {allAgentProfiles.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({a.email})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
