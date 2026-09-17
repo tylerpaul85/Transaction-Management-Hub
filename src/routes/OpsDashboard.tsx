@@ -5,6 +5,7 @@ import { OpsTransaction, OpsMilestone, ALL_MILESTONES_CONFIG } from '../types/op
 import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
 import { OpsTransactionDetailModal } from '../components/OpsTransactionDetailModal';
 import { AdminUserManagement } from '../components/AdminUserManagement';
+import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
 import {
   Settings,
   Search,
@@ -36,6 +37,8 @@ import {
   Phone,
   ExternalLink,
   Upload,
+  Mail,
+  Send,
 } from 'lucide-react';
 
 export const OpsDashboard: React.FC = () => {
@@ -57,6 +60,7 @@ export const OpsDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [reviewOnlyFilter, setReviewOnlyFilter] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   // Quick Add Modals
   const [isAddEscrowModalOpen, setIsAddEscrowModalOpen] = useState(false);
@@ -530,6 +534,25 @@ export const OpsDashboard: React.FC = () => {
     return Array.from(set).sort();
   }, [allAgentProfiles, transactions]);
 
+  const selectedAgentDealCount = useMemo(() => {
+    if (agentFilter === 'All') return transactions.length;
+    return transactions.filter(
+      (t) => (t.agent_name || '').toLowerCase() === agentFilter.toLowerCase()
+    ).length;
+  }, [transactions, agentFilter]);
+
+  const selectedAgentEmail = useMemo(() => {
+    if (agentFilter === 'All') return '';
+    const matchProfile = allAgentProfiles.find(
+      (a) => a.name.toLowerCase() === agentFilter.toLowerCase()
+    );
+    if (matchProfile?.email) return matchProfile.email;
+    const matchTx = transactions.find(
+      (t) => (t.agent_name || '').toLowerCase() === agentFilter.toLowerCase()
+    );
+    return matchTx?.agent_email || '';
+  }, [allAgentProfiles, transactions, agentFilter]);
+
   const allStatusOptions = useMemo(() => {
     const set = new Set<string>();
     transactions.forEach((t) => { if (t.status) set.add(t.status); });
@@ -686,6 +709,24 @@ export const OpsDashboard: React.FC = () => {
             >
               <Plus className="h-3.5 w-3.5" />
               <span>+ Add Listing (LC)</span>
+            </button>
+
+            {/* Dynamic Agent Update Email Button */}
+            <button
+              onClick={() => setIsEmailModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-[#0f172a] border border-emerald-500/40 text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px] shadow-sm active:scale-[0.98] cursor-pointer"
+              title={
+                agentFilter === 'All'
+                  ? 'Send weekly file update email digests to all agents'
+                  : `Send weekly file update email digest to ${agentFilter}`
+              }
+            >
+              <Mail className="h-3.5 w-3.5 text-emerald-400" />
+              <span>
+                {agentFilter === 'All'
+                  ? 'Send Email to All Agents'
+                  : `Send Email to ${agentFilter} (${selectedAgentDealCount})`}
+              </span>
             </button>
 
             {/* Friday Review Filter */}
@@ -874,6 +915,22 @@ export const OpsDashboard: React.FC = () => {
                   </option>
                 ))}
               </select>
+
+              {/* Quick-action email button beside agent filter */}
+              <button
+                onClick={() => setIsEmailModalOpen(true)}
+                className="px-3 py-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+                title={
+                  agentFilter === 'All'
+                    ? 'Send weekly file updates to all agents'
+                    : `Send weekly file update to ${agentFilter}`
+                }
+              >
+                <Mail className="h-3.5 w-3.5 text-emerald-400" />
+                <span>
+                  {agentFilter === 'All' ? 'Email All' : `Email ${agentFilter}`}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -1534,6 +1591,23 @@ export const OpsDashboard: React.FC = () => {
           transaction={selectedTx}
           onClose={() => setSelectedTx(null)}
           onSave={handleSaveTransaction}
+        />
+      )}
+
+      {/* Interactive Agent Update Email Dispatch Modal */}
+      {isEmailModalOpen && (
+        <AgentDigestEmailModal
+          agentName={agentFilter}
+          agentEmail={selectedAgentEmail}
+          transactions={
+            agentFilter === 'All'
+              ? transactions
+              : transactions.filter(
+                  (t) => (t.agent_name || '').toLowerCase() === agentFilter.toLowerCase()
+                )
+          }
+          allAgentProfiles={allAgentProfiles}
+          onClose={() => setIsEmailModalOpen(false)}
         />
       )}
     </div>

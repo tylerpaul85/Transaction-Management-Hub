@@ -595,16 +595,19 @@ export const MyDealsView: React.FC = () => {
       {/* Interactive Email Digest Preview & Send Modal */}
       {isEmailModalOpen && (
         <AgentDigestEmailModal
-          agentName={selectedAgentFilter === 'All' ? 'Tyler Paul' : selectedAgentFilter}
+          agentName={selectedAgentFilter}
           agentEmail={
-            agentRoster.find((a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase())?.email ||
-            'tyler.p@mattsmithrealestategroup.com'
+            selectedAgentFilter === 'All'
+              ? ''
+              : agentRoster.find((a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase())?.email ||
+                'agent@mattsmithrealestategroup.com'
           }
           transactions={
             selectedAgentFilter === 'All'
               ? dealsList
               : dealsList.filter((d) => d.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase())
           }
+          allAgentProfiles={agentRoster}
           onClose={() => setIsEmailModalOpen(false)}
         />
       )}

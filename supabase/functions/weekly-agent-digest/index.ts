@@ -23,46 +23,79 @@ serve(async (req: Request) => {
   const startTime = Date.now();
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  const report = {
+    started_at: new Date().toISOString(),
+    total_agents_evaluated: 0,
+    emails_sent: 0,
+    agents_skipped_zero_deals: 0,
+    errors_count: 0,
+    dispatches: [] as Array<{
+      agent_id: string;
+      agent_name: string;
+      agent_email: string;
+      transaction_count: number;
+      resend_message_id: string | null;
+      status: 'sent' | 'skipped' | 'failed';
+      error?: string;
+    }>,
+  };
+
+  try {
     const body = await req.json().catch(() => ({}));
     const targetAgentId = body?.agent_id;
     const targetAgentEmail = body?.agent_email;
     const targetAgentName = body?.agent_name;
+    const targetAgentsList: Array<{ id?: string; name: string; email: string }> | undefined = body?.target_agents;
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY') || body?.resend_api_key || '';
     const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || body?.from_email || 'MSREG Operations <onboarding@resend.dev>';
-    const targetAgentId = body?.agent_id;
-    const targetAgentEmail = body?.agent_email;
-    const targetAgentName = body?.agent_name;
 
-    // 1. Fetch active agents (or single targeted agent)
-    let agentQuery = supabase
-      .from('agents')
-      .select('id, name, email, phone, active')
-      .eq('active', true);
+    // 1. Fetch active agents (or single targeted agent, or explicit list)
+    let activeAgents: Array<{ id: string; name: string; email: string; phone?: string; active?: boolean }> = [];
 
-    if (targetAgentId) {
-      agentQuery = agentQuery.eq('id', targetAgentId);
-    } else if (targetAgentEmail) {
-      agentQuery = agentQuery.eq('email', targetAgentEmail);
-    }
+    if (Array.isArray(targetAgentsList) && targetAgentsList.length > 0) {
+      activeAgents = targetAgentsList.map((a, idx) => ({
+        id: a.id || `agent-target-${idx}`,
+        name: a.name || 'Agent',
+        email: a.email || 'agent@mattsmithrealestategroup.com',
+        phone: '',
+        active: true,
+      }));
+    } else {
+      let agentQuery = supabase
+        .from('agents')
+        .select('id, name, email, phone, active')
+        .eq('active', true);
 
-    let { data: activeAgents, error: agentsError } = await agentQuery;
+      if (targetAgentId) {
+        agentQuery = agentQuery.eq('id', targetAgentId);
+      } else if (targetAgentEmail) {
+        agentQuery = agentQuery.eq('email', targetAgentEmail);
+      }
 
-    if (agentsError) {
-      console.warn(`Warning querying active agents: ${agentsError.message}`);
-    }
+      const { data: dbAgents, error: agentsError } = await agentQuery;
 
-    // Fallback for single targeted agent if not found in agents table directly
-    if ((!activeAgents || activeAgents.length === 0) && (targetAgentEmail || targetAgentName)) {
-      activeAgents = [
-        {
-          id: targetAgentId || 'agent-target-id',
-          name: targetAgentName || targetAgentEmail?.split('@')[0] || 'Agent',
-          email: targetAgentEmail || 'agent@mattsmithrealestategroup.com',
-          phone: '',
-          active: true,
-        },
-      ];
+      if (agentsError) {
+        console.warn(`Warning querying active agents: ${agentsError.message}`);
+      }
+
+      activeAgents = dbAgents || [];
+
+      // Fallback for single targeted agent if not found in agents table directly
+      if (activeAgents.length === 0 && (targetAgentEmail || targetAgentName)) {
+        activeAgents = [
+          {
+            id: targetAgentId || 'agent-target-id',
+            name: targetAgentName || targetAgentEmail?.split('@')[0] || 'Agent',
+            email: targetAgentEmail || 'agent@mattsmithrealestategroup.com',
+            phone: '',
+            active: true,
+          },
+        ];
+      }
     }
 
     report.total_agents_evaluated = activeAgents?.length || 0;
