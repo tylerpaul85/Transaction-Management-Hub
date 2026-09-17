@@ -25,6 +25,7 @@ import {
   Send,
   Loader2,
 } from 'lucide-react';
+import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
 
 export const MyDealsView: React.FC = () => {
   const { currentUser, isOps, isAdmin } = useAuth();
@@ -36,6 +37,9 @@ export const MyDealsView: React.FC = () => {
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('All');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailStatusText, setEmailStatusText] = useState<string | null>(null);
+
+  // Email Digest Modal state
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   // Load live agent transactions & agent roster from Supabase
   useEffect(() => {
@@ -232,57 +236,9 @@ export const MyDealsView: React.FC = () => {
     window.print();
   };
 
-  // Trigger Weekly Update Email Dispatch (Targeted or All)
-  const handleSendWeeklyUpdate = async () => {
-    setIsSendingEmail(true);
-    const targetLabel = selectedAgentFilter === 'All' ? 'ALL agents' : selectedAgentFilter;
-    setEmailStatusText(`Sending weekly update digest to ${targetLabel}...`);
-    try {
-      let bodyPayload: any = {};
-      if (selectedAgentFilter !== 'All') {
-        const targetAgent = agentRoster.find(
-          (a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase()
-        );
-        if (targetAgent) {
-          bodyPayload = {
-            agent_id: targetAgent.id,
-            agent_email: targetAgent.email,
-            agent_name: targetAgent.name,
-          };
-        } else {
-          bodyPayload = {
-            agent_name: selectedAgentFilter,
-            agent_email: `${selectedAgentFilter.toLowerCase().replace(/\s+/g, '.')}@mattsmithrealestategroup.com`,
-          };
-        }
-      }
-
-      const { data, error } = await supabase.functions.invoke('weekly-agent-digest', {
-        body: bodyPayload,
-      });
-
-      if (error) throw error;
-
-      const sentCount = data?.summary?.emails_sent || 0;
-
-      if (sentCount > 0) {
-        setEmailStatusText(`Weekly update successfully sent to ${targetLabel}! (${sentCount} email dispatched)`);
-      } else {
-        const agentDealsCount = selectedAgentFilter === 'All' 
-          ? dealsList.length 
-          : dealsList.filter((d) => d.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase()).length;
-        setEmailStatusText(`Weekly update created & dispatched for ${targetLabel}! (${agentDealsCount} transactions overview generated)`);
-      }
-    } catch (err: any) {
-      console.warn('Weekly update invocation result:', err);
-      const agentDealsCount = selectedAgentFilter === 'All' 
-        ? dealsList.length 
-        : dealsList.filter((d) => d.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase()).length;
-      setEmailStatusText(`Weekly update successfully processed for ${targetLabel}! (${agentDealsCount} active transactions overview)`);
-    } finally {
-      setIsSendingEmail(false);
-      setTimeout(() => setEmailStatusText(null), 8000);
-    }
+  // Trigger Weekly Update Email Dispatch Modal (Targeted or All)
+  const handleSendWeeklyUpdate = () => {
+    setIsEmailModalOpen(true);
   };
 
   const toggleExpand = (txId: string) => {
@@ -635,6 +591,23 @@ export const MyDealsView: React.FC = () => {
           })
         )}
       </div>
+
+      {/* Interactive Email Digest Preview & Send Modal */}
+      {isEmailModalOpen && (
+        <AgentDigestEmailModal
+          agentName={selectedAgentFilter === 'All' ? 'Tyler Paul' : selectedAgentFilter}
+          agentEmail={
+            agentRoster.find((a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase())?.email ||
+            'tyler.p@mattsmithrealestategroup.com'
+          }
+          transactions={
+            selectedAgentFilter === 'All'
+              ? dealsList
+              : dealsList.filter((d) => d.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase())
+          }
+          onClose={() => setIsEmailModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
