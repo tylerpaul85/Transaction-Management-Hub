@@ -233,6 +233,12 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
             }
           : null,
         overdue_milestones: overdue,
+        milestones: milestonesList.map((m) => ({
+          milestone_type: m.milestone_type,
+          status: m.status,
+          target_date: m.target_date,
+          actual_date: m.actual_date,
+        })),
       };
     });
   }, [currentAgentTransactions, todayStr]);

@@ -20,6 +20,12 @@ export interface DigestTransactionItem {
     status: string;
     days_overdue: number;
   }>;
+  milestones?: Array<{
+    milestone_type: string;
+    status: string;
+    target_date?: string | null;
+    actual_date?: string | null;
+  }>;
 }
 
 export const MILESTONE_LABELS: Record<string, string> = {
@@ -38,6 +44,67 @@ export const MILESTONE_LABELS: Record<string, string> = {
   closing: 'Closing & Settlement',
 };
 
+export const MILESTONE_ORDER_SEQUENCE = [
+  { key: 'earnest_money', aliases: ['earnest_money'], shortLabel: 'EMD', label: 'Earnest Money Deposit' },
+  { key: 'inspection_10day', aliases: ['inspection_10day', 'inspection_notice_sent', 'inspection_ordered'], shortLabel: 'INSP', label: 'Inspection Resolution' },
+  { key: 'appraisal_satisfied', aliases: ['appraisal_satisfied', 'appraisal_received', 'appraisal_ordered'], shortLabel: 'APP', label: 'Appraisal Clearance' },
+  { key: 'financing_contingency', aliases: ['financing_contingency'], shortLabel: 'FIN', label: 'Loan Commitment' },
+  { key: 'title', aliases: ['title'], shortLabel: 'TITLE', label: 'Title Clearance' },
+  { key: 'ctc', aliases: ['ctc'], shortLabel: 'CTC', label: 'Clear to Close' },
+  { key: 'closing', aliases: ['closing'], shortLabel: 'CLOSE', label: 'Closing & Funding' },
+];
+
+export function renderMilestoneSequenceHtml(milestones?: Array<{ milestone_type: string; status: string }>): string {
+  const list = milestones || [];
+
+  const pillsHtml = MILESTONE_ORDER_SEQUENCE.map((item, idx) => {
+    const match = list.find((m) => item.aliases.includes(m.milestone_type));
+    const status = (match?.status || 'pending').toLowerCase();
+
+    let bg = '#d97706';
+    let text = '#0f172a';
+    let border = '#f59e0b';
+
+    if (status === 'satisfied') {
+      bg = '#10b981';
+      text = '#0f172a';
+      border = '#34d399';
+    } else if (status === 'ordered' || status === 'notice_sent') {
+      bg = '#0ea5e9';
+      text = '#0f172a';
+      border = '#38bdf8';
+    } else if (status === 'waived') {
+      bg = '#6366f1';
+      text = '#ffffff';
+      border = '#818cf8';
+    } else if (status === 'na') {
+      bg = '#1e293b';
+      text = '#64748b';
+      border = '#334155';
+    }
+
+    const pill = `<span style="display: inline-block; padding: 2.5px 8px; border-radius: 9999px; font-size: 9px; font-family: monospace, sans-serif; font-weight: 800; background-color: ${bg}; color: ${text}; border: 1px solid ${border}; vertical-align: middle;">${item.shortLabel}</span>`;
+
+    const connector =
+      idx < MILESTONE_ORDER_SEQUENCE.length - 1
+        ? `<span style="display: inline-block; width: 6px; height: 2px; background-color: #334155; vertical-align: middle; margin: 0 1.5px;"></span>`
+        : '';
+
+    return pill + connector;
+  }).join('');
+
+  return `
+    <div style="margin-top: 12px; padding: 10px 12px; background-color: #141c2e; border: 1px solid #293548; border-radius: 10px;">
+      <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;">
+        ESCROW MILESTONE PROGRESS:
+      </div>
+      <div style="line-height: 1.6; white-space: nowrap; overflow-x: auto;">
+        ${pillsHtml}
+      </div>
+    </div>
+  `;
+}
+
 export function renderAgentDigestEmail(params: {
   agentName: string;
   agentEmail: string;
@@ -50,6 +117,7 @@ export function renderAgentDigestEmail(params: {
 } {
   const {
     agentName,
+    agentEmail,
     transactions,
     frequencyName = 'Weekly',
   } = params;
@@ -74,6 +142,8 @@ export function renderAgentDigestEmail(params: {
       const sideColor = tx.side.toLowerCase() === 'buyer' ? '#10b981' : '#d97706';
       const sideBg = tx.side.toLowerCase() === 'buyer' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.12)';
       const sideBorder = tx.side.toLowerCase() === 'buyer' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(217, 119, 6, 0.3)';
+
+      const milestoneSeqHtml = renderMilestoneSequenceHtml(tx.milestones);
 
       const overdueHtml =
         tx.overdue_milestones && tx.overdue_milestones.length > 0
@@ -126,6 +196,7 @@ export function renderAgentDigestEmail(params: {
             </div>
           </div>
 
+          ${milestoneSeqHtml}
           ${upcomingHtml}
           ${overdueHtml}
         </div>
@@ -153,6 +224,9 @@ export function renderAgentDigestEmail(params: {
       </p>
     </div>
     ${transactionRowsHtml}
+    <div style="text-align: center; font-size: 11px; color: #64748b; padding-top: 16px; border-top: 1px solid #334155;">
+      Sent automatically to ${agentEmail} • MSREG Operations
+    </div>
   </div>
 </body>
 </html>
@@ -166,13 +240,20 @@ You currently have ${totalDeals} active escrow(s).
 
 ${transactions
   .map(
-    (t) => `
+    (t) => {
+      const milestoneText = (t.milestones || [])
+        .map((m) => `${m.milestone_type}: ${m.status}`)
+        .join(' | ');
+
+      return `
 - ${t.property_address} (${t.side} Rep)
   Client: ${t.client_name}
   Target Closing: ${t.target_closing_date || 'N/A'}
+  Milestones: ${milestoneText || 'In progress'}
   Next Milestone: ${t.next_milestone ? `${t.next_milestone.label} (${t.next_milestone.target_date})` : 'Up to date'}
   ${t.overdue_milestones.length > 0 ? `Overdue Items: ${t.overdue_milestones.map((o) => o.label).join(', ')}` : ''}
-`
+`;
+    }
   )
   .join('\n')}
 `;

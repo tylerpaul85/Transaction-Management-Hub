@@ -21,6 +21,12 @@ export interface DigestTransactionItem {
     status: string;
     days_overdue: number;
   }>;
+  milestones?: Array<{
+    milestone_type: string;
+    status: string;
+    target_date?: string | null;
+    actual_date?: string | null;
+  }>;
 }
 
 export interface DigestEmailParams {
@@ -48,6 +54,67 @@ export const MILESTONE_LABELS: Record<string, string> = {
   ctc: 'Clear-to-Close (CTC)',
   closing: 'Closing & Settlement',
 };
+
+export const MILESTONE_ORDER_SEQUENCE = [
+  { key: 'earnest_money', aliases: ['earnest_money'], shortLabel: 'EMD', label: 'Earnest Money Deposit' },
+  { key: 'inspection_10day', aliases: ['inspection_10day', 'inspection_notice_sent', 'inspection_ordered'], shortLabel: 'INSP', label: 'Inspection Resolution' },
+  { key: 'appraisal_satisfied', aliases: ['appraisal_satisfied', 'appraisal_received', 'appraisal_ordered'], shortLabel: 'APP', label: 'Appraisal Clearance' },
+  { key: 'financing_contingency', aliases: ['financing_contingency'], shortLabel: 'FIN', label: 'Loan Commitment' },
+  { key: 'title', aliases: ['title'], shortLabel: 'TITLE', label: 'Title Clearance' },
+  { key: 'ctc', aliases: ['ctc'], shortLabel: 'CTC', label: 'Clear to Close' },
+  { key: 'closing', aliases: ['closing'], shortLabel: 'CLOSE', label: 'Closing & Funding' },
+];
+
+export function renderMilestoneSequenceHtml(milestones?: Array<{ milestone_type: string; status: string }>): string {
+  const list = milestones || [];
+
+  const pillsHtml = MILESTONE_ORDER_SEQUENCE.map((item, idx) => {
+    const match = list.find((m) => item.aliases.includes(m.milestone_type));
+    const status = (match?.status || 'pending').toLowerCase();
+
+    let bg = '#d97706';
+    let text = '#0f172a';
+    let border = '#f59e0b';
+
+    if (status === 'satisfied') {
+      bg = '#10b981';
+      text = '#0f172a';
+      border = '#34d399';
+    } else if (status === 'ordered' || status === 'notice_sent') {
+      bg = '#0ea5e9';
+      text = '#0f172a';
+      border = '#38bdf8';
+    } else if (status === 'waived') {
+      bg = '#6366f1';
+      text = '#ffffff';
+      border = '#818cf8';
+    } else if (status === 'na') {
+      bg = '#1e293b';
+      text = '#64748b';
+      border = '#334155';
+    }
+
+    const pill = `<span style="display: inline-block; padding: 2.5px 8px; border-radius: 9999px; font-size: 9px; font-family: monospace, sans-serif; font-weight: 800; background-color: ${bg}; color: ${text}; border: 1px solid ${border}; vertical-align: middle;">${item.shortLabel}</span>`;
+
+    const connector =
+      idx < MILESTONE_ORDER_SEQUENCE.length - 1
+        ? `<span style="display: inline-block; width: 6px; height: 2px; background-color: #334155; vertical-align: middle; margin: 0 1.5px;"></span>`
+        : '';
+
+    return pill + connector;
+  }).join('');
+
+  return `
+    <div style="margin-top: 12px; padding: 10px 12px; background-color: #141c2e; border: 1px solid #293548; border-radius: 10px;">
+      <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;">
+        ESCROW MILESTONE PROGRESS:
+      </div>
+      <div style="line-height: 1.6; white-space: nowrap; overflow-x: auto;">
+        ${pillsHtml}
+      </div>
+    </div>
+  `;
+}
 
 export function renderAgentDigestEmail(params: DigestEmailParams): {
   subject: string;
@@ -85,6 +152,8 @@ export function renderAgentDigestEmail(params: DigestEmailParams): {
       const sideColor = tx.side.toLowerCase() === 'buyer' ? '#10b981' : '#d97706';
       const sideBg = tx.side.toLowerCase() === 'buyer' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.12)';
       const sideBorder = tx.side.toLowerCase() === 'buyer' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(217, 119, 6, 0.3)';
+
+      const milestoneSeqHtml = renderMilestoneSequenceHtml(tx.milestones);
 
       // Overdue Callout HTML
       const overdueHtml =
@@ -139,6 +208,7 @@ export function renderAgentDigestEmail(params: DigestEmailParams): {
             </div>
           </div>
 
+          ${milestoneSeqHtml}
           ${upcomingHtml}
           ${overdueHtml}
         </div>
@@ -180,23 +250,28 @@ export function renderAgentDigestEmail(params: DigestEmailParams): {
             <td style="padding: 16px 24px 8px 24px;">
               <table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="padding: 12px; background-color: #1e293b; border-radius: 10px; border: 1px solid #334155; text-align: center;" width="48%">
-                    <div style="font-size: 20px; font-weight: 800; color: #10b981; font-family: monospace;">${totalDeals}</div>
-                    <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Active Deals</div>
+                  <td style="padding: 12px; background-color: #1e293b; border: 1px solid #334155; border-radius: 10px; width: 48%; vertical-align: top;">
+                    <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Active Escrows</div>
+                    <div style="font-size: 22px; font-weight: 800; color: #38bdf8; margin-top: 4px; font-family: monospace;">${totalDeals}</div>
                   </td>
-                  <td width="4%">&nbsp;</td>
-                  <td style="padding: 12px; background-color: ${totalOverdueCount > 0 ? 'rgba(239, 68, 68, 0.15)' : '#1e293b'}; border-radius: 10px; border: 1px solid ${totalOverdueCount > 0 ? 'rgba(239, 68, 68, 0.4)' : '#334155'}; text-align: center;" width="48%">
-                    <div style="font-size: 20px; font-weight: 800; color: ${totalOverdueCount > 0 ? '#ef4444' : '#94a3b8'}; font-family: monospace;">${totalOverdueCount}</div>
-                    <div style="font-size: 11px; font-weight: 700; color: ${totalOverdueCount > 0 ? '#ef4444' : '#94a3b8'}; text-transform: uppercase;">Overdue Items</div>
+                  <td style="width: 4%;"></td>
+                  <td style="padding: 12px; background-color: #1e293b; border: 1px solid #334155; border-radius: 10px; width: 48%; vertical-align: top;">
+                    <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Action Required</div>
+                    <div style="font-size: 22px; font-weight: 800; color: ${totalOverdueCount > 0 ? '#ef4444' : '#10b981'}; margin-top: 4px; font-family: monospace;">
+                      ${totalOverdueCount} Overdue
+                    </div>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Deals List -->
+          <!-- Transactions List -->
           <tr>
             <td style="padding: 16px 24px;">
+              <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 12px;">
+                Current Active Files (${totalDeals})
+              </div>
               ${transactionRowsHtml}
             </td>
           </tr>
@@ -245,6 +320,9 @@ ${transactions
     block += `   Client: ${tx.client_name}\n`;
     if (tx.target_closing_date) {
       block += `   Target Close: ${tx.target_closing_date}\n`;
+    }
+    if (tx.milestones && tx.milestones.length > 0) {
+      block += `   Milestones: ${tx.milestones.map((m) => `${m.milestone_type}: ${m.status}`).join(' | ')}\n`;
     }
     if (tx.next_milestone) {
       block += `   Next Milestone: ${tx.next_milestone.label} (Target: ${tx.next_milestone.target_date || 'TBD'})\n`;

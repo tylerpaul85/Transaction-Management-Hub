@@ -237,6 +237,12 @@ serve(async (req: Request) => {
               }
             : null,
           overdue_milestones: overdueMilestones,
+          milestones: milestonesList.map((m: any) => ({
+            milestone_type: m.milestone_type,
+            status: m.status,
+            target_date: m.target_date,
+            actual_date: m.actual_date,
+          })),
         };
       });
 
