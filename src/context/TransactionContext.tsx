@@ -276,7 +276,18 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setActiveDetailTab('overview');
   };
 
-  const updateTransactionStage = (trxId: string, newStage: TransactionStage) => {
+  const updateTransactionStage = async (trxId: string, newStage: TransactionStage) => {
+    let dbStatus = 'active';
+    if (newStage === 'intake') dbStatus = 'pre_listing';
+    else if (
+      newStage === 'escrow_opened' ||
+      newStage === 'inspection' ||
+      newStage === 'appraisal_loan' ||
+      newStage === 'clear_to_close'
+    )
+      dbStatus = 'under_contract';
+    else if (newStage === 'closed') dbStatus = 'closed';
+
     setTransactions((prev) =>
       prev.map((t) => {
         if (t.id !== trxId) return t;
@@ -298,6 +309,14 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         };
       })
     );
+
+    try {
+      await (supabase.from('transactions') as any)
+        .update({ status: dbStatus, updated_at: new Date().toISOString() })
+        .eq('id', trxId);
+    } catch (e) {
+      console.error('Failed to persist transaction stage update to Supabase:', e);
+    }
   };
 
   const updateContingencyStatus = (
@@ -395,13 +414,15 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     );
   };
 
-  const toggleMilestone = (trxId: string, milestoneId: string) => {
+  const toggleMilestone = async (trxId: string, milestoneId: string) => {
+    let milestoneToSync: { completed: boolean } | null = null;
     setTransactions((prev) =>
       prev.map((t) => {
         if (t.id !== trxId) return t;
         const updatedMilestones = t.milestones.map((m) => {
           if (m.id !== milestoneId) return m;
           const nextCompleted = !m.completed;
+          milestoneToSync = { completed: nextCompleted };
           return {
             ...m,
             completed: nextCompleted,
@@ -414,6 +435,20 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         };
       })
     );
+
+    if (milestoneToSync && !milestoneId.startsWith('m-new-')) {
+      try {
+        await (supabase.from('milestones') as any)
+          .update({
+            status: (milestoneToSync as any).completed ? 'satisfied' : 'pending',
+            actual_date: (milestoneToSync as any).completed ? new Date().toISOString().split('T')[0] : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', milestoneId);
+      } catch (e) {
+        console.error('Failed to persist milestone toggle to Supabase:', e);
+      }
+    }
   };
 
   const addActivityNote = (

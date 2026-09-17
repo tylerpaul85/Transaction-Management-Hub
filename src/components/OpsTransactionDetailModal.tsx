@@ -197,8 +197,8 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
       flagged_for_review: flaggedForReview,
       reviewed_at: flaggedForReview ? new Date().toISOString() : null,
       reviewed_by: flaggedForReview ? 'Sarah Jenkins (TC)' : null,
-      listing_agent_id: validAgentId,
-      selling_agent_id: validAgentId,
+      listing_agent_id: side === 'seller' || side === 'dual' ? validAgentId : transaction.listing_agent_id,
+      selling_agent_id: side === 'buyer' || side === 'dual' ? validAgentId : transaction.selling_agent_id,
       assigned_tc_id: validTcId,
       agent_name: agentName,
       agent_email: agentEmail,
@@ -370,6 +370,8 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                       <option value="active">Active</option>
                       <option value="pending">Pending</option>
                       <option value="under_contract">Under Contract</option>
+                      <option value="pre_listing">Pre-Listing</option>
+                      <option value="coming_soon">Coming Soon</option>
                       <option value="closed">Closed</option>
                       <option value="terminated">Terminated</option>
                     </select>

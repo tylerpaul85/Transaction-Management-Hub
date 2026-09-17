@@ -487,7 +487,7 @@ export const OpsDashboard: React.FC = () => {
 
       if (updatedTx.milestones && updatedTx.milestones.length > 0) {
         const milestoneUpserts = updatedTx.milestones.map((m) => {
-          const payload: any = {
+          return {
             transaction_id: updatedTx.id,
             milestone_type: m.milestone_type,
             target_date: m.target_date || null,
@@ -497,10 +497,6 @@ export const OpsDashboard: React.FC = () => {
             notes: m.notes || null,
             updated_at: m.updated_at || new Date().toISOString(),
           };
-          if (m.id && !m.id.startsWith('m-new-')) {
-            payload.id = m.id;
-          }
-          return payload;
         });
 
         const { error: msErr } = await (supabase
