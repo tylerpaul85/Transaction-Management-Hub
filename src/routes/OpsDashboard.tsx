@@ -444,6 +444,9 @@ export const OpsDashboard: React.FC = () => {
     }
   };
 
+  const isValidUuid = (str: any) =>
+    typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
   const handleSaveTransaction = async (updatedTx: OpsTransaction) => {
     setTransactions((prev) => prev.map((t) => (t.id === updatedTx.id ? updatedTx : t)));
     setSelectedTx(updatedTx);
@@ -463,9 +466,9 @@ export const OpsDashboard: React.FC = () => {
         other_party_phone: updatedTx.other_party_phone || null,
         other_party_brokerage: updatedTx.other_party_brokerage || null,
         flagged_for_review: updatedTx.flagged_for_review,
-        listing_agent_id: updatedTx.listing_agent_id || null,
-        selling_agent_id: updatedTx.selling_agent_id || null,
-        assigned_tc_id: updatedTx.assigned_tc_id || null,
+        listing_agent_id: isValidUuid(updatedTx.listing_agent_id) ? updatedTx.listing_agent_id : null,
+        selling_agent_id: isValidUuid(updatedTx.selling_agent_id) ? updatedTx.selling_agent_id : null,
+        assigned_tc_id: isValidUuid(updatedTx.assigned_tc_id) ? updatedTx.assigned_tc_id : null,
         updated_at: new Date().toISOString(),
       };
 
@@ -476,6 +479,7 @@ export const OpsDashboard: React.FC = () => {
 
       if (txErr) {
         console.error('Error persisting transaction edit to Supabase:', txErr);
+        throw txErr;
       }
 
       if (updatedTx.milestones && updatedTx.milestones.length > 0) {
@@ -502,12 +506,14 @@ export const OpsDashboard: React.FC = () => {
 
         if (msErr) {
           console.error('Error persisting milestones edit to Supabase:', msErr);
+          throw msErr;
         }
       }
 
       await loadLiveTransactions();
     } catch (err) {
       console.error('Failed to save transaction to Supabase:', err);
+      throw err;
     }
   };
 

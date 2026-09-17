@@ -173,7 +173,13 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
     );
   };
 
-  const handleSaveAll = () => {
+  const isValidUuid = (str: string | null) =>
+    Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
+
+  const handleSaveAll = async () => {
+    const validAgentId = isValidUuid(agentId) ? agentId : null;
+    const validTcId = isValidUuid(tcId) ? tcId : null;
+
     const updatedTx: OpsTransaction = {
       ...transaction,
       property_address: address,
@@ -191,9 +197,9 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
       flagged_for_review: flaggedForReview,
       reviewed_at: flaggedForReview ? new Date().toISOString() : null,
       reviewed_by: flaggedForReview ? 'Sarah Jenkins (TC)' : null,
-      listing_agent_id: agentId,
-      selling_agent_id: agentId,
-      assigned_tc_id: tcId,
+      listing_agent_id: validAgentId,
+      selling_agent_id: validAgentId,
+      assigned_tc_id: validTcId,
       agent_name: agentName,
       agent_email: agentEmail,
       tc_name: tcName,
@@ -202,9 +208,14 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
       milestones,
     };
 
-    onSave(updatedTx);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+    try {
+      await onSave(updatedTx);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    } catch (err: any) {
+      console.error('Failed to save transaction:', err);
+      alert(`Save failed: ${err.message || String(err)}`);
+    }
   };
 
   return (
