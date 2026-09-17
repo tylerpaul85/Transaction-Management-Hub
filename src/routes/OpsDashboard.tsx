@@ -31,6 +31,10 @@ import {
   Home,
   Check,
   X,
+  LayoutGrid,
+  Table,
+  Phone,
+  ExternalLink,
 } from 'lucide-react';
 
 export const OpsDashboard: React.FC = () => {
@@ -51,6 +55,7 @@ export const OpsDashboard: React.FC = () => {
   const [agentFilter, setAgentFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [reviewOnlyFilter, setReviewOnlyFilter] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
 
   // Quick Add Modals
   const [isAddEscrowModalOpen, setIsAddEscrowModalOpen] = useState(false);
@@ -670,220 +675,246 @@ export const OpsDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Table Container */}
-          <div className="bg-[#1e293b] border border-[#334155] rounded-2xl overflow-hidden shadow-xl">
-            <div className="p-4 border-b border-[#334155] bg-[#131826] flex items-center justify-between">
+          {/* Main Content Container with Cards / Table View Toggle */}
+          <div className="space-y-4">
+            <div className="bg-[#1e293b] p-4 rounded-2xl border border-[#334155] flex items-center justify-between shadow-md">
               <div className="flex items-center gap-2">
-                <h2 className="font-editorial text-base font-bold text-[#f8fafc]">
-                  {activeSection === 'tc_escrows' && `TC Escrows Under Contract (${displayList.length})`}
-                  {activeSection === 'lc_listings' && `LC Listings Pipeline (${displayList.length})`}
-                  {activeSection === 'all_files' && `Master Deals (${displayList.length})`}
+                <h2 className="font-editorial text-lg font-bold text-[#f8fafc]">
+                  {activeSection === 'tc_escrows' && `Active TC Escrows (${displayList.length})`}
+                  {activeSection === 'lc_listings' && `Current LC Listings (${displayList.length})`}
+                  {activeSection === 'all_files' && `Master Active Files (${displayList.length})`}
                 </h2>
               </div>
-              <span className="text-xs text-[#94a3b8]">
-                Click any row to open the complete details & milestone sheet
-              </span>
+
+              {/* View Switcher: Cards vs Table */}
+              <div className="flex items-center gap-1 bg-[#131826] p-1 rounded-xl border border-[#334155]">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    viewMode === 'cards'
+                      ? 'bg-[#d97706] text-[#0f172a] shadow-md'
+                      : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span>Cards</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    viewMode === 'table'
+                      ? 'bg-[#d97706] text-[#0f172a] shadow-md'
+                      : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  }`}
+                >
+                  <Table className="h-3.5 w-3.5" />
+                  <span>Table</span>
+                </button>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
-                <thead className="bg-[#131826]/70 text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wider border-b border-[#334155]">
-                  <tr>
-                    <th className="py-3.5 px-3 text-center">Review</th>
-                    <th className="py-3.5 px-4">Property Address</th>
-                    <th className="py-3.5 px-4">Client</th>
-                    <th className="py-3.5 px-3">Status / Side</th>
-                    {activeSection === 'lc_listings' ? (
-                      <>
-                        <th className="py-3.5 px-3">Listing Price</th>
-                        <th className="py-3.5 px-3">MLS / Photos</th>
-                        <th className="py-3.5 px-3">DOM</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="py-3.5 px-3">Contract Date</th>
-                        <th className="py-3.5 px-4">
-                          <div className="flex items-center gap-1">
-                            <span>Milestones</span>
-                            <span className="text-[10px] text-slate-500 font-mono-code font-normal">
-                              (EMD → INSP → APP → FIN → TITLE → CTC → CLOSE)
-                            </span>
-                          </div>
-                        </th>
-                      </>
-                    )}
-                    <th className="py-3.5 px-4">Assigned TC / Agent</th>
-                    <th className="py-3.5 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#334155]/60">
-                  {displayList.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-16 text-center text-[#94a3b8]">
-                        <div className="max-w-md mx-auto space-y-3">
-                          <Building className="h-10 w-10 mx-auto text-[#94a3b8]/30" />
-                          <p className="font-bold text-[#f8fafc] text-base">No active records found</p>
-                          <p className="text-xs text-[#94a3b8]">
-                            {activeSection === 'lc_listings'
-                              ? 'No seller listings are currently in the database. Add a new listing below or sync with Sisu.'
-                              : 'No contract-to-close escrow files found. Add an under-contract deal or sync with Sisu.'}
-                          </p>
-                          <div className="flex items-center justify-center gap-3 pt-2">
-                            {activeSection === 'lc_listings' ? (
-                              <button
-                                onClick={() => setIsAddListingModalOpen(true)}
-                                className="px-4 py-2 bg-[#d97706] text-[#0f172a] rounded-xl font-bold text-xs hover:bg-[#b45309] transition-all"
-                              >
-                                + Add First Listing
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => setIsAddEscrowModalOpen(true)}
-                                className="px-4 py-2 bg-sky-500 text-[#0f172a] rounded-xl font-bold text-xs hover:bg-sky-400 transition-all"
-                              >
-                                + Add First Escrow Deal
-                              </button>
-                            )}
-                            <button
-                              onClick={handleSyncSisu}
-                              className="px-4 py-2 bg-[#131826] border border-[#334155] text-[#f8fafc] rounded-xl font-bold text-xs hover:bg-[#1e293b] transition-all"
-                            >
-                              Sync Sisu Deals
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    displayList.map((tx) => (
-                      <tr
-                        key={tx.id}
-                        onClick={() => setSelectedTx(tx)}
-                        className="hover:bg-[#131826]/60 cursor-pointer transition-colors group"
-                      >
-                        {/* Friday Review Flag */}
-                        <td className="py-3.5 px-3 text-center" onClick={(e) => handleToggleReviewFlag(tx.id, e)}>
-                          <button
-                            title={
-                              tx.flagged_for_review
-                                ? 'Flagged for Friday double-check review'
-                                : 'Click to flag for Friday review'
-                            }
-                            className={`p-1.5 rounded-lg border transition-all ${
-                              tx.flagged_for_review
-                                ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm'
-                                : 'bg-[#131826] text-slate-500 border-[#334155] hover:text-amber-400'
+            {displayList.length === 0 ? (
+              <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-12 text-center text-[#94a3b8] space-y-4 shadow-xl">
+                <Building className="h-12 w-12 mx-auto text-[#94a3b8]/30" />
+                <p className="font-bold text-[#f8fafc] text-lg">No active files found</p>
+                <p className="text-xs text-[#94a3b8] max-w-md mx-auto">
+                  {activeSection === 'lc_listings'
+                    ? 'No seller listings match your current filters. Click below to create a listing or resync.'
+                    : 'No active contract-to-close escrow files match your filters. Click below to add an escrow deal.'}
+                </p>
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <button
+                    onClick={() => (activeSection === 'lc_listings' ? setIsAddListingModalOpen(true) : setIsAddEscrowModalOpen(true))}
+                    className="px-5 py-2.5 bg-[#d97706] text-[#0f172a] rounded-xl font-bold text-xs hover:bg-[#b45309] transition-all shadow-md"
+                  >
+                    + Add New Active File
+                  </button>
+                </div>
+              </div>
+            ) : viewMode === 'cards' ? (
+              /* CARDS GRID VIEW */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {displayList.map((tx) => {
+                  const isUnderContract = tx.status === 'under_contract' || tx.status === 'pending';
+
+                  return (
+                    <div
+                      key={tx.id}
+                      onClick={() => setSelectedTx(tx)}
+                      className="bg-[#1e293b] border border-[#334155] hover:border-[#d97706]/60 rounded-3xl p-5 shadow-xl hover:shadow-2xl transition-all cursor-pointer group flex flex-col justify-between space-y-4 relative overflow-hidden"
+                    >
+                      {/* Top Header Strip */}
+                      <div className="flex items-start justify-between gap-2 border-b border-[#334155]/60 pb-3">
+                        <div className="space-y-1">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+                              tx.status === 'under_contract'
+                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                : tx.status === 'pending'
+                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
                             }`}
                           >
-                            <Flag
-                              className={`h-4 w-4 ${
-                                tx.flagged_for_review ? 'fill-amber-400 text-amber-400' : ''
-                              }`}
-                            />
-                          </button>
-                        </td>
-
-                        {/* Property Address */}
-                        <td className="py-3.5 px-4">
-                          <span className="font-editorial font-bold text-sm text-[#f8fafc] group-hover:text-[#d97706] transition-colors block">
-                            {tx.property_address}
+                            {tx.status.replace(/_/g, ' ').toUpperCase()} • {tx.side.toUpperCase()} REP
                           </span>
-                          <span className="text-xs text-[#94a3b8]">
-                            {tx.city}, {tx.state || 'IL'} •{' '}
-                            <strong className="text-slate-400 font-mono-code">
-                              {tx.sisu_transaction_id || 'MSREG Hub Live'}
-                            </strong>
+                          <span className="text-[11px] text-[#94a3b8] font-mono-code block">
+                            File ID: {tx.sisu_transaction_id || tx.id.substring(0, 8)}
                           </span>
-                        </td>
+                        </div>
 
-                        {/* Client Name & Phone */}
-                        <td className="py-3.5 px-4">
-                          <span className="font-medium text-[#f8fafc] block">{tx.client_name}</span>
-                          {tx.client_phone && (
-                            <span className="text-xs text-[#94a3b8] font-mono-code">
-                              {tx.client_phone}
-                            </span>
-                          )}
-                        </td>
+                        {/* Review Flag */}
+                        <button
+                          onClick={(e) => handleToggleReviewFlag(tx.id, e)}
+                          title={tx.flagged_for_review ? 'Flagged for Friday Review' : 'Flag for Friday Review'}
+                          className={`p-2 rounded-xl border transition-all ${
+                            tx.flagged_for_review
+                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm'
+                              : 'bg-[#131826] text-slate-500 border-[#334155] hover:text-amber-400'
+                          }`}
+                        >
+                          <Flag className={`h-4 w-4 ${tx.flagged_for_review ? 'fill-amber-400 text-amber-400' : ''}`} />
+                        </button>
+                      </div>
 
-                        {/* Side / Status */}
-                        <td className="py-3.5 px-3">
-                          <div className="flex flex-col gap-1 items-start">
-                            <span
-                              className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                                tx.side === 'buyer'
-                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                                  : 'bg-[#d97706]/15 text-[#d97706] border-[#d97706]/30'
+                      {/* Main Address Headline */}
+                      <div className="space-y-1">
+                        <h3 className="font-editorial text-lg font-bold text-[#f8fafc] group-hover:text-[#d97706] transition-colors line-clamp-2">
+                          {tx.property_address}
+                        </h3>
+                        <p className="text-xs text-[#94a3b8] font-medium">
+                          {tx.city}, {tx.state} {tx.zip}
+                        </p>
+                      </div>
+
+                      {/* Client Info Block */}
+                      <div className="bg-[#131826] p-3 rounded-2xl border border-[#334155]/60 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#94a3b8] font-medium">Client:</span>
+                          <span className="font-bold text-[#f8fafc]">{tx.client_name}</span>
+                        </div>
+                        {tx.client_phone && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#94a3b8] font-medium">Phone:</span>
+                            <a
+                              href={`tel:${tx.client_phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-mono-code text-sky-400 hover:underline flex items-center gap-1"
+                            >
+                              <Phone className="h-3 w-3" />
+                              <span>{tx.client_phone}</span>
+                            </a>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-1 border-t border-[#334155]/40 text-[11px]">
+                          <span className="text-sky-400 font-semibold">TC: {tx.tc_name}</span>
+                          <span className="text-[#94a3b8] font-medium">Agent: {tx.agent_name}</span>
+                        </div>
+                      </div>
+
+                      {/* Milestones Strip */}
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[10px] text-[#94a3b8] font-bold uppercase tracking-wider block">
+                          Escrow Milestone Progress:
+                        </span>
+                        <MilestoneDotSequence milestones={tx.milestones} onMilestoneClick={() => setSelectedTx(tx)} />
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="pt-2 border-t border-[#334155]/60 flex items-center justify-between gap-2">
+                        <span className="text-xs text-[#94a3b8] font-mono-code">
+                          {tx.target_closing_date ? `Close: ${tx.target_closing_date}` : tx.contract_date ? `Contract: ${tx.contract_date}` : 'Active File'}
+                        </span>
+                        <button
+                          onClick={() => setSelectedTx(tx)}
+                          className="px-3.5 py-1.5 rounded-xl bg-[#d97706]/15 hover:bg-[#d97706] text-[#d97706] hover:text-[#0f172a] border border-[#d97706]/30 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>Inspect File</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* TABLE VIEW */
+              <div className="bg-[#1e293b] border border-[#334155] rounded-2xl overflow-hidden shadow-xl">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead className="bg-[#131826] text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider border-b border-[#334155]">
+                      <tr>
+                        <th className="py-3.5 px-3 text-center">Review</th>
+                        <th className="py-3.5 px-4">Property Address</th>
+                        <th className="py-3.5 px-4">Client</th>
+                        <th className="py-3.5 px-3">Status / Side</th>
+                        <th className="py-3.5 px-4">Milestones</th>
+                        <th className="py-3.5 px-4">Assigned TC / Agent</th>
+                        <th className="py-3.5 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#334155]/60">
+                      {displayList.map((tx) => (
+                        <tr
+                          key={tx.id}
+                          onClick={() => setSelectedTx(tx)}
+                          className="hover:bg-[#131826]/60 cursor-pointer transition-colors group"
+                        >
+                          <td className="py-3.5 px-3 text-center" onClick={(e) => handleToggleReviewFlag(tx.id, e)}>
+                            <button
+                              className={`p-1.5 rounded-lg border transition-all ${
+                                tx.flagged_for_review
+                                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm'
+                                  : 'bg-[#131826] text-slate-500 border-[#334155] hover:text-amber-400'
                               }`}
                             >
-                              {tx.side} Rep
-                            </span>
-                            <span className="text-[11px] text-[#94a3b8] capitalize">
-                              {tx.status.replace('_', ' ')}
-                            </span>
-                          </div>
-                        </td>
+                              <Flag className={`h-4 w-4 ${tx.flagged_for_review ? 'fill-amber-400 text-amber-400' : ''}`} />
+                            </button>
+                          </td>
 
-                        {/* LC Columns vs TC Columns */}
-                        {activeSection === 'lc_listings' ? (
-                          <>
-                            <td className="py-3.5 px-3 font-mono-code text-xs text-emerald-400 font-bold">
-                              {tx.price
-                                ? `$${tx.price.toLocaleString()}`
-                                : tx.list_price
-                                ? `$${tx.list_price.toLocaleString()}`
-                                : '—'}
-                            </td>
-                            <td className="py-3.5 px-3 text-xs">
-                              <span className="text-[#f8fafc] font-mono-code block">
-                                MLS: {tx.mls_number || 'Pending'}
-                              </span>
-                              <span className="text-[11px] text-sky-400">
-                                Photos: {tx.photography_status || 'Scheduled'}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-3 font-mono-code text-xs text-[#94a3b8]">
-                              {tx.days_on_market !== undefined ? `${tx.days_on_market}d` : '—'}
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td className="py-3.5 px-3 font-mono-code text-xs text-[#f8fafc]">
-                              {tx.contract_date || '—'}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <MilestoneDotSequence
-                                milestones={tx.milestones}
-                                onMilestoneClick={() => setSelectedTx(tx)}
-                              />
-                            </td>
-                          </>
-                        )}
+                          <td className="py-3.5 px-4">
+                            <span className="font-editorial font-bold text-sm text-[#f8fafc] group-hover:text-[#d97706] transition-colors block">
+                              {tx.property_address}
+                            </span>
+                            <span className="text-xs text-[#94a3b8]">
+                              {tx.city}, {tx.state} • <strong className="text-slate-400 font-mono-code">{tx.sisu_transaction_id || tx.id.substring(0, 8)}</strong>
+                            </span>
+                          </td>
 
-                        {/* Assigned TC / Agent */}
-                        <td className="py-3.5 px-4">
-                          <div className="text-xs">
+                          <td className="py-3.5 px-4">
+                            <span className="font-medium text-[#f8fafc] block">{tx.client_name}</span>
+                            {tx.client_phone && <span className="text-xs text-[#94a3b8] font-mono-code">{tx.client_phone}</span>}
+                          </td>
+
+                          <td className="py-3.5 px-3">
+                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-amber-500/10 text-amber-400 border-amber-500/30">
+                              {tx.status.replace(/_/g, ' ').toUpperCase()} ({tx.side.toUpperCase()})
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <MilestoneDotSequence milestones={tx.milestones} onMilestoneClick={() => setSelectedTx(tx)} />
+                          </td>
+
+                          <td className="py-3.5 px-4 text-xs">
                             <span className="text-sky-400 font-bold block">TC: {tx.tc_name}</span>
                             <span className="text-[#94a3b8] block">Agent: {tx.agent_name}</span>
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* Action */}
-                        <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => setSelectedTx(tx)}
-                            className="px-3 py-1.5 rounded-xl bg-[#d97706]/15 hover:bg-[#d97706] text-[#d97706] hover:text-[#0f172a] border border-[#d97706]/30 text-xs font-bold transition-all flex items-center gap-1.5 ml-auto"
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                            <span>Edit Sheet</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                          <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => setSelectedTx(tx)}
+                              className="px-3 py-1.5 rounded-xl bg-[#d97706]/15 hover:bg-[#d97706] text-[#d97706] hover:text-[#0f172a] border border-[#d97706]/30 text-xs font-bold transition-all ml-auto"
+                            >
+                              Inspect
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
