@@ -23,31 +23,13 @@ serve(async (req: Request) => {
   const startTime = Date.now();
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  const resendApiKey = Deno.env.get('RESEND_API_KEY') || '';
-  const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'MSREG Operations <digest@msreg.com>';
-  const appBaseUrl = Deno.env.get('APP_BASE_URL') || 'https://hub.msreg.com';
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-  const report = {
-    started_at: new Date().toISOString(),
-    total_agents_evaluated: 0,
-    emails_sent: 0,
-    agents_skipped_zero_deals: 0,
-    errors_count: 0,
-    dispatches: [] as Array<{
-      agent_id: string;
-      agent_name: string;
-      agent_email: string;
-      transaction_count: number;
-      resend_message_id: string | null;
-      status: 'sent' | 'skipped' | 'failed';
-      error?: string;
-    }>,
-  };
-
-  try {
     const body = await req.json().catch(() => ({}));
+    const targetAgentId = body?.agent_id;
+    const targetAgentEmail = body?.agent_email;
+    const targetAgentName = body?.agent_name;
+
+    const resendApiKey = Deno.env.get('RESEND_API_KEY') || body?.resend_api_key || '';
+    const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || body?.from_email || 'MSREG Operations <onboarding@resend.dev>';
     const targetAgentId = body?.agent_id;
     const targetAgentEmail = body?.agent_email;
     const targetAgentName = body?.agent_name;
@@ -227,14 +209,15 @@ serve(async (req: Request) => {
 
       if (resendApiKey) {
         try {
-          const resendResponse = await fetch('https://api.resend.com/emails', {
+          let fromAddress = resendFromEmail;
+          let resendResponse = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${resendApiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              from: resendFromEmail,
+              from: fromAddress,
               to: [agent.email],
               subject: emailContent.subject,
               html: emailContent.html,
@@ -244,9 +227,31 @@ serve(async (req: Request) => {
 
           if (!resendResponse.ok) {
             const errJson = await resendResponse.json();
-            throw new Error(
-              `Resend API error (${resendResponse.status}): ${JSON.stringify(errJson)}`
-            );
+            if (errJson?.name === 'validation_error' || errJson?.message?.includes('not verified')) {
+              console.warn('Unverified domain error from Resend API, retrying with onboarding@resend.dev...');
+              fromAddress = 'MSREG Operations <onboarding@resend.dev>';
+              resendResponse = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${resendApiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  from: fromAddress,
+                  to: [agent.email],
+                  subject: emailContent.subject,
+                  html: emailContent.html,
+                  text: emailContent.text,
+                }),
+              });
+            }
+
+            if (!resendResponse.ok) {
+              const errJson2 = await resendResponse.json();
+              throw new Error(
+                `Resend API error (${resendResponse.status}): ${JSON.stringify(errJson2)}`
+              );
+            }
           }
 
           const resendData = await resendResponse.json();
