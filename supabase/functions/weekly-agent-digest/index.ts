@@ -51,7 +51,7 @@ serve(async (req: Request) => {
     const targetAgentsList: Array<{ id?: string; name: string; email: string }> | undefined = body?.target_agents;
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY') || body?.resend_api_key || '';
-    const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || body?.from_email || 'MSREG Operations <onboarding@resend.dev>';
+    const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || body?.from_email || 'MSREG Operations <operations@msreginternal.com>';
     const appBaseUrl = Deno.env.get('APP_BASE_URL') || body?.app_base_url || 'https://hub.msreg.com';
 
     // 1. Fetch active agents (or single targeted agent, or explicit list)
@@ -274,8 +274,8 @@ serve(async (req: Request) => {
 
           if (!resendResponse.ok) {
             const errJson = await resendResponse.json();
-            if (errJson?.name === 'validation_error' || errJson?.message?.includes('not verified')) {
-              console.warn('Unverified domain error from Resend API, retrying with onboarding@resend.dev...');
+            if (errJson?.message?.includes('is not verified') || errJson?.message?.includes('domain is not verified')) {
+              console.warn('Domain not verified in Resend, retrying with sandbox onboarding@resend.dev...');
               fromAddress = 'MSREG Operations <onboarding@resend.dev>';
               resendResponse = await fetch('https://api.resend.com/emails', {
                 method: 'POST',
