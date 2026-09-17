@@ -107,11 +107,11 @@ export const AdminUserManagement: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      let agentId = formData.role === 'agent' && formData.agentId ? formData.agentId : null;
-      let opsUserId = (formData.role === 'tc' || formData.role === 'listing_coordinator' || formData.role === 'admin') && formData.opsUserId ? formData.opsUserId : null;
+      let agentId = formData.agentId || null;
+      let opsUserId = formData.opsUserId || null;
 
-      // Auto-create agent record if adding an agent and no agent linked yet
-      if (formData.role === 'agent' && !agentId) {
+      // Always ensure an agent record exists so user can be assigned as lead agent on deals
+      if (!agentId) {
         const { data: existingAgent } = await (supabase
           .from('agents') as any)
           .select('id')
