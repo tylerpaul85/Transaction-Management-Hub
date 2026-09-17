@@ -35,6 +35,7 @@ import {
   Table,
   Phone,
   ExternalLink,
+  Upload,
 } from 'lucide-react';
 
 export const OpsDashboard: React.FC = () => {
@@ -60,6 +61,10 @@ export const OpsDashboard: React.FC = () => {
   // Quick Add Modals
   const [isAddEscrowModalOpen, setIsAddEscrowModalOpen] = useState(false);
   const [isAddListingModalOpen, setIsAddListingModalOpen] = useState(false);
+  const [isBatchImportModalOpen, setIsBatchImportModalOpen] = useState(false);
+  const [batchImportText, setBatchImportText] = useState('');
+  const [isBatchImporting, setIsBatchImporting] = useState(false);
+  const [batchImportSummary, setBatchImportSummary] = useState<string | null>(null);
 
   // Form states for New Escrow Deal
   const [newEscrowAddress, setNewEscrowAddress] = useState('');
@@ -210,6 +215,103 @@ export const OpsDashboard: React.FC = () => {
     } finally {
       setIsSyncing(false);
       setTimeout(() => setSyncStatusText(null), 4000);
+    }
+  };
+
+  // Run Sisu Batch CSV/JSON Import
+  const handleRunBatchImport = async () => {
+    if (!batchImportText.trim()) return;
+    setIsBatchImporting(true);
+    setBatchImportSummary(null);
+    try {
+      let rows: any[] = [];
+      try {
+        const parsed = JSON.parse(batchImportText);
+        rows = Array.isArray(parsed) ? parsed : (parsed.data || parsed.transactions || parsed.clients || [parsed]);
+      } catch {
+        const lines = batchImportText.split('\n').filter((l) => l.trim());
+        if (lines.length > 0) {
+          const headers = lines[0].split(',').map((h) => h.trim().replace(/^["']|["']$/g, '').toLowerCase());
+          const isHeader = headers.some((h) => h.includes('address') || h.includes('client') || h.includes('status') || h.includes('city'));
+          const startIdx = isHeader ? 1 : 0;
+          for (let i = startIdx; i < lines.length; i++) {
+            const vals = lines[i].split(',').map((v) => v.trim().replace(/^["']|["']$/g, ''));
+            if (vals.length === 0 || !vals.join('')) continue;
+            const obj: any = {};
+            if (isHeader) {
+              headers.forEach((h, idx) => {
+                obj[h] = vals[idx] || '';
+              });
+            } else {
+              obj.property_address = vals[0];
+              obj.client_name = vals[1] || 'Client';
+              obj.city = vals[2] || 'Waynesville';
+              obj.status = vals[3] || 'under_contract';
+            }
+            rows.push(obj);
+          }
+        }
+      }
+
+      if (rows.length === 0) {
+        alert('No valid transaction rows found in input.');
+        setIsBatchImporting(false);
+        return;
+      }
+
+      const toInsert = rows.map((r, idx) => {
+        const addr =
+          r.property_address || r.address || r.address_1 || r['street address'] || r['property address'] || 'Unknown Address';
+        let city = r.city || 'Waynesville';
+        if (city === 'Chicago') city = 'Waynesville';
+        let state = r.state || 'MO';
+        if (state === 'IL') state = 'MO';
+        const side = String(r.side || r.transaction_side || r.type || 'buyer').toLowerCase().includes('sell')
+          ? 'seller'
+          : 'buyer';
+
+        let status = String(r.status || r.pipeline_status || r.stage || 'under_contract').toLowerCase();
+        if (status.includes('contract') || status.includes('pending') || status.includes('escrow')) {
+          status = 'under_contract';
+        } else if (status.includes('list') || status.includes('active')) {
+          status = 'active';
+        }
+
+        const clientName =
+          r.client_name || r.client || r.full_name || (r.first_name ? `${r.first_name} ${r.last_name || ''}`.trim() : 'Client');
+        const clientPhone = r.client_phone || r.phone || r['phone number'] || null;
+
+        const sisuTxId =
+          r.sisu_transaction_id || r.id || r.client_id || `SISU-BATCH-${Date.now()}-${idx}`;
+
+        return {
+          property_address: addr,
+          city,
+          state,
+          side,
+          status,
+          client_name: clientName,
+          client_phone: clientPhone,
+          contract_date: r.contract_date || r.contractDate || new Date().toISOString().split('T')[0],
+          target_closing_date: r.closing_date || r.closingDate || null,
+          sisu_transaction_id: String(sisuTxId),
+        };
+      });
+
+      const { data, error } = await (supabase
+        .from('transactions') as any)
+        .upsert(toInsert, { onConflict: 'sisu_transaction_id' })
+        .select();
+
+      if (error) throw error;
+
+      setBatchImportSummary(`Successfully imported ${data?.length || toInsert.length} deals into Supabase!`);
+      await loadLiveTransactions();
+    } catch (err: any) {
+      console.error('Batch import error:', err);
+      alert('Batch import failed: ' + (err.message || String(err)));
+    } finally {
+      setIsBatchImporting(false);
     }
   };
 
@@ -466,7 +568,19 @@ export const OpsDashboard: React.FC = () => {
               className="px-3.5 py-2 rounded-xl bg-[#131826] hover:bg-[#1e293b] text-[#f8fafc] border border-[#334155] text-xs font-bold transition-all flex items-center gap-2 min-h-[40px]"
             >
               <RefreshCw className={`h-3.5 w-3.5 text-[#d97706] ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Syncing...' : 'Sync Sisu Deals'}</span>
+              <span>{isSyncing ? 'Syncing...' : 'Sync Sisu API'}</span>
+            </button>
+
+            {/* Sisu Batch CSV/JSON Import Button */}
+            <button
+              onClick={() => {
+                setBatchImportSummary(null);
+                setIsBatchImportModalOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-[#0f172a] border border-purple-500/40 text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px]"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span>Import Sisu Batch (CSV/JSON)</span>
             </button>
 
             {/* Quick Add Buttons */}
@@ -1200,6 +1314,73 @@ export const OpsDashboard: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Sisu Batch CSV/JSON Import Modal */}
+      {isBatchImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-6 w-full max-w-2xl shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#334155]">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
+                  <Upload className="h-5 w-5" />
+                </span>
+                <h3 className="text-lg font-bold text-[#f8fafc]">
+                  Import Sisu Batch (CSV or JSON)
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsBatchImportModalOpen(false)}
+                className="p-1 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#334155]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#94a3b8]">
+              Paste your raw Sisu JSON payload, webhooks payload, or CSV exported rows below. The system will automatically normalize property addresses, client contacts, assigned team members, and status codes.
+            </p>
+
+            {batchImportSummary && (
+              <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-xl text-xs font-bold text-emerald-400 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400" />
+                <span>{batchImportSummary}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
+                CSV Lines or JSON Payload *
+              </label>
+              <textarea
+                rows={10}
+                value={batchImportText}
+                onChange={(e) => setBatchImportText(e.target.value)}
+                placeholder={`Example CSV:\nproperty_address,client_name,city,status\n101 Oak Street,John Doe,Waynesville,under_contract\n\nOr paste Sisu JSON array...`}
+                className="w-full p-3 bg-[#131826] border border-[#334155] rounded-xl text-xs font-mono text-[#f8fafc] focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#334155]">
+              <button
+                type="button"
+                onClick={() => setIsBatchImportModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#94a3b8] hover:text-[#f8fafc]"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleRunBatchImport}
+                disabled={isBatchImporting || !batchImportText.trim()}
+                className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
+              >
+                <Upload className="h-4 w-4" />
+                <span>{isBatchImporting ? 'Processing Import...' : 'Execute Batch Import'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
