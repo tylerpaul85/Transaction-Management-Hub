@@ -380,18 +380,21 @@ export const AdminSyncDebug: React.FC = () => {
           .maybeSingle();
 
         if (existingTx) {
-          await (supabase.from('transactions') as any).update({
-            property_address: address,
-            city,
-            state,
-            side,
-            status,
-            client_name: clientFullName || 'Unnamed Client',
-            client_phone: clientPhone || null,
-            listing_agent_id: side === 'seller' ? agentId : undefined,
-            selling_agent_id: side === 'buyer' ? agentId : undefined,
+          const updateData: Record<string, any> = {
             updated_at: new Date().toISOString(),
-          }).eq('id', existingTx.id);
+          };
+          if (address && address !== 'Pending Address') updateData.property_address = address;
+          if (city) updateData.city = city;
+          if (state) updateData.state = state;
+          if (sideVal) updateData.side = side;
+          if (status) updateData.status = status;
+          if (clientFullName && clientFullName !== 'Unnamed Client') updateData.client_name = clientFullName;
+          if (clientPhone) updateData.client_phone = clientPhone;
+          if (agentId) {
+            if (side === 'seller') updateData.listing_agent_id = agentId;
+            else updateData.selling_agent_id = agentId;
+          }
+          await (supabase.from('transactions') as any).update(updateData).eq('id', existingTx.id);
         } else {
           await (supabase.from('transactions') as any).insert({
             sisu_transaction_id: sisuId,

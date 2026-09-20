@@ -466,52 +466,71 @@ serve(async (req: Request) => {
     }
 
     // 5. Upsert Transactions record
-    const address =
+    // Extract raw incoming values without default fallback placeholders
+    const rawAddress =
       sisuData.property_address ||
       sisuData.address ||
       fullObj.address_1 ||
       updatedVals.address_1 ||
       payload.property_address ||
       payload.address ||
-      'Pending Address';
+      null;
 
-    let state = sisuData.state || fullObj.state || updatedVals.state || payload.state || null;
-    let city = sisuData.city || fullObj.city || updatedVals.city || payload.city || null;
+    let rawCity = sisuData.city || fullObj.city || updatedVals.city || payload.city || null;
+    let rawState = sisuData.state || fullObj.state || updatedVals.state || payload.state || null;
 
-    if (!state || !city) {
-      if (address && address.includes(' ')) {
-        const parts = address.split(' ');
-        if (/^\d{5}$/.test(parts[parts.length - 1])) {
-          if (!city && parts.length >= 2) {
-            city = parts[parts.length - 2];
-          }
+    if ((!rawCity || !rawState) && rawAddress && typeof rawAddress === 'string' && rawAddress.includes(' ')) {
+      const parts = rawAddress.trim().split(/\s+/);
+      if (/^\d{5}$/.test(parts[parts.length - 1])) {
+        if (!rawCity && parts.length >= 2) {
+          rawCity = parts[parts.length - 2];
         }
       }
     }
 
-    if (!city || city === 'Chicago') city = 'Waynesville';
-    if (!state || state === 'IL') state = 'MO';
+    const rawZip =
+      sisuData.zip ||
+      sisuData.postal_code ||
+      fullObj.postal_code ||
+      updatedVals.postal_code ||
+      payload.zip ||
+      null;
 
-    const sideType = (sisuData.side || sisuData.transaction_side || fullObj.type_id || updatedVals.type_id || payload.side || '').toLowerCase();
-    const side = (sideType === 's' || sideType === 'seller' || sideType === 'listing') ? 'seller' : 'buyer';
+    const rawSideType = sisuData.side || sisuData.transaction_side || fullObj.type_id || updatedVals.type_id || payload.side || null;
+    const resolvedSide = rawSideType
+      ? (['s', 'seller', 'listing'].includes(String(rawSideType).toLowerCase()) ? 'seller' : 'buyer')
+      : null;
 
-    const rawStatus = (sisuData.status || sisuData.stage || fullObj.pipeline_status || updatedVals.pipeline_status || payload.status || 'Pre-Listing');
-    const status = rawStatus;
+    const rawStatus =
+      sisuData.status ||
+      sisuData.stage ||
+      fullObj.pipeline_status ||
+      updatedVals.pipeline_status ||
+      payload.status ||
+      null;
 
-    const clientName =
+    const rawClientName =
       sisuData.client?.name ||
       sisuData.client?.full_name ||
       sisuData.client_name ||
       fullObj.full_name ||
       (fullObj.first_name ? `${fullObj.first_name} ${fullObj.last_name || ''}`.trim() : null) ||
       (updatedVals.first_name ? `${updatedVals.first_name} ${updatedVals.last_name || ''}`.trim() : null) ||
-      'Unnamed Client';
+      null;
 
-    const clientPhone =
+    const rawClientPhone =
       sisuData.client?.phone ||
       sisuData.client_phone ||
       fullObj.mobile_phone ||
       updatedVals.mobile_phone ||
+      null;
+
+    const rawClientEmail =
+      sisuData.client?.email ||
+      sisuData.client_email ||
+      fullObj.email ||
+      updatedVals.email ||
+      payload.client_email ||
       null;
 
     const otherPartyName = sisuData.other_party?.name || sisuData.other_party_name || null;
@@ -522,55 +541,130 @@ serve(async (req: Request) => {
       null;
     const contractDate = sisuData.contract_date || null;
 
+    const rawPrice =
+      sisuData.price ||
+      sisuData.trans_amt ||
+      fullObj.trans_amt ||
+      fullObj.orig_trans_amt ||
+      updatedVals.trans_amt ||
+      null;
+
     // Check if transaction already exists
     const { data: existingTx } = await supabase
       .from('transactions')
-      .select('id, sisu_transaction_id, updated_at')
+      .select('id, sisu_transaction_id, updated_at, property_address, client_name, status, side, city, state')
       .eq('sisu_transaction_id', finalSisuId)
       .maybeSingle();
 
     let transactionId = existingTx?.id;
 
     if (existingTx) {
+      // Build guarded partial update object - NEVER wipe out existing valid data with placeholders
+      const txUpdates: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      // Only update address if a genuine non-placeholder address was provided
+      if (rawAddress && typeof rawAddress === 'string' && rawAddress.trim() !== '') {
+        const trimmedAddr = rawAddress.trim();
+        if (trimmedAddr.toLowerCase() !== 'pending address' && trimmedAddr.toLowerCase() !== 'unknown address') {
+          txUpdates.property_address = trimmedAddr;
+        }
+      }
+
+      // Only update client_name if a genuine non-placeholder name was provided
+      if (rawClientName && typeof rawClientName === 'string' && rawClientName.trim() !== '') {
+        const trimmedName = rawClientName.trim();
+        if (trimmedName.toLowerCase() !== 'unnamed client') {
+          txUpdates.client_name = trimmedName;
+        }
+      }
+
+      // Only update status if explicitly provided in this payload
+      if (rawStatus && typeof rawStatus === 'string' && rawStatus.trim() !== '') {
+        txUpdates.status = rawStatus.trim();
+      }
+
+      // Only update side if explicitly resolved
+      if (resolvedSide) {
+        txUpdates.side = resolvedSide;
+      }
+
+      // Only update city/state/zip if provided
+      if (rawCity && typeof rawCity === 'string' && rawCity.trim() !== '') {
+        const trimmedCity = rawCity.trim();
+        txUpdates.city = trimmedCity === 'Chicago' ? 'Waynesville' : trimmedCity;
+      }
+      if (rawState && typeof rawState === 'string' && rawState.trim() !== '') {
+        const trimmedState = rawState.trim();
+        txUpdates.state = trimmedState === 'IL' ? 'MO' : trimmedState;
+      }
+      if (rawZip && typeof rawZip === 'string' && rawZip.trim() !== '') {
+        txUpdates.zip = rawZip.trim();
+      }
+
+      // Only update contact/party/date fields if provided
+      if (rawClientPhone && typeof rawClientPhone === 'string' && rawClientPhone.trim() !== '') {
+        txUpdates.client_phone = rawClientPhone.trim();
+      }
+      if (rawClientEmail && typeof rawClientEmail === 'string' && rawClientEmail.trim() !== '') {
+        txUpdates.client_email = rawClientEmail.trim();
+      }
+      if (otherPartyName && typeof otherPartyName === 'string' && otherPartyName.trim() !== '') {
+        txUpdates.other_party_name = otherPartyName.trim();
+      }
+      if (otherPartyAgent && typeof otherPartyAgent === 'string' && otherPartyAgent.trim() !== '') {
+        txUpdates.other_party_agent = otherPartyAgent.trim();
+      }
+      if (contractDate && typeof contractDate === 'string' && contractDate.trim() !== '') {
+        txUpdates.contract_date = contractDate.trim();
+      }
+      if (rawPrice !== null && rawPrice !== undefined && !isNaN(Number(rawPrice))) {
+        txUpdates.price = Number(rawPrice);
+      }
+
+      // Only update agent & TC assignments if matched in this event
+      if (listingAgentId) txUpdates.listing_agent_id = listingAgentId;
+      if (sellingAgentId) txUpdates.selling_agent_id = sellingAgentId;
+      if (assignedTcId) txUpdates.assigned_tc_id = assignedTcId;
+
       const { error: updateErr } = await supabase
         .from('transactions')
-        .update({
-          status,
-          property_address: address,
-          city,
-          state,
-          side,
-          client_name: clientName,
-          client_phone: clientPhone,
-          other_party_name: otherPartyName,
-          other_party_agent: otherPartyAgent,
-          listing_agent_id: listingAgentId || undefined,
-          selling_agent_id: sellingAgentId || undefined,
-          assigned_tc_id: assignedTcId || undefined,
-          contract_date: contractDate,
-          updated_at: new Date().toISOString(),
-        })
+        .update(txUpdates)
         .eq('id', existingTx.id);
 
       if (updateErr) throw updateErr;
     } else {
+      // For brand new transactions, ensure required non-null columns have sane fallbacks
+      const insertAddress = (rawAddress && typeof rawAddress === 'string' && rawAddress.trim()) || 'Pending Address';
+      const insertClientName = (rawClientName && typeof rawClientName === 'string' && rawClientName.trim()) || 'Unnamed Client';
+      const insertStatus = (rawStatus && typeof rawStatus === 'string' && rawStatus.trim()) || 'pending';
+      let insertCity = (rawCity && typeof rawCity === 'string' && rawCity.trim()) || 'Waynesville';
+      if (insertCity === 'Chicago') insertCity = 'Waynesville';
+      let insertState = (rawState && typeof rawState === 'string' && rawState.trim()) || 'MO';
+      if (insertState === 'IL') insertState = 'MO';
+      const insertSide = resolvedSide || 'buyer';
+
       const { data: newTx, error: insertErr } = await supabase
         .from('transactions')
         .insert({
           sisu_transaction_id: finalSisuId,
-          status,
-          property_address: address,
-          city,
-          state,
-          side,
-          client_name: clientName,
-          client_phone: clientPhone,
-          other_party_name: otherPartyName,
-          other_party_agent: otherPartyAgent,
+          status: insertStatus,
+          property_address: insertAddress,
+          city: insertCity,
+          state: insertState,
+          zip: (rawZip && typeof rawZip === 'string' && rawZip.trim()) || null,
+          side: insertSide,
+          client_name: insertClientName,
+          client_phone: (rawClientPhone && typeof rawClientPhone === 'string' && rawClientPhone.trim()) || null,
+          client_email: (rawClientEmail && typeof rawClientEmail === 'string' && rawClientEmail.trim()) || null,
+          other_party_name: (otherPartyName && typeof otherPartyName === 'string' && otherPartyName.trim()) || null,
+          other_party_agent: (otherPartyAgent && typeof otherPartyAgent === 'string' && otherPartyAgent.trim()) || null,
           listing_agent_id: listingAgentId,
           selling_agent_id: sellingAgentId,
           assigned_tc_id: assignedTcId,
-          contract_date: contractDate,
+          contract_date: (contractDate && typeof contractDate === 'string' && contractDate.trim()) || null,
+          price: (rawPrice !== null && rawPrice !== undefined && !isNaN(Number(rawPrice))) ? Number(rawPrice) : null,
         })
         .select('id')
         .single();

@@ -415,12 +415,17 @@ serve(async (req: Request) => {
         if (sisuTxId && !sisuTransactions.some((t) => String(t.id || t.client_id || t.transaction_id) === sisuTxId)) {
           sisuTransactions.push({
             id: sisuTxId,
-            property_address: fullObj.address_1 || updatedVals.address_1 || fullObj.property_address || payload.property_address,
-            city: fullObj.city || updatedVals.city || payload.city || 'Waynesville',
-            side: (fullObj.type_id || updatedVals.type_id || payload.side || 's') === 's' ? 'seller' : 'buyer',
-            status: fullObj.pipeline_status || updatedVals.pipeline_status || payload.status || 'Pre-Listing',
-            client: { full_name: fullObj.full_name || updatedVals.first_name ? `${updatedVals.first_name} ${updatedVals.last_name || ''}`.trim() : payload.client_name },
-            agent_email: dataObj?.object_data?.agent_record?.email || payload.agent_email,
+            property_address: fullObj.address_1 || updatedVals.address_1 || fullObj.property_address || payload.property_address || null,
+            city: fullObj.city || updatedVals.city || payload.city || null,
+            state: fullObj.state || updatedVals.state || payload.state || null,
+            side: (fullObj.type_id || updatedVals.type_id || payload.side)
+              ? (['s', 'seller', 'listing'].includes(String(fullObj.type_id || updatedVals.type_id || payload.side).toLowerCase()) ? 'seller' : 'buyer')
+              : null,
+            status: fullObj.pipeline_status || updatedVals.pipeline_status || payload.status || null,
+            client: {
+              full_name: fullObj.full_name || (updatedVals.first_name ? `${updatedVals.first_name} ${updatedVals.last_name || ''}`.trim() : null) || payload.client_name || null,
+            },
+            agent_email: dataObj?.object_data?.agent_record?.email || payload.agent_email || null,
             milestones: fullObj.milestones || {},
           });
         }
@@ -434,19 +439,26 @@ serve(async (req: Request) => {
       const sisuTxId = String(sisuData.id || sisuData.transaction_id);
       if (!sisuTxId) continue;
 
-      const address = sisuData.property_address || sisuData.address || sisuData.address_1 || 'Unknown Address';
-      let state = sisuData.state || 'MO';
-      let city = sisuData.city || 'Waynesville';
-      if (city === 'Chicago') city = 'Waynesville';
-      if (state === 'IL') state = 'MO';
+      const rawAddress = sisuData.property_address || sisuData.address || sisuData.address_1 || null;
+      let rawState = sisuData.state || null;
+      let rawCity = sisuData.city || null;
+      if (rawCity === 'Chicago') rawCity = 'Waynesville';
+      if (rawState === 'IL') rawState = 'MO';
 
-      const side = (sisuData.side || sisuData.transaction_side || 'buyer').toLowerCase();
-      const status = (sisuData.status || sisuData.stage || 'pending').toLowerCase();
-      const clientName =
+      const rawSide = sisuData.side || sisuData.transaction_side || null;
+      const side = rawSide
+        ? (['s', 'seller', 'listing'].includes(String(rawSide).toLowerCase()) ? 'seller' : 'buyer')
+        : null;
+
+      const rawStatus = sisuData.status || sisuData.stage || null;
+      const status = rawStatus ? String(rawStatus).toLowerCase() : null;
+
+      const rawClientName =
         sisuData.client?.full_name ||
         sisuData.client?.name ||
         sisuData.client_name ||
-        'Unnamed Client';
+        null;
+
       const clientPhone = sisuData.client?.phone || sisuData.client_phone || null;
       const otherPartyName = sisuData.other_party?.name || sisuData.other_party_name || null;
       const otherPartyAgent =
@@ -460,46 +472,87 @@ serve(async (req: Request) => {
       // Find in DB
       const { data: existingTx } = await supabase
         .from('transactions')
-        .select('id, sisu_transaction_id, updated_at')
+        .select('id, sisu_transaction_id, updated_at, property_address, client_name, status, side, city, state')
         .eq('sisu_transaction_id', sisuTxId)
         .maybeSingle();
 
       let transactionId = existingTx?.id;
 
       if (existingTx) {
+        // Build guarded partial update object - NEVER overwrite valid data with placeholders
+        const txUpdates: Record<string, any> = {
+          updated_at: new Date().toISOString(),
+        };
+
+        if (rawAddress && typeof rawAddress === 'string' && rawAddress.trim() !== '') {
+          const trimmedAddr = rawAddress.trim();
+          if (trimmedAddr.toLowerCase() !== 'unknown address' && trimmedAddr.toLowerCase() !== 'pending address') {
+            txUpdates.property_address = trimmedAddr;
+          }
+        }
+
+        if (rawClientName && typeof rawClientName === 'string' && rawClientName.trim() !== '') {
+          const trimmedName = rawClientName.trim();
+          if (trimmedName.toLowerCase() !== 'unnamed client') {
+            txUpdates.client_name = trimmedName;
+          }
+        }
+
+        if (status && status.trim() !== '') {
+          txUpdates.status = status.trim();
+        }
+
+        if (side) {
+          txUpdates.side = side;
+        }
+
+        if (rawCity && typeof rawCity === 'string' && rawCity.trim() !== '') {
+          txUpdates.city = rawCity.trim();
+        }
+        if (rawState && typeof rawState === 'string' && rawState.trim() !== '') {
+          txUpdates.state = rawState.trim();
+        }
+        if (clientPhone && typeof clientPhone === 'string' && clientPhone.trim() !== '') {
+          txUpdates.client_phone = clientPhone.trim();
+        }
+        if (otherPartyName && typeof otherPartyName === 'string' && otherPartyName.trim() !== '') {
+          txUpdates.other_party_name = otherPartyName.trim();
+        }
+        if (otherPartyAgent && typeof otherPartyAgent === 'string' && otherPartyAgent.trim() !== '') {
+          txUpdates.other_party_agent = otherPartyAgent.trim();
+        }
+        if (contractDate && typeof contractDate === 'string' && contractDate.trim() !== '') {
+          txUpdates.contract_date = contractDate.trim();
+        }
+
         await supabase
           .from('transactions')
-          .update({
-            status,
-            property_address: address,
-            city,
-            state,
-            side,
-            client_name: clientName,
-            client_phone: clientPhone,
-            other_party_name: otherPartyName,
-            other_party_agent: otherPartyAgent,
-            contract_date: contractDate,
-            updated_at: new Date().toISOString(),
-          })
+          .update(txUpdates)
           .eq('id', existingTx.id);
 
         transactionsUpdated++;
       } else {
+        const insertAddress = (rawAddress && typeof rawAddress === 'string' && rawAddress.trim()) || 'Pending Address';
+        const insertClientName = (rawClientName && typeof rawClientName === 'string' && rawClientName.trim()) || 'Unnamed Client';
+        const insertStatus = status || 'pending';
+        const insertCity = (rawCity && typeof rawCity === 'string' && rawCity.trim()) || 'Waynesville';
+        const insertState = (rawState && typeof rawState === 'string' && rawState.trim()) || 'MO';
+        const insertSide = side || 'buyer';
+
         const { data: newTx } = await supabase
           .from('transactions')
           .insert({
             sisu_transaction_id: sisuTxId,
-            status,
-            property_address: address,
-            city,
-            state,
-            side,
-            client_name: clientName,
-            client_phone: clientPhone,
-            other_party_name: otherPartyName,
-            other_party_agent: otherPartyAgent,
-            contract_date: contractDate,
+            status: insertStatus,
+            property_address: insertAddress,
+            city: insertCity,
+            state: insertState,
+            side: insertSide,
+            client_name: insertClientName,
+            client_phone: clientPhone || null,
+            other_party_name: otherPartyName || null,
+            other_party_agent: otherPartyAgent || null,
+            contract_date: contractDate || null,
           })
           .select('id')
           .single();
