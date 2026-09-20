@@ -145,6 +145,47 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
             const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
             const tcName = t.assigned_tc?.name || t.tc_name || 'Assigned TC';
 
+            const partiesList: any[] = [];
+            if (t.client_name && t.client_name !== 'Unnamed Client') {
+              partiesList.push({
+                id: `party-client-${t.id}`,
+                name: t.client_name,
+                role: t.side === 'seller' ? 'Seller' : 'Buyer',
+                email: t.client_email || '',
+                phone: t.client_phone || '',
+                isPrimary: true,
+              });
+            }
+            if (t.other_party_agent) {
+              partiesList.push({
+                id: `party-coop-${t.id}`,
+                name: t.other_party_agent,
+                role: 'Co-op Agent',
+                email: t.other_party_email || '',
+                phone: t.other_party_phone || '',
+                company: t.other_party_brokerage || '',
+              });
+            }
+            if (t.lender_name) {
+              partiesList.push({
+                id: `party-lender-${t.id}`,
+                name: t.lender_name,
+                role: 'Mortgage Lender',
+                email: t.lender_email || '',
+                phone: t.lender_phone || '',
+                company: t.loan_type ? `Loan: ${t.loan_type}` : undefined,
+              });
+            }
+            if (t.title_company) {
+              partiesList.push({
+                id: `party-title-${t.id}`,
+                name: t.title_company,
+                role: 'Title / Escrow Officer',
+                email: '',
+                phone: '',
+              });
+            }
+
             return {
               id: t.id,
               fileNumber: t.sisu_transaction_id ? `SISU-${t.sisu_transaction_id}` : `TRX-2026-${String(idx + 1).padStart(3, '0')}`,
@@ -171,7 +212,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
               clientNames: [t.client_name || 'Client'],
               contingencies: [],
               documents: [],
-              parties: [],
+              parties: partiesList,
               commission: {
                 purchasePrice: price,
                 commissionRate: 2.5,

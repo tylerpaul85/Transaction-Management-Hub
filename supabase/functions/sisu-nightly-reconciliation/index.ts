@@ -26,6 +26,17 @@ const MILESTONE_KEYS = [
   'closing',
 ] as const;
 
+function parseSisuDate(val: any): string | null {
+  if (!val || typeof val !== 'string' || !val.trim()) return null;
+  try {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().split('T')[0];
+    }
+  } catch {}
+  return null;
+}
+
 function extractTasksFromSisuData(sisuData: any): any[] | null {
   const candidates = [
     sisuData?.tasks,
@@ -460,13 +471,38 @@ serve(async (req: Request) => {
         null;
 
       const clientPhone = sisuData.client?.phone || sisuData.client_phone || null;
+      const fullObj = sisuData.object_data?.full_object || {};
+
+      const clientPhone = sisuData.client?.phone || sisuData.client_phone || fullObj.mobile_phone || null;
       const otherPartyName = sisuData.other_party?.name || sisuData.other_party_name || null;
       const otherPartyAgent =
+        fullObj.coop_agent_name ||
         sisuData.other_party?.agent ||
         sisuData.other_party?.agent_name ||
         sisuData.other_party_agent ||
         null;
-      const contractDate = sisuData.contract_date || null;
+      const otherPartyPhone = fullObj.coop_agent_phone || sisuData.other_party_phone || null;
+      const otherPartyEmail = fullObj.coop_agent_email || sisuData.other_party_email || null;
+
+      const lenderName = fullObj.mortgage_officer_name || sisuData.mortgage_officer_name || null;
+      const lenderEmail = fullObj.mortgage_officer_email || sisuData.mortgage_officer_email || null;
+      const lenderPhone = fullObj.mortgage_officer_phone || sisuData.mortgage_officer_phone || null;
+      const loanType = fullObj.loan_type || sisuData.loan_type || null;
+
+      const titleCompany = fullObj.custom?.escrow_agent || fullObj.escrow_company_name || fullObj.title_company_name || null;
+
+      const contractDate =
+        parseSisuDate(fullObj.uc_dt || sisuData.uc_dt) ||
+        sisuData.contract_date ||
+        null;
+
+      const emdTargetDate = parseSisuDate(fullObj.earnest_money_due_dt || sisuData.earnest_money_due_dt);
+      const inspectionTargetDate = parseSisuDate(fullObj.home_inspection_deadline_dt || sisuData.home_inspection_deadline_dt);
+      const loanAppraisalTargetDate = parseSisuDate(fullObj.financing_appraisal_deadline_dt || sisuData.financing_appraisal_deadline_dt);
+      const closingTargetDate = parseSisuDate(fullObj.forecasted_closed_dt || sisuData.forecasted_closed_dt);
+      const closedActualDate = parseSisuDate(fullObj.closed_dt || sisuData.closed_dt);
+      const titleTargetDate = parseSisuDate(fullObj.custom?.title_deadline || sisuData.custom?.title_deadline);
+
       const sisuUpdatedAt = new Date(sisuData.updated_at || new Date()).getTime();
 
       // Find in DB
@@ -521,6 +557,30 @@ serve(async (req: Request) => {
         if (otherPartyAgent && typeof otherPartyAgent === 'string' && otherPartyAgent.trim() !== '') {
           txUpdates.other_party_agent = otherPartyAgent.trim();
         }
+        if (otherPartyPhone && typeof otherPartyPhone === 'string' && otherPartyPhone.trim() !== '') {
+          txUpdates.other_party_phone = otherPartyPhone.trim();
+        }
+        if (otherPartyEmail && typeof otherPartyEmail === 'string' && otherPartyEmail.trim() !== '') {
+          txUpdates.other_party_email = otherPartyEmail.trim();
+        }
+        if (lenderName && typeof lenderName === 'string' && lenderName.trim() !== '') {
+          txUpdates.lender_name = lenderName.trim();
+        }
+        if (lenderEmail && typeof lenderEmail === 'string' && lenderEmail.trim() !== '') {
+          txUpdates.lender_email = lenderEmail.trim();
+        }
+        if (lenderPhone && typeof lenderPhone === 'string' && lenderPhone.trim() !== '') {
+          txUpdates.lender_phone = lenderPhone.trim();
+        }
+        if (loanType && typeof loanType === 'string' && loanType.trim() !== '') {
+          txUpdates.loan_type = loanType.trim();
+        }
+        if (titleCompany && typeof titleCompany === 'string' && titleCompany.trim() !== '') {
+          txUpdates.title_company = titleCompany.trim();
+        }
+        if (closingTargetDate) {
+          txUpdates.target_closing_date = closingTargetDate;
+        }
         if (contractDate && typeof contractDate === 'string' && contractDate.trim() !== '') {
           txUpdates.contract_date = contractDate.trim();
         }
@@ -552,6 +612,14 @@ serve(async (req: Request) => {
             client_phone: clientPhone || null,
             other_party_name: otherPartyName || null,
             other_party_agent: otherPartyAgent || null,
+            other_party_phone: otherPartyPhone || null,
+            other_party_email: otherPartyEmail || null,
+            lender_name: lenderName || null,
+            lender_email: lenderEmail || null,
+            lender_phone: lenderPhone || null,
+            loan_type: loanType || null,
+            title_company: titleCompany || null,
+            target_closing_date: closingTargetDate || null,
             contract_date: contractDate || null,
           })
           .select('id')
@@ -566,7 +634,48 @@ serve(async (req: Request) => {
       if (!transactionId) continue;
 
       // Reconcile milestones
-      const incomingMilestones = sisuData.milestones || {};
+      const isClosedStage = Boolean(
+        (status && ['closed', 'c'].includes(status.toLowerCase().trim())) ||
+        (fullObj.pipeline_status && fullObj.pipeline_status.toLowerCase().trim() === 'closed')
+      );
+
+      const sisuDates: Record<string, { target_date?: string | null; actual_date?: string | null; status?: string }> = {
+        earnest_money: {
+          target_date: emdTargetDate,
+        },
+        inspection_10day: {
+          target_date: inspectionTargetDate,
+        },
+        inspection_ordered: {
+          target_date: inspectionTargetDate,
+        },
+        financing_contingency: {
+          target_date: loanAppraisalTargetDate,
+        },
+        appraisal_satisfied: {
+          target_date: loanAppraisalTargetDate,
+        },
+        appraisal_ordered: {
+          target_date: loanAppraisalTargetDate,
+        },
+        appraisal_received: {
+          target_date: loanAppraisalTargetDate,
+        },
+        title: {
+          target_date: titleTargetDate,
+        },
+        closing: {
+          target_date: closingTargetDate,
+          actual_date: closedActualDate || (isClosedStage ? new Date().toISOString().split('T')[0] : null),
+          status: (closedActualDate || isClosedStage) ? 'complete' : undefined,
+        },
+      };
+
+      const incomingMilestones = {
+        ...sisuDates,
+        ...(sisuData.milestones || {}),
+      };
+
       const { data: existingMilestones } = await supabase
         .from('milestones')
         .select('*')
@@ -583,8 +692,10 @@ serve(async (req: Request) => {
 
         const targetDate = incomingM.target_date || null;
         const actualDate = incomingM.actual_date || null;
-        const mStatus = incomingM.status || 'pending';
-        const mNotes = incomingM.notes || null;
+        const mStatus = incomingM.status;
+        const mNotes = (incomingM as any).notes || null;
+
+        if (!targetDate && !actualDate && !mStatus && !mNotes) continue;
 
         const existingM = existingMap.get(mKey);
 
@@ -593,9 +704,8 @@ serve(async (req: Request) => {
           const manualUpdatedAt = new Date(existingM.updated_at).getTime();
 
           if (isManual && manualUpdatedAt >= sisuUpdatedAt) {
-            const isDateDiff =
-              existingM.target_date !== targetDate || existingM.actual_date !== actualDate;
-            const isStatusDiff = existingM.status !== mStatus;
+            const isDateDiff = (targetDate && existingM.target_date !== targetDate) || (actualDate && existingM.actual_date !== actualDate);
+            const isStatusDiff = Boolean(mStatus && existingM.status !== mStatus);
 
             if (isDateDiff || isStatusDiff) {
               conflictsFound++;
@@ -616,7 +726,7 @@ serve(async (req: Request) => {
                 incoming_sisu_value: {
                   target_date: targetDate,
                   actual_date: actualDate,
-                  status: mStatus,
+                  status: mStatus || existingM.status,
                   notes: mNotes,
                   source: 'sisu',
                   sisu_updated_at: sisuData.updated_at,
@@ -630,17 +740,19 @@ serve(async (req: Request) => {
             }
           }
 
-          // Safe to overwrite
+          // Safe to update (source is 'sisu' or older manual update)
+          const updateMilestoneData: Record<string, any> = {
+            source: 'sisu',
+            updated_at: new Date().toISOString(),
+          };
+          if (targetDate) updateMilestoneData.target_date = targetDate;
+          if (actualDate) updateMilestoneData.actual_date = actualDate;
+          if (mStatus) updateMilestoneData.status = mStatus;
+          if (mNotes || existingM.notes) updateMilestoneData.notes = mNotes || existingM.notes;
+
           await supabase
             .from('milestones')
-            .update({
-              target_date: targetDate,
-              actual_date: actualDate,
-              status: mStatus,
-              source: 'sisu',
-              notes: mNotes || existingM.notes,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updateMilestoneData)
             .eq('id', existingM.id);
         } else {
           await supabase.from('milestones').insert({
@@ -648,7 +760,7 @@ serve(async (req: Request) => {
             milestone_type: mKey,
             target_date: targetDate,
             actual_date: actualDate,
-            status: mStatus,
+            status: mStatus || 'pending',
             source: 'sisu',
             notes: mNotes,
           });
