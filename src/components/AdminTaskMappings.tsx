@@ -53,10 +53,17 @@ export const AdminTaskMappings: React.FC = () => {
   const [manualMilestoneField, setManualMilestoneField] = useState<string>('earnest_money');
   const [isSavingManual, setIsSavingManual] = useState<boolean>(false);
 
-  // Quick-test suggestions from screenshot
+  // Quick-test suggestions (both checklist task names and Sisu form custom fields)
   const TEST_SUGGESTIONS = [
+    { name: 'Earnest money Deposited?', defaultField: 'earnest_money' },
+    { name: 'Inspection Completed?', defaultField: 'inspection_10day' },
     { name: 'Earnest Money Deposited - Transaction Hub', defaultField: 'earnest_money' },
     { name: 'Inspection Ordered - Transaction Hub', defaultField: 'inspection_ordered' },
+    { name: 'Appraisal Completed?', defaultField: 'appraisal_satisfied' },
+    { name: 'Loan Commitment Received?', defaultField: 'financing_contingency' },
+    { name: 'Title Cleared?', defaultField: 'title' },
+    { name: 'Clear to Close Received?', defaultField: 'ctc' },
+    { name: 'Closing Completed?', defaultField: 'closing' },
   ];
 
   const fetchData = async () => {

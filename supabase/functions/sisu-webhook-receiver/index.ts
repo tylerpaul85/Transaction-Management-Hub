@@ -925,6 +925,201 @@ serve(async (req: Request) => {
       }
     }
 
+    // =========================================================================
+    // 7b. Sisu Custom Transaction Fields Synchronization (Yes/No Form Fields)
+    // =========================================================================
+    const customFields: Record<string, any> = {
+      ...(fullObj?.custom || {}),
+      ...(updatedVals?.custom || {}),
+      ...(sisuData?.custom || {}),
+      ...(payload?.custom || {}),
+    };
+
+    const customEntries = Object.entries(customFields);
+    if (customEntries.length > 0) {
+      console.log(`[Sisu Webhook] Found ${customEntries.length} custom fields in transaction payload:`, Object.keys(customFields));
+
+      const { data: activeMappings } = await supabase
+        .from('sisu_task_mappings')
+        .select('*')
+        .eq('active', true);
+
+      const mappingMap = new Map<string, any>();
+      (activeMappings || []).forEach((m: any) => {
+        if (m.sisu_task_name) {
+          mappingMap.set(m.sisu_task_name.trim(), m);
+          mappingMap.set(m.sisu_task_name.trim().toLowerCase(), m);
+          mappingMap.set(m.sisu_task_name.trim().toLowerCase().replace(/[\s\-_?]/g, ''), m);
+        }
+      });
+
+      const { data: currentMilestones } = await supabase
+        .from('milestones')
+        .select('*')
+        .eq('transaction_id', transactionId);
+
+      const latestMilestoneMap = new Map<string, any>();
+      (currentMilestones || []).forEach((m: any) => latestMilestoneMap.set(m.milestone_type, m));
+
+      const receiptDate = new Date().toISOString().split('T')[0];
+
+      for (const [key, rawValue] of customEntries) {
+        if (rawValue === null || rawValue === undefined) continue;
+        const strVal = String(rawValue).trim().toLowerCase();
+
+        // Completion boolean check
+        const isYes =
+          strVal === 'yes' ||
+          strVal === 'true' ||
+          strVal === 'y' ||
+          strVal === '1' ||
+          strVal === 'completed' ||
+          strVal === 'satisfied' ||
+          strVal === 'done' ||
+          rawValue === true ||
+          rawValue === 1;
+
+        const isNo =
+          strVal === 'no' ||
+          strVal === 'false' ||
+          strVal === 'n' ||
+          strVal === '0' ||
+          rawValue === false ||
+          rawValue === 0;
+
+        const normalizedKey = key.trim().toLowerCase().replace(/[\s\-_?]/g, '');
+        const cleanKey = key.replace(/_/g, ' ').trim().toLowerCase();
+
+        // 1. Direct mapping check from sisu_task_mappings
+        const matched =
+          mappingMap.get(key) ||
+          mappingMap.get(key.toLowerCase()) ||
+          mappingMap.get(cleanKey) ||
+          mappingMap.get(normalizedKey);
+
+        const targetFields: string[] = [];
+        if (matched) {
+          targetFields.push(matched.milestone_field);
+        } else {
+          // 2. Intelligent keyword fallback
+          if (normalizedKey.includes('earnest') || normalizedKey.includes('emd')) {
+            targetFields.push('earnest_money');
+          } else if (normalizedKey.includes('inspection')) {
+            if (
+              normalizedKey.includes('complet') ||
+              normalizedKey.includes('10day') ||
+              normalizedKey.includes('resolut') ||
+              normalizedKey.includes('satisf')
+            ) {
+              targetFields.push('inspection_10day', 'inspection_ordered');
+            } else {
+              targetFields.push('inspection_ordered');
+            }
+          } else if (normalizedKey.includes('appraisal')) {
+            if (
+              normalizedKey.includes('satisf') ||
+              normalizedKey.includes('receiv') ||
+              normalizedKey.includes('complet')
+            ) {
+              targetFields.push('appraisal_satisfied', 'appraisal_received');
+            } else {
+              targetFields.push('appraisal_ordered');
+            }
+          } else if (normalizedKey.includes('financ') || normalizedKey.includes('loan')) {
+            targetFields.push('financing_contingency');
+          } else if (normalizedKey.includes('title')) {
+            targetFields.push('title');
+          } else if (normalizedKey.includes('ctc') || normalizedKey.includes('cleartoclose')) {
+            targetFields.push('ctc');
+          } else if (normalizedKey.includes('walk') || normalizedKey.includes('walkthrough')) {
+            targetFields.push('walk_through');
+          } else if (
+            normalizedKey.includes('closing') ||
+            normalizedKey.includes('closed') ||
+            normalizedKey.includes('settlement')
+          ) {
+            targetFields.push('closing');
+          }
+        }
+
+        if (targetFields.length > 0) {
+          for (const targetField of targetFields) {
+            const existingM = latestMilestoneMap.get(targetField);
+            if (isYes) {
+              tasksMatched++;
+              if (existingM) {
+                const isManual = existingM.source === 'manual';
+                const manualUpdatedAt = new Date(existingM.updated_at).getTime();
+
+                if (isManual && manualUpdatedAt >= sisuUpdatedAt) {
+                  if (
+                    existingM.actual_date !== receiptDate ||
+                    (existingM.status !== 'complete' && existingM.status !== 'satisfied')
+                  ) {
+                    conflictsFound++;
+                    continue;
+                  }
+                }
+
+                await supabase
+                  .from('milestones')
+                  .update({
+                    actual_date: receiptDate,
+                    status: 'complete',
+                    source: 'sisu',
+                    notes: existingM.notes || `Completed via Sisu form: ${key}`,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', existingM.id);
+
+                latestMilestoneMap.set(targetField, {
+                  ...existingM,
+                  actual_date: receiptDate,
+                  status: 'complete',
+                  source: 'sisu',
+                });
+              } else {
+                const { data: newM } = await supabase
+                  .from('milestones')
+                  .insert({
+                    transaction_id: transactionId,
+                    milestone_type: targetField,
+                    actual_date: receiptDate,
+                    status: 'complete',
+                    source: 'sisu',
+                    notes: `Completed via Sisu form: ${key}`,
+                  })
+                  .select()
+                  .maybeSingle();
+
+                if (newM) latestMilestoneMap.set(targetField, newM);
+              }
+            } else if (
+              isNo &&
+              existingM &&
+              existingM.source === 'sisu' &&
+              (existingM.status === 'complete' || existingM.status === 'satisfied')
+            ) {
+              await supabase
+                .from('milestones')
+                .update({
+                  status: 'pending',
+                  actual_date: null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', existingM.id);
+
+              latestMilestoneMap.set(targetField, {
+                ...existingM,
+                status: 'pending',
+                actual_date: null,
+              });
+            }
+          }
+        }
+      }
+    }
+
     // 8. Mark Webhook Log as processed
     if (logId) {
       await supabase

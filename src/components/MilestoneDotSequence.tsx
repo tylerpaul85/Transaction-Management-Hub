@@ -38,7 +38,19 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
   return (
     <div className="flex items-center gap-1.5 py-1">
       {MILESTONE_ORDER.map((item, idx) => {
-        const m = milestoneMap.get(item.type);
+        let m = milestoneMap.get(item.type);
+        if (item.type === 'inspection_10day' && (!m || m.status === 'pending')) {
+          const alt = milestoneMap.get('inspection_ordered') || milestoneMap.get('inspection_notice_sent');
+          if (alt && (alt.status === 'complete' || alt.status === 'satisfied')) {
+            m = alt;
+          }
+        }
+        if (item.type === 'appraisal_satisfied' && (!m || m.status === 'pending')) {
+          const alt = milestoneMap.get('appraisal_received') || milestoneMap.get('appraisal_ordered');
+          if (alt && (alt.status === 'complete' || alt.status === 'satisfied')) {
+            m = alt;
+          }
+        }
         const status = m?.status || 'pending';
         const isHovered = hoveredType === item.type;
 
