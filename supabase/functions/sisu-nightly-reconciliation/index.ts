@@ -902,12 +902,43 @@ serve(async (req: Request) => {
       }
 
       // Reconcile custom transaction form fields
-      const customFields: Record<string, any> = {
+      const fullCustom: Record<string, any> = {
         ...(sisuData?.custom || {}),
         ...(sisuData?.object_data?.full_object?.custom || {}),
       };
-      const customEntries = Object.entries(customFields);
-      if (customEntries.length > 0) {
+      const hasFullCustomState = Object.keys(fullCustom).length > 0;
+
+      // Helper: evaluate Yes / No / Cleared boolean state
+      const evaluateBooleanValue = (val: any): { isYes: boolean; isNo: boolean } => {
+        if (val === null || val === undefined) return { isYes: false, isNo: true };
+        const strVal = String(val).trim().toLowerCase();
+        if (strVal === '' || strVal === 'none' || strVal === 'null' || strVal === 'unmarked' || strVal === '- select -' || strVal === 'n/a') {
+          return { isYes: false, isNo: true };
+        }
+        const isYes =
+          strVal === 'yes' ||
+          strVal === 'true' ||
+          strVal === 'y' ||
+          strVal === '1' ||
+          strVal === 'completed' ||
+          strVal === 'satisfied' ||
+          strVal === 'done' ||
+          val === true ||
+          val === 1;
+
+        const isNo =
+          strVal === 'no' ||
+          strVal === 'false' ||
+          strVal === 'n' ||
+          strVal === '0' ||
+          val === false ||
+          val === 0;
+
+        return { isYes, isNo };
+      };
+
+      const customEntries = Object.entries(fullCustom);
+      if (customEntries.length > 0 || hasFullCustomState) {
         const { data: activeMappings } = await supabase
           .from('sisu_task_mappings')
           .select('*')
@@ -932,81 +963,65 @@ serve(async (req: Request) => {
 
         const receiptDate = new Date().toISOString().split('T')[0];
 
-        for (const [key, rawValue] of customEntries) {
-          if (rawValue === null || rawValue === undefined) continue;
-          const strVal = String(rawValue).trim().toLowerCase();
-
-          const isYes =
-            strVal === 'yes' ||
-            strVal === 'true' ||
-            strVal === 'y' ||
-            strVal === '1' ||
-            strVal === 'completed' ||
-            strVal === 'satisfied' ||
-            strVal === 'done' ||
-            rawValue === true ||
-            rawValue === 1;
-
-          const isNo =
-            strVal === 'no' ||
-            strVal === 'false' ||
-            strVal === 'n' ||
-            strVal === '0' ||
-            rawValue === false ||
-            rawValue === 0;
-
-          const normalizedKey = key.trim().toLowerCase().replace(/[\s\-_?]/g, '');
-          const cleanKey = key.replace(/_/g, ' ').trim().toLowerCase();
+        const getTargetFields = (fieldKey: string): string[] => {
+          const baseKey = fieldKey.replace(/s_\d+$|_\d+$/g, '').toLowerCase().trim();
+          const normalizedKey = baseKey.replace(/[\s\-_?]/g, '');
+          const cleanKey = baseKey.replace(/_/g, ' ').trim().toLowerCase();
 
           const matched =
-            mappingMap.get(key) ||
-            mappingMap.get(key.toLowerCase()) ||
+            mappingMap.get(fieldKey) ||
+            mappingMap.get(fieldKey.toLowerCase()) ||
+            mappingMap.get(baseKey) ||
             mappingMap.get(cleanKey) ||
             mappingMap.get(normalizedKey);
 
-          const targetFields: string[] = [];
-          if (matched) {
-            targetFields.push(matched.milestone_field);
-          } else {
-            if (normalizedKey.includes('earnest') || normalizedKey.includes('emd')) {
-              targetFields.push('earnest_money');
-            } else if (normalizedKey.includes('inspection')) {
-              if (
-                normalizedKey.includes('complet') ||
-                normalizedKey.includes('10day') ||
-                normalizedKey.includes('resolut') ||
-                normalizedKey.includes('satisf')
-              ) {
-                targetFields.push('inspection_10day', 'inspection_ordered');
-              } else {
-                targetFields.push('inspection_ordered');
-              }
-            } else if (normalizedKey.includes('appraisal')) {
-              if (
-                normalizedKey.includes('satisf') ||
-                normalizedKey.includes('receiv') ||
-                normalizedKey.includes('complet')
-              ) {
-                targetFields.push('appraisal_satisfied', 'appraisal_received');
-              } else {
-                targetFields.push('appraisal_ordered');
-              }
-            } else if (normalizedKey.includes('financ') || normalizedKey.includes('loan')) {
-              targetFields.push('financing_contingency');
-            } else if (normalizedKey.includes('title')) {
-              targetFields.push('title');
-            } else if (normalizedKey.includes('ctc') || normalizedKey.includes('cleartoclose')) {
-              targetFields.push('ctc');
-            } else if (normalizedKey.includes('walk') || normalizedKey.includes('walkthrough')) {
-              targetFields.push('walk_through');
-            } else if (
-              normalizedKey.includes('closing') ||
-              normalizedKey.includes('closed') ||
-              normalizedKey.includes('settlement')
+          if (matched) return [matched.milestone_field];
+
+          const targets: string[] = [];
+          if (normalizedKey.includes('earnest') || normalizedKey.includes('emd')) {
+            targets.push('earnest_money');
+          } else if (normalizedKey.includes('inspection')) {
+            if (
+              normalizedKey.includes('complet') ||
+              normalizedKey.includes('10day') ||
+              normalizedKey.includes('resolut') ||
+              normalizedKey.includes('satisf')
             ) {
-              targetFields.push('closing');
+              targets.push('inspection_10day', 'inspection_ordered');
+            } else {
+              targets.push('inspection_ordered');
             }
+          } else if (normalizedKey.includes('appraisal')) {
+            if (
+              normalizedKey.includes('satisf') ||
+              normalizedKey.includes('receiv') ||
+              normalizedKey.includes('complet')
+            ) {
+              targets.push('appraisal_satisfied', 'appraisal_received');
+            } else {
+              targets.push('appraisal_ordered');
+            }
+          } else if (normalizedKey.includes('financ') || normalizedKey.includes('loan')) {
+            targets.push('financing_contingency');
+          } else if (normalizedKey.includes('title')) {
+            targets.push('title');
+          } else if (normalizedKey.includes('ctc') || normalizedKey.includes('cleartoclose')) {
+            targets.push('ctc');
+          } else if (normalizedKey.includes('walk') || normalizedKey.includes('walkthrough')) {
+            targets.push('walk_through');
+          } else if (
+            normalizedKey.includes('closing') ||
+            normalizedKey.includes('closed') ||
+            normalizedKey.includes('settlement')
+          ) {
+            targets.push('closing');
           }
+          return targets;
+        };
+
+        for (const [key, rawValue] of customEntries) {
+          const { isYes, isNo } = evaluateBooleanValue(rawValue);
+          const targetFields = getTargetFields(key);
 
           if (targetFields.length > 0) {
             for (const targetField of targetFields) {
@@ -1019,10 +1034,18 @@ serve(async (req: Request) => {
                       actual_date: receiptDate,
                       status: 'complete',
                       source: 'sisu',
-                      notes: existingM.notes || `Completed via Sisu form: ${key}`,
+                      notes: `Completed via Sisu form: ${key}`,
                       updated_at: new Date().toISOString(),
                     })
                     .eq('id', existingM.id);
+
+                  latestMilestoneMap.set(targetField, {
+                    ...existingM,
+                    actual_date: receiptDate,
+                    status: 'complete',
+                    source: 'sisu',
+                    notes: `Completed via Sisu form: ${key}`,
+                  });
                 } else {
                   await supabase.from('milestones').insert({
                     transaction_id: transactionId,
@@ -1036,17 +1059,63 @@ serve(async (req: Request) => {
               } else if (
                 isNo &&
                 existingM &&
-                existingM.source === 'sisu' &&
-                (existingM.status === 'complete' || existingM.status === 'satisfied')
+                (existingM.status === 'complete' || existingM.status === 'satisfied') &&
+                (existingM.source === 'sisu' || existingM.notes?.includes('Completed via Sisu form:'))
               ) {
                 await supabase
                   .from('milestones')
                   .update({
                     status: 'pending',
                     actual_date: null,
+                    notes: null,
+                    source: 'sisu',
                     updated_at: new Date().toISOString(),
                   })
                   .eq('id', existingM.id);
+
+                latestMilestoneMap.set(targetField, {
+                  ...existingM,
+                  status: 'pending',
+                  actual_date: null,
+                  notes: null,
+                  source: 'sisu',
+                });
+              }
+            }
+          }
+        }
+
+        // State-reconciliation sweep for nightly job
+        if (hasFullCustomState) {
+          for (const [mType, existingM] of latestMilestoneMap.entries()) {
+            if (
+              (existingM.status === 'complete' || existingM.status === 'satisfied') &&
+              existingM.notes &&
+              existingM.notes.startsWith('Completed via Sisu form: ')
+            ) {
+              const originatingKey = existingM.notes.replace('Completed via Sisu form: ', '').trim();
+              const currentVal = fullCustom[originatingKey];
+              const { isYes } = evaluateBooleanValue(currentVal);
+
+              if (!isYes) {
+                await supabase
+                  .from('milestones')
+                  .update({
+                    status: 'pending',
+                    actual_date: null,
+                    notes: null,
+                    source: 'sisu',
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', existingM.id);
+
+                latestMilestoneMap.set(mType, {
+                  ...existingM,
+                  status: 'pending',
+                  actual_date: null,
+                  notes: null,
+                  source: 'sisu',
+                });
               }
             }
           }
