@@ -93,3 +93,22 @@ export const ALL_MILESTONES_CONFIG: { type: MilestoneType; label: string; descri
   { type: 'ctc', label: 'Clear-to-Close (CTC)', description: 'Final underwriter loan clearance' },
   { type: 'closing', label: 'Closing Settlement & Funding', description: 'Final deed recording and escrow funding' },
 ];
+
+export interface SisuTaskMapping {
+  id: string;
+  sisu_task_name: string;
+  milestone_field: string;
+  milestone_table: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SisuUnmatchedTask {
+  id: string;
+  task_name: string;
+  transaction_id: string | null;
+  detected_at: string;
+  task_payload?: any;
+}
+

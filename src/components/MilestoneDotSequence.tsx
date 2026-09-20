@@ -19,6 +19,7 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'satisfied':
+      case 'complete':
         return 'bg-emerald-500 text-[#0f172a] border-emerald-400';
       case 'notice_sent':
       case 'ordered':

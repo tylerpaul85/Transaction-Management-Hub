@@ -29,6 +29,7 @@ export type MilestoneStatus =
   | 'ordered'
   | 'notice_sent'
   | 'satisfied'
+  | 'complete'
   | 'waived'
   | 'na';
 
@@ -409,6 +410,58 @@ export interface Database {
           metadata?: Json | null;
         };
       };
+      sisu_task_mappings: {
+        Row: {
+          id: string;
+          sisu_task_name: string;
+          milestone_field: string;
+          milestone_table: string;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          sisu_task_name: string;
+          milestone_field: string;
+          milestone_table?: string;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          sisu_task_name?: string;
+          milestone_field?: string;
+          milestone_table?: string;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      sisu_unmatched_tasks: {
+        Row: {
+          id: string;
+          task_name: string;
+          transaction_id: string | null;
+          detected_at: string;
+          task_payload: Json | null;
+        };
+        Insert: {
+          id?: string;
+          task_name: string;
+          transaction_id?: string | null;
+          detected_at?: string;
+          task_payload?: Json | null;
+        };
+        Update: {
+          id?: string;
+          task_name?: string;
+          transaction_id?: string | null;
+          detected_at?: string;
+          task_payload?: Json | null;
+        };
+      };
     };
   };
 }
@@ -422,4 +475,7 @@ export type DbSisuWebhookLog = Database['public']['Tables']['sisu_webhook_log'][
 export type DbSyncConflict = Database['public']['Tables']['sync_conflicts']['Row'];
 export type DbReconciliationRun = Database['public']['Tables']['reconciliation_runs']['Row'];
 export type DbDigestLog = Database['public']['Tables']['digest_log']['Row'];
+export type DbSisuTaskMapping = Database['public']['Tables']['sisu_task_mappings']['Row'];
+export type DbSisuUnmatchedTask = Database['public']['Tables']['sisu_unmatched_tasks']['Row'];
+
 

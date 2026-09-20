@@ -5,8 +5,10 @@ import { OpsTransaction, OpsMilestone, ALL_MILESTONES_CONFIG } from '../types/op
 import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
 import { OpsTransactionDetailModal } from '../components/OpsTransactionDetailModal';
 import { AdminUserManagement } from '../components/AdminUserManagement';
+import { AdminTaskMappings } from '../components/AdminTaskMappings';
 import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
 import {
+  ListChecks,
   Settings,
   Search,
   Filter,
@@ -48,8 +50,8 @@ export const OpsDashboard: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncStatusText, setSyncStatusText] = useState<string | null>(null);
 
-  // Main Dashboard Tab: 'tc_escrows' | 'lc_listings' | 'all_files' | 'users'
-  const [activeSection, setActiveSection] = useState<'tc_escrows' | 'lc_listings' | 'all_files' | 'users'>(
+  // Main Dashboard Tab: 'tc_escrows' | 'lc_listings' | 'all_files' | 'users' | 'tasks'
+  const [activeSection, setActiveSection] = useState<'tc_escrows' | 'lc_listings' | 'all_files' | 'users' | 'tasks'>(
     currentUser?.role === 'listing_coordinator' ? 'lc_listings' : 'tc_escrows'
   );
 
@@ -808,6 +810,21 @@ export const OpsDashboard: React.FC = () => {
                 <span>User Allowlist & Access</span>
               </button>
             )}
+
+            {/* Admin Sisu Task Mappings */}
+            {currentUser.role === 'admin' && (
+              <button
+                onClick={() => setActiveSection('tasks')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeSection === 'tasks'
+                    ? 'bg-amber-500 text-[#0f172a] shadow-lg'
+                    : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                }`}
+              >
+                <ListChecks className="h-4 w-4" />
+                <span>Sisu Task Mappings</span>
+              </button>
+            )}
           </div>
 
           <div className="text-xs text-[#94a3b8] flex items-center gap-2">
@@ -859,6 +876,8 @@ export const OpsDashboard: React.FC = () => {
       {/* Main Routed Area */}
       {activeSection === 'users' && currentUser.role === 'admin' ? (
         <AdminUserManagement />
+      ) : activeSection === 'tasks' && currentUser.role === 'admin' ? (
+        <AdminTaskMappings />
       ) : (
         <>
           {/* Search & Filter Toolbar */}

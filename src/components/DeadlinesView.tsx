@@ -49,7 +49,7 @@ export const DeadlinesView: React.FC = () => {
       return item.contingency.status === 'pending';
     }
     if (filterCategory === 'satisfied') {
-      return item.contingency.status === 'satisfied' || item.contingency.status === 'waived';
+      return item.contingency.status === 'satisfied' || item.contingency.status === 'complete' || item.contingency.status === 'waived';
     }
     return true;
   });
@@ -69,7 +69,7 @@ export const DeadlinesView: React.FC = () => {
   );
   const upcoming = sorted.filter((i) => i.contingency.status === 'pending' && i.diffDays > 7);
   const satisfied = sorted.filter(
-    (i) => i.contingency.status === 'satisfied' || i.contingency.status === 'waived'
+    (i) => i.contingency.status === 'satisfied' || i.contingency.status === 'complete' || i.contingency.status === 'waived'
   );
 
   const renderSection = (
@@ -104,7 +104,7 @@ export const DeadlinesView: React.FC = () => {
                   </span>
                   <span
                     className={`font-mono-code text-xs px-2 py-0.5 rounded-md border font-semibold ${
-                      contingency.status === 'satisfied'
+                      contingency.status === 'satisfied' || contingency.status === 'complete'
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                         : diffDays < 0
                         ? 'bg-rose-500/15 text-rose-400 border-rose-500/30 font-bold animate-pulse'
@@ -113,7 +113,7 @@ export const DeadlinesView: React.FC = () => {
                         : 'bg-slate-800 text-slate-300 border-slate-700'
                     }`}
                   >
-                    {contingency.status === 'satisfied'
+                    {contingency.status === 'satisfied' || contingency.status === 'complete'
                       ? 'Satisfied'
                       : diffDays < 0
                       ? `${Math.abs(diffDays)}d Overdue`

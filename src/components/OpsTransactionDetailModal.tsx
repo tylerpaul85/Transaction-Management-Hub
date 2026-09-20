@@ -585,7 +585,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                                   })
                                 }
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border cursor-pointer ${
-                                  m.status === 'satisfied'
+                                  m.status === 'satisfied' || m.status === 'complete'
                                     ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                                     : m.status === 'notice_sent' || m.status === 'ordered'
                                     ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
@@ -600,6 +600,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                                 <option value="ordered">ordered</option>
                                 <option value="notice_sent">notice_sent</option>
                                 <option value="satisfied">satisfied</option>
+                                <option value="complete">complete</option>
                                 <option value="waived">waived</option>
                                 <option value="na">na</option>
                               </select>

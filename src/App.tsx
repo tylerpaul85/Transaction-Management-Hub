@@ -10,6 +10,7 @@ import { HubHome } from './routes/HubHome';
 import { MyDealsView } from './routes/MyDealsView';
 import { OpsDashboard } from './routes/OpsDashboard';
 import { AdminSyncDebug } from './routes/AdminSyncDebug';
+import { AdminTaskMappings } from './components/AdminTaskMappings';
 import { GoogleAuthGate } from './components/GoogleAuthGate';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
 import { NewTransactionModal } from './components/NewTransactionModal';
@@ -118,6 +119,14 @@ const AuthenticatedLayout: React.FC = () => {
         {currentPath === '/ops' && (
           <RoleGuard allowedRoles={['tc', 'listing_coordinator', 'admin']} routeName="/ops" onNavigate={handleNavigate}>
             <OpsDashboard />
+          </RoleGuard>
+        )}
+
+        {currentPath === '/ops/task-mappings' && (
+          <RoleGuard allowedRoles={['admin']} routeName="/ops/task-mappings" onNavigate={handleNavigate}>
+            <div className="pt-4">
+              <AdminTaskMappings />
+            </div>
           </RoleGuard>
         )}
 

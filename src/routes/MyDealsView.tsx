@@ -536,7 +536,7 @@ export const MyDealsView: React.FC = () => {
                                   </span>
                                   <span
                                     className={`px-2 py-0.2 rounded-full text-[10px] font-bold uppercase border ${
-                                      m.status === 'satisfied'
+                                      m.status === 'satisfied' || m.status === 'complete'
                                         ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                                         : m.status === 'notice_sent' || m.status === 'ordered'
                                         ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'

@@ -193,7 +193,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
               milestones: (t.milestones || []).map((m: any) => ({
                 id: m.id,
                 title: m.milestone_type.replace(/_/g, ' ').toUpperCase(),
-                completed: m.status === 'satisfied',
+                completed: m.status === 'satisfied' || m.status === 'complete',
                 dueDate: m.target_date || undefined,
                 completedAt: m.actual_date || undefined,
               })),
@@ -334,7 +334,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
             ...c,
             status,
             notes: notes !== undefined ? notes : c.notes,
-            resolvedDate: status === 'satisfied' || status === 'waived' ? new Date().toISOString().split('T')[0] : c.resolvedDate,
+            resolvedDate: status === 'satisfied' || (status as any) === 'complete' || status === 'waived' ? new Date().toISOString().split('T')[0] : c.resolvedDate,
           };
         });
 

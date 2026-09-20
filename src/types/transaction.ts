@@ -18,7 +18,7 @@ export type PropertyType =
 
 export type TransactionHealth = 'on_track' | 'attention_required' | 'urgent_deadline' | 'completed';
 
-export type ContingencyStatus = 'pending' | 'satisfied' | 'waived' | 'overdue';
+export type ContingencyStatus = 'pending' | 'satisfied' | 'complete' | 'waived' | 'overdue';
 
 export interface Contingency {
   id: string;
