@@ -508,7 +508,7 @@ serve(async (req: Request) => {
       // Find in DB
       const { data: existingTx } = await supabase
         .from('transactions')
-        .select('id, sisu_transaction_id, updated_at, property_address, client_name, status, side, city, state')
+        .select('id, sisu_transaction_id, updated_at, property_address, client_name, status, side, city, state, custom_fields')
         .eq('sisu_transaction_id', sisuTxId)
         .maybeSingle();
 
@@ -1099,7 +1099,7 @@ serve(async (req: Request) => {
           }
         }
 
-        // State-reconciliation sweep for nightly job
+        // State-reconciliation sweep for nightly job: only revert if the field is present in the snapshot and explicitly NOT Yes
         if (hasFullCustomState) {
           for (const [mType, existingM] of latestMilestoneMap.entries()) {
             if (
@@ -1108,28 +1108,30 @@ serve(async (req: Request) => {
               existingM.notes.startsWith('Completed via Sisu form: ')
             ) {
               const originatingKey = existingM.notes.replace('Completed via Sisu form: ', '').trim();
-              const currentVal = fullCustom[originatingKey];
-              const { isYes } = evaluateBooleanValue(currentVal);
+              if (originatingKey in fullCustom) {
+                const currentVal = fullCustom[originatingKey];
+                const { isYes } = evaluateBooleanValue(currentVal);
 
-              if (!isYes) {
-                await supabase
-                  .from('milestones')
-                  .update({
+                if (!isYes) {
+                  await supabase
+                    .from('milestones')
+                    .update({
+                      status: 'pending',
+                      actual_date: null,
+                      notes: null,
+                      source: 'sisu',
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', existingM.id);
+
+                  latestMilestoneMap.set(mType, {
+                    ...existingM,
                     status: 'pending',
                     actual_date: null,
                     notes: null,
                     source: 'sisu',
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq('id', existingM.id);
-
-                latestMilestoneMap.set(mType, {
-                  ...existingM,
-                  status: 'pending',
-                  actual_date: null,
-                  notes: null,
-                  source: 'sisu',
-                });
+                  });
+                }
               }
             }
           }
@@ -1140,7 +1142,10 @@ serve(async (req: Request) => {
             updated_at: new Date().toISOString(),
           };
           if (hasFullCustomState) {
-            finalTxUpdates.custom_fields = fullCustom;
+            finalTxUpdates.custom_fields = {
+              ...((existingTx?.custom_fields as Record<string, any>) || {}),
+              ...fullCustom,
+            };
           }
           await supabase
             .from('transactions')

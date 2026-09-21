@@ -613,7 +613,7 @@ serve(async (req: Request) => {
     // Check if transaction already exists
     const { data: existingTx } = await supabase
       .from('transactions')
-      .select('id, sisu_transaction_id, updated_at, property_address, client_name, status, side, city, state')
+      .select('id, sisu_transaction_id, updated_at, property_address, client_name, status, side, city, state, custom_fields')
       .eq('sisu_transaction_id', finalSisuId)
       .maybeSingle();
 
@@ -1064,7 +1064,20 @@ serve(async (req: Request) => {
     const updatedCustom = (dataObj?.updated_values?.custom || {}) as Record<string, any>;
     const fullCustom = (fullObj?.custom || sisuData?.custom || payload?.custom || {}) as Record<string, any>;
 
-    const hasFullCustomState = Object.keys(fullCustom).length > 0;
+    // Incoming delta fields explicitly sent in this webhook payload
+    const incomingCustom: Record<string, any> = {
+      ...fullCustom,
+      ...updatedCustom,
+    };
+
+    // Existing custom fields saved on this transaction in our database
+    const existingCustom = ((existingTx?.custom_fields as Record<string, any>) || {});
+
+    // Merged state preserves all previously answered form fields on the transaction
+    const mergedCustomFields: Record<string, any> = {
+      ...existingCustom,
+      ...incomingCustom,
+    };
 
     // Helper: evaluate Yes / No / Cleared boolean state
     const evaluateBooleanValue = (val: any): { isYes: boolean; isNo: boolean } => {
@@ -1109,21 +1122,9 @@ serve(async (req: Request) => {
       return { isYes, isNo };
     };
 
-    // Build unified custom fields map:
-    // Any field in prevCustom that is not in fullCustom or updatedCustom is treated as cleared (null)
-    const customFields: Record<string, any> = {};
-    for (const key of Object.keys(prevCustom)) {
-      if (hasFullCustomState && !(key in fullCustom) && !(key in updatedCustom)) {
-        customFields[key] = null;
-      } else {
-        customFields[key] = prevCustom[key];
-      }
-    }
-    Object.assign(customFields, fullCustom, updatedCustom);
-
-    const customEntries = Object.entries(customFields);
-    if (customEntries.length > 0 || hasFullCustomState) {
-      console.log(`[Sisu Webhook] Processing ${customEntries.length} custom fields in transaction payload:`, Object.keys(customFields));
+    const incomingEntries = Object.entries(incomingCustom);
+    if (incomingEntries.length > 0) {
+      console.log(`[Sisu Webhook] Processing ${incomingEntries.length} incoming custom fields in transaction payload:`, Object.keys(incomingCustom));
 
       const { data: activeMappings } = await supabase
         .from('sisu_task_mappings')
@@ -1206,8 +1207,8 @@ serve(async (req: Request) => {
         return targets;
       };
 
-      // 1. Process explicit custom field entries
-      for (const [key, rawValue] of customEntries) {
+      // Process only the incoming custom fields explicitly updated in this webhook event
+      for (const [key, rawValue] of incomingEntries) {
         const { isYes, isNo } = evaluateBooleanValue(rawValue);
         const targetFields = getTargetFields(key);
 
@@ -1270,7 +1271,7 @@ serve(async (req: Request) => {
               (existingM.status === 'complete' || existingM.status === 'satisfied') &&
               (existingM.source === 'sisu' || existingM.notes?.includes('Completed via Sisu form:'))
             ) {
-              console.log(`[Sisu Webhook] Reverting milestone ${targetField} to pending because Sisu field ${key} is No/cleared`);
+              console.log(`[Sisu Webhook] Reverting milestone ${targetField} to pending because Sisu field ${key} was explicitly set to No/cleared`);
               await supabase
                 .from('milestones')
                 .update({
@@ -1293,55 +1294,16 @@ serve(async (req: Request) => {
           }
         }
       }
-
-      // 2. State-reconciliation sweep:
-      // If Sisu sent a full custom fields snapshot (fullCustom), check any milestone that was
-      // previously completed via a Sisu form field. If that form field is now missing or not Yes, revert it to pending.
-      if (hasFullCustomState) {
-        for (const [mType, existingM] of latestMilestoneMap.entries()) {
-          if (
-            (existingM.status === 'complete' || existingM.status === 'satisfied') &&
-            existingM.notes &&
-            existingM.notes.startsWith('Completed via Sisu form: ')
-          ) {
-            const originatingKey = existingM.notes.replace('Completed via Sisu form: ', '').trim();
-            const currentVal = fullCustom[originatingKey] ?? updatedCustom[originatingKey];
-            const { isYes } = evaluateBooleanValue(currentVal);
-
-            if (!isYes) {
-              console.log(`[Sisu Webhook] Reverting milestone ${mType} to pending because originating Sisu field ${originatingKey} is absent/falsy in full custom snapshot`);
-              await supabase
-                .from('milestones')
-                .update({
-                  status: 'pending',
-                  actual_date: null,
-                  notes: null,
-                  source: 'sisu',
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', existingM.id);
-
-              latestMilestoneMap.set(mType, {
-                ...existingM,
-                status: 'pending',
-                actual_date: null,
-                notes: null,
-                source: 'sisu',
-              });
-            }
-          }
-        }
-      }
     }
 
-    // 7c. Persist full custom_fields snapshot to transactions table and touch updated_at
+    // 7c. Persist merged custom_fields snapshot to transactions table and touch updated_at
     // This guarantees any realtime listener on 'transactions' fires AFTER all milestones are committed.
     if (transactionId) {
       const finalTxUpdates: Record<string, any> = {
         updated_at: new Date().toISOString(),
       };
-      if (hasFullCustomState) {
-        finalTxUpdates.custom_fields = fullCustom;
+      if (Object.keys(mergedCustomFields).length > 0) {
+        finalTxUpdates.custom_fields = mergedCustomFields;
       }
       await supabase
         .from('transactions')
