@@ -7,6 +7,7 @@ import { OpsTransactionDetailModal } from '../components/OpsTransactionDetailMod
 import { AdminUserManagement } from '../components/AdminUserManagement';
 import { AdminTaskMappings } from '../components/AdminTaskMappings';
 import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
+import { AgentRosterManagement } from '../components/AgentRosterManagement';
 import {
   ListChecks,
   Settings,
@@ -50,8 +51,8 @@ export const OpsDashboard: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncStatusText, setSyncStatusText] = useState<string | null>(null);
 
-  // Main Dashboard View Section: 'escrows' | 'users' | 'tasks'
-  const [activeSection, setActiveSection] = useState<'escrows' | 'users' | 'tasks'>('escrows');
+  // Main Dashboard View Section: 'escrows' | 'users' | 'tasks' | 'roster'
+  const [activeSection, setActiveSection] = useState<'escrows' | 'users' | 'tasks' | 'roster'>('escrows');
   // Representation Tab: 'all' | 'buyer' | 'seller'
   const [representationTab, setRepresentationTab] = useState<'all' | 'buyer' | 'seller'>('all');
 
@@ -762,6 +763,19 @@ export const OpsDashboard: React.FC = () => {
               <span>Seller Files ({metrics.sellerEscrows})</span>
             </button>
 
+            {/* Agent Roster & Directory */}
+            <button
+              onClick={() => setActiveSection('roster')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeSection === 'roster'
+                  ? 'bg-purple-500 text-[#0f172a] shadow-lg'
+                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              <span>Agent Roster ({allAgentProfiles.length})</span>
+            </button>
+
             {/* Admin User Management */}
             {currentUser.role === 'admin' && (
               <button
@@ -772,7 +786,7 @@ export const OpsDashboard: React.FC = () => {
                     : 'text-[#94a3b8] hover:text-[#f8fafc]'
                 }`}
               >
-                <Users className="h-4 w-4" />
+                <ShieldCheck className="h-4 w-4" />
                 <span>User Allowlist & Access</span>
               </button>
             )}
@@ -840,7 +854,14 @@ export const OpsDashboard: React.FC = () => {
       </div>
 
       {/* Main Routed Area */}
-      {activeSection === 'users' && currentUser.role === 'admin' ? (
+      {activeSection === 'roster' ? (
+        <AgentRosterManagement
+          onAgentSelect={(agentName) => {
+            setAgentFilter(agentName);
+            setActiveSection('escrows');
+          }}
+        />
+      ) : activeSection === 'users' && currentUser.role === 'admin' ? (
         <AdminUserManagement />
       ) : activeSection === 'tasks' && currentUser.role === 'admin' ? (
         <AdminTaskMappings />

@@ -63,8 +63,8 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
     isInitialAll ? '' : initialAgentName
   );
   const [recipientEmail, setRecipientEmail] = useState<string>(
-    initialAgentEmail ||
-      allAgentProfiles.find((a) => a.name.toLowerCase() === initialAgentName.toLowerCase())?.email ||
+    allAgentProfiles.find((a) => a.name.toLowerCase() === initialAgentName.toLowerCase())?.email ||
+      initialAgentEmail ||
       'tyler.p@mattsmithrealestategroup.com'
   );
 
@@ -91,22 +91,24 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
   // Group all transactions by agent for the multi-agent view
   const agentGroups: AgentGroupInfo[] = useMemo(() => {
-    const map = new Map<string, { id?: string; email?: string; txs: OpsTransaction[] }>();
+    const map = new Map<string, { canonicalName: string; id?: string; email?: string; txs: OpsTransaction[] }>();
 
-    // First seed with known profiles
+    // First seed with verified profiles
     allAgentProfiles.forEach((p) => {
       if (p.name) {
-        map.set(p.name.trim(), { id: p.id, email: p.email, txs: [] });
+        map.set(p.name.trim().toLowerCase(), { canonicalName: p.name.trim(), id: p.id, email: p.email, txs: [] });
       }
     });
 
     // Distribute transactions to agents
     transactions.forEach((tx) => {
-      const name = (tx.agent_name || 'Unassigned Agent').trim();
-      if (!map.has(name)) {
-        map.set(name, { email: tx.agent_email, txs: [] });
+      const rawName = (tx.agent_name || 'Unassigned Agent').trim();
+      const key = rawName.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, { canonicalName: rawName, email: tx.agent_email, txs: [] });
       }
-      const item = map.get(name)!;
+      const item = map.get(key)!;
+      // If no verified email, fallback to transaction email
       if (!item.email && tx.agent_email) {
         item.email = tx.agent_email;
       }
@@ -139,7 +141,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
       list.push({
         id: data.id,
-        name,
+        name: data.canonicalName,
         email: data.email || 'agent@mattsmithrealestategroup.com',
         transactions: data.txs,
         overdueCount: overdue,

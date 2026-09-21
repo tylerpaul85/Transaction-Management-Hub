@@ -87,6 +87,8 @@ export interface Database {
           name: string;
           email: string;
           phone: string | null;
+          role: string | null;
+          category: string | null;
           sisu_agent_id: string | null;
           active: boolean;
           created_at: string;
@@ -98,6 +100,8 @@ export interface Database {
           name: string;
           email: string;
           phone?: string | null;
+          role?: string | null;
+          category?: string | null;
           sisu_agent_id?: string | null;
           active?: boolean;
           created_at?: string;
@@ -109,6 +113,8 @@ export interface Database {
           name?: string;
           email?: string;
           phone?: string | null;
+          role?: string | null;
+          category?: string | null;
           sisu_agent_id?: string | null;
           active?: boolean;
           created_at?: string;
