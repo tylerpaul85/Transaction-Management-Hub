@@ -699,7 +699,21 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     {Object.entries(transaction.custom_fields).map(([key, val]) => {
-                      const label = key
+                      const CUSTOM_LABEL_OVERRIDES: Record<string, string> = {
+                        inspection_completeds_63: 'Inspection Ordered',
+                        inspection_completed: 'Inspection Ordered',
+                        inspection_satisfieds_63: 'Inspection Satisfied',
+                        insurance_obtaineds_63: 'Insurance Obtained',
+                        earnest_money_depositeds_63: 'Earnest Money Deposited',
+                        title_commitment_s_38_clearance: 'Title Commitment & Clearance',
+                        'financing_/_loan_commitment_-_internal_use': 'Financing / Loan Commitment',
+                        'clear-to-close_(ctc)': 'Clear to Close',
+                        final_walkthrough: 'Final Walkthrough',
+                        appraisal_received: 'Appraisal Received',
+                        appraisal_satisfied: 'Appraisal Satisfied',
+                      };
+
+                      const label = CUSTOM_LABEL_OVERRIDES[key] || key
                         .replace(/s_\d+$|_\d+$/g, '')
                         .replace(/_/g, ' ')
                         .replace(/\b\w/g, (c) => c.toUpperCase());

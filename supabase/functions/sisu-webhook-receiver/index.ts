@@ -1233,24 +1233,24 @@ serve(async (req: Request) => {
           targets.push('earnest_money');
         } else if (normalizedKey.includes('inspection') || rawNormalized.includes('inspection')) {
           if (
-            normalizedKey.includes('ordr') ||
-            normalizedKey.includes('order') ||
-            normalizedKey.includes('sched') ||
-            normalizedKey.includes('book') ||
-            rawNormalized.includes('ordr') ||
-            rawNormalized.includes('order')
-          ) {
-            targets.push('inspection_ordered');
-          } else if (
             normalizedKey.includes('satisf') ||
-            normalizedKey.includes('complet') ||
             normalizedKey.includes('10day') ||
             normalizedKey.includes('resolut') ||
             normalizedKey.includes('pass') ||
-            rawNormalized.includes('satisf') ||
-            rawNormalized.includes('complet')
+            rawNormalized.includes('satisf')
           ) {
             targets.push('inspection_10day');
+          } else if (
+            normalizedKey.includes('ordr') ||
+            normalizedKey.includes('order') ||
+            normalizedKey.includes('complet') ||
+            normalizedKey.includes('sched') ||
+            normalizedKey.includes('book') ||
+            rawNormalized.includes('ordr') ||
+            rawNormalized.includes('order') ||
+            rawNormalized.includes('complet')
+          ) {
+            targets.push('inspection_ordered');
           } else {
             targets.push('inspection_ordered');
           }
