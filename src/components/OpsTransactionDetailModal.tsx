@@ -560,15 +560,23 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                           ALL_MILESTONES_CONFIG.find((c) => c.type === m.milestone_type) || {
                             label: m.milestone_type,
                             description: '',
+                            parentGroup: undefined as 'inspection' | 'appraisal' | undefined,
                           };
 
                         return (
                           <tr key={m.milestone_type} className="hover:bg-[#131826]/40 transition-colors">
                             {/* Milestone Name */}
                             <td className="py-3 px-4">
-                              <span className="font-semibold text-[#f8fafc] block">
-                                {config.label}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-[#f8fafc] block">
+                                  {config.label}
+                                </span>
+                                {config.parentGroup && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    Dual Condition
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-[11px] text-[#94a3b8]">
                                 {config.description}
                               </span>

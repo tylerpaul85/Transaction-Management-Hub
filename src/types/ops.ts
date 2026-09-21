@@ -69,30 +69,49 @@ export interface OpsTransaction {
   milestones: OpsMilestone[];
 }
 
-export const MILESTONE_ORDER: { type: MilestoneType; label: string; shortLabel: string }[] = [
+export const MILESTONE_ORDER: {
+  type: MilestoneType;
+  label: string;
+  shortLabel: string;
+  subTypes?: MilestoneType[];
+}[] = [
   { type: 'earnest_money', label: 'Earnest Money Deposit', shortLabel: 'EMD' },
-  { type: 'inspection_10day', label: 'Home Inspection', shortLabel: 'INSP' },
-  { type: 'appraisal_satisfied', label: 'Appraisal Report', shortLabel: 'APP' },
+  {
+    type: 'inspection_10day',
+    label: 'Home Inspection',
+    shortLabel: 'INSP',
+    subTypes: ['inspection_ordered', 'inspection_10day'],
+  },
   { type: 'financing_contingency', label: 'Loan Commitment', shortLabel: 'FIN' },
+  {
+    type: 'appraisal_satisfied',
+    label: 'Appraisal',
+    shortLabel: 'APP',
+    subTypes: ['appraisal_received', 'appraisal_satisfied'],
+  },
+  { type: 'insurance_binder', label: 'Insurance Binder', shortLabel: 'INS' },
   { type: 'title', label: 'Title Clearance', shortLabel: 'TITLE' },
   { type: 'ctc', label: 'Clear to Close', shortLabel: 'CTC' },
-  { type: 'closing', label: 'Closing & Funding', shortLabel: 'CLOSE' },
+  { type: 'walk_through', label: 'Final Walkthrough', shortLabel: 'WALK' },
 ];
 
-export const ALL_MILESTONES_CONFIG: { type: MilestoneType; label: string; description: string }[] = [
-  { type: 'earnest_money', label: 'Earnest Money Deposit (EMD)', description: 'Initial escrow deposit slip and verification' },
-  { type: 'inspection_ordered', label: 'Inspection Ordered', description: 'Home inspector booked by buyer/agent' },
-  { type: 'inspection_notice_sent', label: 'Inspection Notice Sent', description: 'Repair requests & addenda delivered to other party' },
-  { type: 'inspection_10day', label: '10-Day Inspection Contingency', description: 'Contractual inspection deadline' },
-  { type: 'sale_contingency', label: 'Sale Contingency', description: 'Buyer home sale contingency (if applicable)' },
-  { type: 'financing_contingency', label: 'Financing / Loan Commitment', description: 'Mortgage lender approval deadline' },
-  { type: 'appraisal_ordered', label: 'Appraisal Ordered', description: 'Lender valuation appraisal scheduled' },
-  { type: 'appraisal_received', label: 'Appraisal Received', description: 'Appraisal report delivered to buyer/lender' },
-  { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', description: 'Appraisal valuation condition met' },
-  { type: 'title', label: 'Title Commitment & Clearance', description: 'Preliminary title Schedule B review' },
-  { type: 'walk_through', label: 'Final Walkthrough', description: 'Pre-closing property inspection' },
+export const ALL_MILESTONES_CONFIG: {
+  type: MilestoneType;
+  label: string;
+  description: string;
+  isSubItem?: boolean;
+  parentGroup?: 'inspection' | 'appraisal';
+}[] = [
+  { type: 'earnest_money', label: 'Earnest Money Deposited', description: 'Initial escrow deposit slip and verification' },
+  { type: 'inspection_ordered', label: 'Inspection Ordered', description: 'Home inspector booked by buyer/agent', isSubItem: true, parentGroup: 'inspection' },
+  { type: 'inspection_10day', label: 'Inspection Satisfied', description: 'Contractual inspection deadline and repair resolution', isSubItem: true, parentGroup: 'inspection' },
+  { type: 'financing_contingency', label: 'Financing / Loan Commitment', description: 'Mortgage lender approval condition deadline' },
+  { type: 'appraisal_received', label: 'Appraisal Received', description: 'Appraisal report delivered to buyer/lender', isSubItem: true, parentGroup: 'appraisal' },
+  { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', description: 'Appraisal valuation condition met', isSubItem: true, parentGroup: 'appraisal' },
+  { type: 'insurance_binder', label: 'Insurance Binder Obtained', description: 'Homeowners insurance binder delivered to lender/title' },
+  { type: 'title', label: 'Title Commitment & Clearance', description: 'Preliminary title Schedule B review and clearance' },
   { type: 'ctc', label: 'Clear-to-Close (CTC)', description: 'Final underwriter loan clearance' },
-  { type: 'closing', label: 'Closing Settlement & Funding', description: 'Final deed recording and escrow funding' },
+  { type: 'walk_through', label: 'Final Walkthrough', description: 'Pre-closing property inspection' },
 ];
 
 export interface SisuTaskMapping {

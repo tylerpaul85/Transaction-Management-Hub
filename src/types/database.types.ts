@@ -19,6 +19,7 @@ export type MilestoneType =
   | 'appraisal_ordered'
   | 'appraisal_received'
   | 'appraisal_satisfied'
+  | 'insurance_binder'
   | 'title'
   | 'walk_through'
   | 'ctc'

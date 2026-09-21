@@ -379,11 +379,19 @@ export const AdminSyncDebug: React.FC = () => {
           .eq('sisu_transaction_id', sisuId)
           .maybeSingle();
 
+        const isGenuine =
+          address &&
+          address.trim().length >= 3 &&
+          address.toLowerCase() !== 'pending address' &&
+          !address.toLowerCase().startsWith('pending address') &&
+          address.toLowerCase() !== 'tbd' &&
+          !address.toLowerCase().startsWith('tbd ');
+
         if (existingTx) {
           const updateData: Record<string, any> = {
             updated_at: new Date().toISOString(),
           };
-          if (address && address !== 'Pending Address') updateData.property_address = address;
+          if (isGenuine) updateData.property_address = address;
           if (city) updateData.city = city;
           if (state) updateData.state = state;
           if (sideVal) updateData.side = side;
@@ -396,6 +404,11 @@ export const AdminSyncDebug: React.FC = () => {
           }
           await (supabase.from('transactions') as any).update(updateData).eq('id', existingTx.id);
         } else {
+          // Only pull over properties that have a genuine street address
+          if (!isGenuine) {
+            continue;
+          }
+
           await (supabase.from('transactions') as any).insert({
             sisu_transaction_id: sisuId,
             property_address: address,

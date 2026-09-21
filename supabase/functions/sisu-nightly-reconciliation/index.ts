@@ -20,11 +20,33 @@ const MILESTONE_KEYS = [
   'appraisal_ordered',
   'appraisal_received',
   'appraisal_satisfied',
+  'insurance_binder',
   'title',
   'walk_through',
   'ctc',
   'closing',
 ] as const;
+
+function isGenuineAddress(address: string | null | undefined): boolean {
+  if (!address || typeof address !== 'string') return false;
+  const trimmed = address.trim();
+  if (trimmed.length < 3) return false;
+  const lower = trimmed.toLowerCase();
+  if (
+    lower === 'pending address' ||
+    lower.startsWith('pending address') ||
+    lower === 'pending' ||
+    lower === 'tbd' ||
+    lower === 'tbd address' ||
+    lower.startsWith('tbd -') ||
+    lower.startsWith('tbd ') ||
+    lower === 'n/a' ||
+    lower === 'none'
+  ) {
+    return false;
+  }
+  return true;
+}
 
 function parseSisuDate(val: any): string | null {
   if (!val || typeof val !== 'string' || !val.trim()) return null;
@@ -592,7 +614,13 @@ serve(async (req: Request) => {
 
         transactionsUpdated++;
       } else {
-        const insertAddress = (rawAddress && typeof rawAddress === 'string' && rawAddress.trim()) || 'Pending Address';
+        // Only pull over properties that have a genuine street address
+        if (!isGenuineAddress(rawAddress)) {
+          console.log(`[Reconciliation] Skipping deal ${sisuTxId} because it has no genuine street address: "${rawAddress}"`);
+          continue;
+        }
+
+        const insertAddress = rawAddress.trim();
         const insertClientName = (rawClientName && typeof rawClientName === 'string' && rawClientName.trim()) || 'Unnamed Client';
         const insertStatus = status || 'pending';
         const insertCity = (rawCity && typeof rawCity === 'string' && rawCity.trim()) || 'Waynesville';
@@ -996,10 +1024,16 @@ serve(async (req: Request) => {
             targets.push('earnest_money');
           } else if (normalizedKey.includes('inspection')) {
             if (
+              normalizedKey.includes('order') ||
+              normalizedKey.includes('sched') ||
+              normalizedKey.includes('book')
+            ) {
+              targets.push('inspection_ordered');
+            } else if (
+              normalizedKey.includes('satisf') ||
               normalizedKey.includes('complet') ||
               normalizedKey.includes('10day') ||
-              normalizedKey.includes('resolut') ||
-              normalizedKey.includes('satisf')
+              normalizedKey.includes('resolut')
             ) {
               targets.push('inspection_10day');
             } else {
@@ -1008,13 +1042,23 @@ serve(async (req: Request) => {
           } else if (normalizedKey.includes('appraisal')) {
             if (
               normalizedKey.includes('satisf') ||
-              normalizedKey.includes('receiv') ||
-              normalizedKey.includes('complet')
+              normalizedKey.includes('met') ||
+              normalizedKey.includes('condit')
             ) {
-              targets.push('appraisal_satisfied', 'appraisal_received');
-            } else {
+              targets.push('appraisal_satisfied');
+            } else if (
+              normalizedKey.includes('receiv') ||
+              normalizedKey.includes('in') ||
+              normalizedKey.includes('deliver')
+            ) {
+              targets.push('appraisal_received');
+            } else if (normalizedKey.includes('order') || normalizedKey.includes('sched')) {
               targets.push('appraisal_ordered');
+            } else {
+              targets.push('appraisal_satisfied');
             }
+          } else if (normalizedKey.includes('insurance') || normalizedKey.includes('binder')) {
+            targets.push('insurance_binder');
           } else if (normalizedKey.includes('financ') || normalizedKey.includes('loan')) {
             targets.push('financing_contingency');
           } else if (normalizedKey.includes('title')) {

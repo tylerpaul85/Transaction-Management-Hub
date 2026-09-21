@@ -45,31 +45,55 @@ export const MILESTONE_LABELS: Record<string, string> = {
 };
 
 export const MILESTONE_ORDER_SEQUENCE = [
-  { key: 'earnest_money', aliases: ['earnest_money'], shortLabel: 'EMD', label: 'Earnest Money Deposit' },
-  { key: 'inspection_10day', aliases: ['inspection_10day', 'inspection_notice_sent', 'inspection_ordered'], shortLabel: 'INSP', label: 'Inspection Resolution' },
-  { key: 'appraisal_satisfied', aliases: ['appraisal_satisfied', 'appraisal_received', 'appraisal_ordered'], shortLabel: 'APP', label: 'Appraisal Clearance' },
-  { key: 'financing_contingency', aliases: ['financing_contingency'], shortLabel: 'FIN', label: 'Loan Commitment' },
-  { key: 'title', aliases: ['title'], shortLabel: 'TITLE', label: 'Title Clearance' },
-  { key: 'ctc', aliases: ['ctc'], shortLabel: 'CTC', label: 'Clear to Close' },
-  { key: 'closing', aliases: ['closing'], shortLabel: 'CLOSE', label: 'Closing & Funding' },
+  { key: 'earnest_money', shortLabel: 'EMD', label: 'Earnest Money Deposit' },
+  { key: 'inspection', shortLabel: 'INSP', label: 'Home Inspection', subKeys: ['inspection_ordered', 'inspection_10day'] },
+  { key: 'financing_contingency', shortLabel: 'FIN', label: 'Loan Commitment' },
+  { key: 'appraisal', shortLabel: 'APP', label: 'Appraisal', subKeys: ['appraisal_received', 'appraisal_satisfied'] },
+  { key: 'insurance_binder', shortLabel: 'INS', label: 'Insurance Binder' },
+  { key: 'title', shortLabel: 'TITLE', label: 'Title Clearance' },
+  { key: 'ctc', shortLabel: 'CTC', label: 'Clear to Close' },
+  { key: 'walk_through', shortLabel: 'WALK', label: 'Final Walkthrough' },
 ];
 
 export function renderMilestoneSequenceHtml(milestones?: Array<{ milestone_type: string; status: string }>): string {
   const list = milestones || [];
 
   const pillsHtml = MILESTONE_ORDER_SEQUENCE.map((item, idx) => {
-    const match = list.find((m) => item.aliases.includes(m.milestone_type));
-    const status = (match?.status || 'pending').toLowerCase();
+    let status = 'pending';
+
+    if (item.subKeys && item.subKeys.length > 0) {
+      const allDone = item.subKeys.every((sk) => {
+        const found = list.find((m) => m.milestone_type === sk);
+        const s = (found?.status || '').toLowerCase();
+        return s === 'satisfied' || s === 'complete';
+      });
+      const anyDone = item.subKeys.some((sk) => {
+        const found = list.find((m) => m.milestone_type === sk);
+        const s = (found?.status || '').toLowerCase();
+        return s === 'satisfied' || s === 'complete' || s === 'ordered';
+      });
+
+      if (allDone) {
+        status = 'satisfied';
+      } else if (anyDone) {
+        status = 'in_progress';
+      } else {
+        status = 'pending';
+      }
+    } else {
+      const match = list.find((m) => m.milestone_type === item.key);
+      status = (match?.status || 'pending').toLowerCase();
+    }
 
     let bg = '#d97706';
     let text = '#0f172a';
     let border = '#f59e0b';
 
-    if (status === 'satisfied') {
+    if (status === 'satisfied' || status === 'complete') {
       bg = '#10b981';
       text = '#0f172a';
       border = '#34d399';
-    } else if (status === 'ordered' || status === 'notice_sent') {
+    } else if (status === 'in_progress' || status === 'ordered' || status === 'notice_sent') {
       bg = '#0ea5e9';
       text = '#0f172a';
       border = '#38bdf8';
