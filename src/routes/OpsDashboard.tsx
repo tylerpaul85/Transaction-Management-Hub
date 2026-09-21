@@ -279,7 +279,18 @@ export const OpsDashboard: React.FC = () => {
         return;
       }
 
-      const toInsert = rows.map((r, idx) => {
+      const validRows = rows.filter((r) => {
+        const addr = (r.property_address || r.address || r.address_1 || r['street address'] || r['property address'] || '').trim();
+        return addr.length > 0 && addr.toLowerCase() !== 'tbd' && addr.toLowerCase() !== 'unknown address';
+      });
+
+      if (validRows.length === 0) {
+        alert('No transactions with valid street addresses found in input.');
+        setIsBatchImporting(false);
+        return;
+      }
+
+      const toInsert = validRows.map((r, idx) => {
         const addr =
           r.property_address || r.address || r.address_1 || r['street address'] || r['property address'] || 'Unknown Address';
         let city = r.city || 'Waynesville';
@@ -301,8 +312,8 @@ export const OpsDashboard: React.FC = () => {
           r.client_name || r.client || r.full_name || (r.first_name ? `${r.first_name} ${r.last_name || ''}`.trim() : 'Client');
         const clientPhone = r.client_phone || r.phone || r['phone number'] || null;
 
-        const sisuTxId =
-          r.sisu_transaction_id || r.id || r.client_id || `SISU-BATCH-${Date.now()}-${idx}`;
+        const rawId = r.sisu_transaction_id || r.id || r.client_id;
+        const sisuTxId = rawId ? String(rawId).replace(/^SISU-/, '').trim() : `BATCH-${Date.now()}-${idx}`;
 
         return {
           property_address: addr,
@@ -565,22 +576,45 @@ export const OpsDashboard: React.FC = () => {
   // Section Segmented Lists
   const tcEscrows = useMemo(() => {
     return transactions.filter((t) => {
-      const s = (t.status || '').toLowerCase().replace(/_/g, ' ');
+      const s = (t.status || '').toLowerCase().replace(/_/g, ' ').trim();
+      if (
+        s === 'closed' ||
+        s.startsWith('closed') ||
+        s.includes('terminated') ||
+        s.includes('cancelled') ||
+        s.includes('cancel') ||
+        s.includes('fell through') ||
+        s.includes('archived')
+      ) {
+        return false;
+      }
       return (
         s.includes('under contract') ||
         s.includes('pending') ||
         s.includes('escrow') ||
-        s.includes('close') ||
+        s.includes('closing') ||
+        s.includes('clear to close') ||
         s.includes('needed') ||
         s.includes('offer') ||
-        Boolean(t.contract_date && !s.includes('closed'))
+        Boolean(t.contract_date)
       );
     });
   }, [transactions]);
 
   const lcListings = useMemo(() => {
     return transactions.filter((t) => {
-      const s = (t.status || '').toLowerCase().replace(/_/g, ' ');
+      const s = (t.status || '').toLowerCase().replace(/_/g, ' ').trim();
+      if (
+        s === 'closed' ||
+        s.startsWith('closed') ||
+        s.includes('terminated') ||
+        s.includes('cancelled') ||
+        s.includes('cancel') ||
+        s.includes('fell through') ||
+        s.includes('archived')
+      ) {
+        return false;
+      }
       const isSeller = (t.side || '').toLowerCase() === 'seller';
       return (
         isSeller ||

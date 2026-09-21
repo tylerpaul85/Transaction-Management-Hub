@@ -341,8 +341,12 @@ export const AdminSyncDebug: React.FC = () => {
         const clientLastName = getVal(cleanRow, ['last_name', 'last name', 'client_last']);
         const clientFullName = getVal(cleanRow, ['client', 'full_name', 'name', 'client_name']) || `${clientFirstName} ${clientLastName}`.trim();
 
-        const sisuId = getVal(cleanRow, ['client_id', 'id', 'sisu_id', 'transaction_id']) || `SISU-CSV-${Date.now()}-${i}`;
-        const address = getVal(cleanRow, ['address_1', 'address', 'property_address']) || 'Pending Address';
+        const rawSisuId = getVal(cleanRow, ['client_id', 'id', 'sisu_id', 'transaction_id']);
+        const sisuId = rawSisuId ? rawSisuId.replace(/^SISU-/, '').trim() : `CSV-${Date.now()}-${i}`;
+        const address = getVal(cleanRow, ['address_1', 'address', 'property_address']) || '';
+        if (!address.trim() || address.trim().toLowerCase() === 'tbd' || address.trim().toLowerCase() === 'pending address') {
+          continue;
+        }
         const city = getVal(cleanRow, ['city']) || 'Waynesville';
         const state = getVal(cleanRow, ['state']) || 'MO';
         const sideVal = getVal(cleanRow, ['side', 'type', 'representation']).toLowerCase();

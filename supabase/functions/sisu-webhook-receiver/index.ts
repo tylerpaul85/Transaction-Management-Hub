@@ -411,7 +411,7 @@ serve(async (req: Request) => {
       throw new Error('No transaction_id / client_id found in Sisu webhook payload');
     }
 
-    const finalSisuId = String(sisuTxId);
+    const finalSisuId = String(sisuTxId).replace(/^SISU-/, '').trim();
 
     // 4. Resolve Agent & TC relationships
     let listingAgentId: string | null = null;

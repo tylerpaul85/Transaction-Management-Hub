@@ -246,43 +246,51 @@ serve(async (req: Request) => {
       }
     }
 
-    const toUpsert = resultRows.map((r, idx) => {
-      const sisuId = String(r['ID'] || `BATCH-${Date.now()}-${idx}`).trim();
-      const addr = r['Address Line 1'] || r['address'] || 'TBD Address';
-      const city = r['City'] || 'Waynesville';
-      const state = 'MO';
-      const zip = r['Postal Code'] || '';
-      const side = String(r['Transaction Type'] || r['type'] || 'buyer').toLowerCase().includes('sell') ? 'seller' : 'buyer';
-      
-      let status = 'under_contract';
-      const rawStat = String(r['Status'] || r['status'] || '').toLowerCase();
-      if (rawStat.includes('list') || rawStat.includes('active')) {
-        status = 'active';
-      }
+    const toUpsert = resultRows
+      .filter((r) => {
+        const addr = (r['Address Line 1'] || r['address'] || r['property_address'] || '').trim();
+        return isGenuineAddress(addr);
+      })
+      .map((r, idx) => {
+        const rawId = String(r['ID'] || r['sisu_id'] || r['transaction_id'] || '').trim();
+        const sisuId = rawId ? rawId.replace(/^SISU-/, '').trim() : `BATCH-${Date.now()}-${idx}`;
+        const addr = (r['Address Line 1'] || r['address'] || '').trim();
+        const city = r['City'] || 'Waynesville';
+        const state = 'MO';
+        const zip = r['Postal Code'] || '';
+        const side = String(r['Transaction Type'] || r['type'] || 'buyer').toLowerCase().includes('sell') ? 'seller' : 'buyer';
+        
+        let status = 'under_contract';
+        const rawStat = String(r['Status'] || r['status'] || '').toLowerCase();
+        if (rawStat.includes('list') || rawStat.includes('active')) {
+          status = 'active';
+        } else if (rawStat.includes('close')) {
+          status = 'Closed';
+        }
 
-      const firstName = r['First Name'] || '';
-      const lastName = r['Last Name'] || '';
-      const clientName = `${firstName} ${lastName}`.trim() || r['client_name'] || 'Client';
-      const clientEmail = r['Contact Email'] || null;
-      const clientPhone = r['Mobile Phone Number'] || null;
+        const firstName = r['First Name'] || '';
+        const lastName = r['Last Name'] || '';
+        const clientName = `${firstName} ${lastName}`.trim() || r['client_name'] || 'Client';
+        const clientEmail = r['Contact Email'] || null;
+        const clientPhone = r['Mobile Phone Number'] || null;
 
-      const priceNum = parseFloat(String(r['Transaction Amount'] || '0').replace(/[^0-9.]/g, '')) || null;
-      const contractDate = String(r['Under Contract Date'] || '').slice(0, 10) || new Date().toISOString().split('T')[0];
-      const closingDate = String(r['Forecasted Closed Date'] || r['Closed (Settlement) Date'] || '').slice(0, 10) || null;
+        const priceNum = parseFloat(String(r['Transaction Amount'] || '0').replace(/[^0-9.]/g, '')) || null;
+        const contractDate = String(r['Under Contract Date'] || '').slice(0, 10) || new Date().toISOString().split('T')[0];
+        const closingDate = String(r['Forecasted Closed Date'] || r['Closed (Settlement) Date'] || '').slice(0, 10) || null;
 
-      return {
-        sisu_transaction_id: sisuId.startsWith('SISU-') ? sisuId : `SISU-${sisuId}`,
-        property_address: addr,
-        city,
-        state,
-        side,
-        status,
-        client_name: clientName,
-        client_phone: clientPhone,
-        contract_date: contractDate,
-        other_party_agent: r['Cooperating Agent Name'] || null,
-      };
-    });
+        return {
+          sisu_transaction_id: sisuId,
+          property_address: addr,
+          city,
+          state,
+          side,
+          status,
+          client_name: clientName,
+          client_phone: clientPhone,
+          contract_date: contractDate,
+          other_party_agent: r['Cooperating Agent Name'] || null,
+        };
+      });
 
     if (toUpsert.length > 0) {
       const { data: inserted, error: insErr } = await supabase
@@ -469,7 +477,7 @@ serve(async (req: Request) => {
 
     // 2. Iterate through each Sisu transaction and reconcile
     for (const sisuData of sisuTransactions) {
-      const sisuTxId = String(sisuData.id || sisuData.transaction_id);
+      const sisuTxId = String(sisuData.id || sisuData.transaction_id).replace(/^SISU-/, '').trim();
       if (!sisuTxId) continue;
 
       const rawAddress = sisuData.property_address || sisuData.address || sisuData.address_1 || null;

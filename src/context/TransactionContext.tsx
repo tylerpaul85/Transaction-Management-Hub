@@ -188,7 +188,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
             return {
               id: t.id,
-              fileNumber: t.sisu_transaction_id ? `SISU-${t.sisu_transaction_id}` : `TRX-2026-${String(idx + 1).padStart(3, '0')}`,
+              fileNumber: t.sisu_transaction_id ? (t.sisu_transaction_id.startsWith('SISU-') ? t.sisu_transaction_id : `SISU-${t.sisu_transaction_id}`) : `TRX-2026-${String(idx + 1).padStart(3, '0')}`,
               address: t.property_address || 'Pending Address',
               unit: '',
               city: t.city || 'Waynesville',
