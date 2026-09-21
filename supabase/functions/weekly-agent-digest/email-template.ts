@@ -100,7 +100,6 @@ export function isFieldComplete(
     for (const k of keys) {
       const v = customFields[k];
       if (
-        v === '1' ||
         v === '0' ||
         v === true ||
         String(v).toLowerCase() === 'yes' ||
