@@ -75,44 +75,121 @@ export const MILESTONE_ORDER: {
   shortLabel: string;
   subTypes?: MilestoneType[];
 }[] = [
-  { type: 'earnest_money', label: 'Earnest Money Deposit', shortLabel: 'EMD' },
+  { type: 'earnest_money', label: 'Earnest Money', shortLabel: 'Earnest Money' },
   {
     type: 'inspection_10day',
-    label: 'Home Inspection',
-    shortLabel: 'INSP',
-    subTypes: ['inspection_ordered', 'inspection_10day'],
+    label: 'Inspection',
+    shortLabel: 'Inspection',
+    subTypes: ['inspection_ordered', 'inspection_notice_sent', 'inspection_10day'],
   },
-  { type: 'financing_contingency', label: 'Loan Commitment', shortLabel: 'FIN' },
+  { type: 'financing_contingency', label: 'Financing', shortLabel: 'Financing' },
   {
     type: 'appraisal_satisfied',
     label: 'Appraisal',
-    shortLabel: 'APP',
+    shortLabel: 'Appraisal',
     subTypes: ['appraisal_received', 'appraisal_satisfied'],
   },
-  { type: 'insurance_binder', label: 'Insurance Binder', shortLabel: 'INS' },
-  { type: 'title', label: 'Title Clearance', shortLabel: 'TITLE' },
-  { type: 'ctc', label: 'Clear to Close', shortLabel: 'CTC' },
-  { type: 'walk_through', label: 'Final Walkthrough', shortLabel: 'WALK' },
+  { type: 'title', label: 'Title Clearance', shortLabel: 'Title' },
+  { type: 'cds_obtained', label: 'CDs Obtained', shortLabel: 'CDs Obtained' },
+  { type: 'ctc', label: 'Clear to Close', shortLabel: 'Clear to Close' },
+  { type: 'closing_scheduled', label: 'Closing Scheduled', shortLabel: 'Closing Scheduled' },
+  { type: 'walk_through', label: 'Walkthrough', shortLabel: 'Walkthrough' },
 ];
 
 export const ALL_MILESTONES_CONFIG: {
   type: MilestoneType;
   label: string;
+  shortLabel: string;
   description: string;
   isSubItem?: boolean;
-  parentGroup?: 'inspection' | 'appraisal';
+  parentGroup?: 'inspection' | 'appraisal' | 'closing';
 }[] = [
-  { type: 'earnest_money', label: 'Earnest Money Deposited', description: 'Initial escrow deposit slip and verification' },
-  { type: 'inspection_ordered', label: 'Inspection Ordered', description: 'Home inspector booked by buyer/agent', isSubItem: true, parentGroup: 'inspection' },
-  { type: 'inspection_10day', label: 'Inspection Satisfied', description: 'Contractual inspection deadline and repair resolution', isSubItem: true, parentGroup: 'inspection' },
-  { type: 'financing_contingency', label: 'Financing / Loan Commitment', description: 'Mortgage lender approval condition deadline' },
-  { type: 'appraisal_received', label: 'Appraisal Received', description: 'Appraisal report delivered to buyer/lender', isSubItem: true, parentGroup: 'appraisal' },
-  { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', description: 'Appraisal valuation condition met', isSubItem: true, parentGroup: 'appraisal' },
-  { type: 'insurance_binder', label: 'Insurance Binder Obtained', description: 'Homeowners insurance binder delivered to lender/title' },
-  { type: 'title', label: 'Title Commitment & Clearance', description: 'Preliminary title Schedule B review and clearance' },
-  { type: 'ctc', label: 'Clear-to-Close (CTC)', description: 'Final underwriter loan clearance' },
-  { type: 'walk_through', label: 'Final Walkthrough', description: 'Pre-closing property inspection' },
+  { type: 'earnest_money', label: 'Earnest Money Deposited', shortLabel: 'Earnest Money', description: 'Initial escrow deposit slip and verification' },
+  { type: 'inspection_ordered', label: 'Inspection Ordered', shortLabel: 'Inspection Ordered', description: 'Home inspector booked by buyer/agent', isSubItem: true, parentGroup: 'inspection' },
+  { type: 'inspection_notice_sent', label: 'Inspection Notice Sent', shortLabel: 'Notice Sent', description: 'Inspection report and amendment notice delivered', isSubItem: true, parentGroup: 'inspection' },
+  { type: 'inspection_10day', label: 'Inspection Satisfied', shortLabel: 'Inspection Satisfied', description: 'Contractual inspection deadline and repair resolution', isSubItem: true, parentGroup: 'inspection' },
+  { type: 'appraisal_received', label: 'Appraisal Received', shortLabel: 'Appraisal Received', description: 'Appraisal report delivered to buyer/lender', isSubItem: true, parentGroup: 'appraisal' },
+  { type: 'financing_contingency', label: 'Financing / Loan Commitment', shortLabel: 'Financing / Loan', description: 'Mortgage lender approval condition deadline' },
+  { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', shortLabel: 'Appraisal Satisfied', description: 'Appraisal valuation condition met', isSubItem: true, parentGroup: 'appraisal' },
+  { type: 'title', label: 'Title Commitment & Clearance', shortLabel: 'Title Clearance', description: 'Preliminary title Schedule B review and clearance' },
+  { type: 'cds_obtained', label: 'CDs Obtained', shortLabel: 'CDs Obtained', description: 'Closing Disclosures obtained and acknowledged' },
+  { type: 'ctc', label: 'Clear-to-Close (CTC)', shortLabel: 'Clear to Close', description: 'Final underwriter loan clearance' },
+  { type: 'closing_scheduled', label: 'Closing Scheduled', shortLabel: 'Closing Scheduled', description: 'Settlement time and location confirmed with title and clients' },
+  { type: 'walk_through', label: 'Final Walkthrough', shortLabel: 'Walkthrough', description: 'Pre-closing property inspection' },
+  { type: 'insurance_binder', label: 'Insurance Binder Obtained', shortLabel: 'Insurance Binder', description: 'Homeowners insurance binder delivered to lender/title' },
 ];
+
+/**
+ * Universal evaluator for Sisu 4-choice values (Yes, No, In Progress, N/A)
+ * Sisu multiple choice form indices:
+ * Option 1 ("Yes") -> "0"
+ * Option 2 ("No")  -> "1"
+ * Option 3 ("In Progress") -> "2"
+ * Option 4 ("N/A") -> "3"
+ */
+export function evaluateMilestoneValue(val: any): 'complete' | 'in_progress' | 'na' | 'pending' {
+  if (val === null || val === undefined) return 'pending';
+  const str = String(val).trim().toLowerCase();
+  if (str === '' || str === 'null' || str === 'undefined' || str === '- select -' || str === 'select one' || str === '-1') {
+    return 'pending';
+  }
+
+  // Option 4: N/A / Waived / Not applicable
+  if (
+    str === '3' ||
+    str === 'n/a' ||
+    str === 'na' ||
+    str === 'n / a' ||
+    str === 'not applicable' ||
+    str === 'not_applicable' ||
+    str === 'waived'
+  ) {
+    return 'na';
+  }
+
+  // Option 3: In Progress
+  if (
+    str === '2' ||
+    str === 'in progress' ||
+    str === 'in_progress' ||
+    str === 'inprogress' ||
+    str === 'progress' ||
+    str === 'started' ||
+    str === 'ordered' ||
+    str === 'notice_sent'
+  ) {
+    return 'in_progress';
+  }
+
+  // Option 1: Complete / Satisfied / Yes
+  if (
+    str === '0' ||
+    str === 'yes' ||
+    str === 'y' ||
+    str === 'true' ||
+    str === 'completed' ||
+    str === 'complete' ||
+    str === 'satisfied' ||
+    str === 'done' ||
+    val === true
+  ) {
+    return 'complete';
+  }
+
+  // Option 2: Pending / No
+  if (
+    str === '1' ||
+    str === 'no' ||
+    str === 'n' ||
+    str === 'false' ||
+    str === 'pending' ||
+    val === false
+  ) {
+    return 'pending';
+  }
+
+  return 'pending';
+}
 
 export interface SisuTaskMapping {
   id: string;

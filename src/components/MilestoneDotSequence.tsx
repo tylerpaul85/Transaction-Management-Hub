@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { OpsMilestone, MILESTONE_ORDER, ALL_MILESTONES_CONFIG } from '../types/ops';
+import { Check, Clock, Minus, Circle } from 'lucide-react';
 
 interface MilestoneDotSequenceProps {
   milestones: OpsMilestone[];
@@ -15,50 +16,75 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
   const milestoneMap = new Map<string, OpsMilestone>();
   milestones.forEach((m) => milestoneMap.set(m.milestone_type, m));
 
-  const getStatusColor = (status?: string) => {
+  const getStatusStyles = (status: string) => {
     switch (status) {
-      case 'satisfied':
       case 'complete':
-        return 'bg-emerald-500 text-[#0f172a] border-emerald-400 shadow-sm shadow-emerald-500/20';
+      case 'satisfied':
+        return {
+          pill: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/25 shadow-sm shadow-emerald-500/10',
+          badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+          label: 'Complete',
+          icon: <Check className="w-2.5 h-2.5 flex-shrink-0 text-emerald-400 stroke-[3]" />,
+        };
       case 'in_progress':
       case 'ordered':
       case 'notice_sent':
-        return 'bg-sky-500 text-[#0f172a] border-sky-400';
-      case 'pending':
-        return 'bg-amber-500/80 text-[#0f172a] border-amber-400';
-      case 'waived':
-        return 'bg-indigo-500 text-white border-indigo-400';
+        return {
+          pill: 'bg-sky-500/15 text-sky-400 border-sky-500/40 hover:bg-sky-500/25 shadow-sm shadow-sky-500/15',
+          badge: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+          label: 'In Progress',
+          icon: <Clock className="w-2.5 h-2.5 flex-shrink-0 text-sky-400 animate-pulse" />,
+        };
       case 'na':
-        return 'bg-[#1e293b] text-[#94a3b8] border-[#334155] opacity-50';
+      case 'waived':
+        return {
+          pill: 'bg-[#1e293b]/40 text-slate-500 border-slate-700/50 line-through opacity-55 hover:opacity-80',
+          badge: 'bg-slate-800 text-slate-400 border-slate-700',
+          label: 'N/A',
+          icon: <Minus className="w-2.5 h-2.5 flex-shrink-0 text-slate-500" />,
+        };
+      case 'pending':
       default:
-        return 'bg-[#334155] text-[#94a3b8] border-[#2a354c]';
+        return {
+          pill: 'bg-[#131826]/90 text-slate-400 border-[#334155] hover:border-amber-400/50 hover:text-slate-200',
+          badge: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+          label: 'Pending',
+          icon: <Circle className="w-2 h-2 flex-shrink-0 text-slate-500" />,
+        };
     }
   };
 
   return (
-    <div className="flex items-center gap-1.5 py-1">
-      {MILESTONE_ORDER.map((item, idx) => {
+    <div className="flex flex-wrap items-center gap-1.5 py-1">
+      {MILESTONE_ORDER.map((item) => {
         let displayStatus = 'pending';
-        let subItemsStatus: { label: string; done: boolean; milestone?: OpsMilestone }[] = [];
+        let subItemsStatus: { label: string; status: string; milestone?: OpsMilestone }[] = [];
         let primaryMilestone = milestoneMap.get(item.type);
 
         if (item.subTypes && item.subTypes.length > 0) {
-          const subMilestones = item.subTypes.map((st) => ({
-            type: st,
-            milestone: milestoneMap.get(st),
-            isDone: Boolean(
-              milestoneMap.get(st)?.status === 'complete' ||
-              milestoneMap.get(st)?.status === 'satisfied'
-            ),
-          }));
+          const subMilestones = item.subTypes.map((st) => {
+            const m = milestoneMap.get(st);
+            const status = m?.status || 'pending';
+            return {
+              type: st,
+              milestone: m,
+              status,
+              isDone: status === 'complete' || status === 'satisfied',
+              isInProgress: status === 'in_progress' || status === 'ordered' || status === 'notice_sent',
+              isNa: status === 'na' || status === 'waived',
+            };
+          });
 
-          const allDone = subMilestones.every((sm) => sm.isDone);
-          const anyDone = subMilestones.some((sm) => sm.isDone);
+          const activeSub = subMilestones.filter((sm) => !sm.isNa);
+          const allDone = activeSub.length > 0 && activeSub.every((sm) => sm.isDone);
+          const anyInProgress = subMilestones.some((sm) => sm.isInProgress || sm.isDone);
+          const allNa = subMilestones.every((sm) => sm.isNa);
 
-          // Turns green ONLY when ALL required sub-conditions are satisfied
           if (allDone) {
             displayStatus = 'complete';
-          } else if (anyDone) {
+          } else if (allNa) {
+            displayStatus = 'na';
+          } else if (anyInProgress) {
             displayStatus = 'in_progress';
           } else {
             displayStatus = 'pending';
@@ -68,104 +94,82 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
             const conf = ALL_MILESTONES_CONFIG.find((c) => c.type === sm.type);
             return {
               label: conf?.label || sm.type,
-              done: sm.isDone,
+              status: sm.status,
               milestone: sm.milestone,
             };
           });
 
-          // Primary milestone to open when clicked is the first pending sub-item, or the first sub-item
-          const pendingSub = subMilestones.find((sm) => !sm.isDone);
-          primaryMilestone = pendingSub?.milestone || subMilestones[0]?.milestone || primaryMilestone;
+          // Primary milestone to open when clicked is the first active pending/in-progress sub-item
+          const nextActionableSub = subMilestones.find((sm) => !sm.isDone && !sm.isNa);
+          primaryMilestone = nextActionableSub?.milestone || subMilestones[0]?.milestone || primaryMilestone;
         } else {
           displayStatus = primaryMilestone?.status || 'pending';
         }
 
+        const styles = getStatusStyles(displayStatus);
         const isHovered = hoveredType === item.type;
 
         return (
           <div
             key={item.type}
-            className="relative flex items-center"
+            className="relative"
             onMouseEnter={() => setHoveredType(item.type)}
             onMouseLeave={() => setHoveredType(null)}
           >
-            {/* Step Dot Badge */}
-            <div
+            {/* Full-word Milestone Pill Badge */}
+            <button
+              type="button"
               onClick={(e) => {
                 if (primaryMilestone && onMilestoneClick) {
                   e.stopPropagation();
                   onMilestoneClick(primaryMilestone);
                 }
               }}
-              className={`h-5 px-1.5 rounded-full border text-[9px] font-mono-code font-bold flex items-center justify-center cursor-pointer transition-all hover:scale-110 ${getStatusColor(
-                displayStatus
-              )}`}
-              title={`${item.label}: ${displayStatus.toUpperCase()}`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium transition-all duration-150 cursor-pointer ${styles.pill}`}
+              title={`${item.label}: ${styles.label}`}
             >
-              <span>{item.shortLabel}</span>
-              {displayStatus === 'in_progress' && (
-                <span className="ml-0.5 text-[8px] opacity-85">½</span>
-              )}
-            </div>
+              {styles.icon}
+              <span className="tracking-tight whitespace-nowrap">{item.shortLabel || item.label}</span>
+            </button>
 
-            {/* Connecting line between dots (except last) */}
-            {idx < MILESTONE_ORDER.length - 1 && (
-              <div className="w-1.5 h-0.5 bg-[#334155] flex-shrink-0" />
-            )}
-
-            {/* Hover Tooltip */}
+            {/* Hover Tooltip Popover */}
             {isHovered && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 w-52 p-2.5 bg-[#131826] border border-[#334155] rounded-xl shadow-2xl text-[11px] pointer-events-none space-y-1.5 backdrop-blur-md">
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 w-60 p-3 bg-[#131826] border border-[#334155] rounded-xl shadow-2xl text-xs pointer-events-none space-y-2 backdrop-blur-md">
                 <div className="flex items-center justify-between gap-1 border-b border-[#334155]/60 pb-1.5">
                   <span className="font-bold text-[#f8fafc] truncate">{item.label}</span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border ${
-                      displayStatus === 'complete'
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                        : displayStatus === 'in_progress'
-                        ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
-                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                    }`}
-                  >
-                    {displayStatus === 'complete'
-                      ? 'Satisfied'
-                      : displayStatus === 'in_progress'
-                      ? 'In Progress'
-                      : 'Pending'}
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${styles.badge}`}>
+                    {styles.label}
                   </span>
                 </div>
 
                 {subItemsStatus.length > 0 ? (
                   <div className="space-y-1.5 pt-0.5">
-                    {subItemsStatus.map((sub, sIdx) => (
-                      <div key={sIdx} className="flex items-center justify-between text-[10px]">
-                        <span className="text-[#cbd5e1] truncate pr-1">{sub.label}</span>
-                        {sub.done ? (
-                          <span className="text-emerald-400 font-bold flex items-center gap-0.5 flex-shrink-0">
-                            ✓ Done
+                    {subItemsStatus.map((sub, sIdx) => {
+                      const subStyle = getStatusStyles(sub.status);
+                      return (
+                        <div key={sIdx} className="flex items-center justify-between text-[11px] gap-2">
+                          <span className={`truncate ${sub.status === 'na' ? 'text-slate-500 line-through' : 'text-[#cbd5e1]'}`}>
+                            {sub.label}
                           </span>
-                        ) : (
-                          <span className="text-amber-400/90 font-medium flex-shrink-0">
-                            Pending
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${subStyle.badge}`}>
+                            {subStyle.icon}
+                            {subStyle.label}
                           </span>
-                        )}
-                      </div>
-                    ))}
-                    <div className="text-[9px] text-[#fbbf24] pt-0.5 italic border-t border-[#334155]/40">
-                      *Both conditions required to turn green
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="text-[#94a3b8] space-y-0.5">
+                  <div className="text-[#94a3b8] space-y-1 text-[11px]">
                     <div>
-                      Status: <strong className="text-[#f8fafc] uppercase">{displayStatus}</strong>
+                      Status: <strong className="text-[#f8fafc] uppercase">{styles.label}</strong>
                     </div>
                     {primaryMilestone?.target_date && <div>Target: {primaryMilestone.target_date}</div>}
                     {primaryMilestone?.actual_date && (
                       <div className="text-emerald-400">Actual: {primaryMilestone.actual_date}</div>
                     )}
                     {primaryMilestone?.notes && (
-                      <p className="italic text-[10px] text-slate-400 pt-0.5">
+                      <p className="italic text-[10px] text-slate-400 pt-0.5 border-t border-[#334155]/40 mt-1">
                         {primaryMilestone.notes}
                       </p>
                     )}

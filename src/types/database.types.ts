@@ -21,12 +21,15 @@ export type MilestoneType =
   | 'appraisal_satisfied'
   | 'insurance_binder'
   | 'title'
-  | 'walk_through'
+  | 'cds_obtained'
   | 'ctc'
+  | 'closing_scheduled'
+  | 'walk_through'
   | 'closing';
 
 export type MilestoneStatus =
   | 'pending'
+  | 'in_progress'
   | 'ordered'
   | 'notice_sent'
   | 'satisfied'

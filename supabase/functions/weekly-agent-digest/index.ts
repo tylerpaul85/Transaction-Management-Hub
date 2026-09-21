@@ -9,6 +9,7 @@ import {
   MILESTONE_LABELS,
   ACTIVE_MILESTONES_SET,
   isFieldComplete,
+  getFieldStatus,
   DigestTransactionItem,
 } from './email-template.ts';
 
@@ -196,18 +197,19 @@ serve(async (req: Request) => {
           ACTIVE_MILESTONES_SET.has(m.milestone_type)
         );
 
-        // Helper to check if milestone is completed (either via milestone status or custom_fields)
-        const checkDone = (m: any) => {
+        // Helper to check if milestone is completed or exempt (N/A)
+        const checkDoneOrExempt = (m: any) => {
           const s = (m.status || '').toLowerCase();
-          if (s === 'satisfied' || s === 'complete' || s === 'waived') return true;
-          return isFieldComplete(m.milestone_type, milestonesList, tx.custom_fields);
+          if (s === 'satisfied' || s === 'complete' || s === 'waived' || s === 'na') return true;
+          const status = getFieldStatus(m.milestone_type, milestonesList, tx.custom_fields);
+          return status === 'complete' || status === 'na';
         };
 
-        // Identify overdue milestones: target_date < today AND status NOT completed
+        // Identify overdue milestones: target_date < today AND status NOT completed or exempt
         const overdueMilestones = milestonesList
           .filter((m) => {
             if (!m.target_date) return false;
-            return !checkDone(m) && m.target_date < todayStr;
+            return !checkDoneOrExempt(m) && m.target_date < todayStr;
           })
           .map((m) => {
             const targetMs = new Date(m.target_date).getTime();
@@ -223,10 +225,10 @@ serve(async (req: Request) => {
             };
           });
 
-        // Identify next upcoming milestone: target_date >= today AND status NOT completed
+        // Identify next upcoming milestone: target_date >= today AND status NOT completed or exempt
         const pendingMilestones = milestonesList
           .filter((m) => {
-            return !checkDone(m) && m.target_date && m.target_date >= todayStr;
+            return !checkDoneOrExempt(m) && m.target_date && m.target_date >= todayStr;
           })
           .sort((a, b) => (a.target_date > b.target_date ? 1 : -1));
 

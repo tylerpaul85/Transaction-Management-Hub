@@ -13,14 +13,17 @@ const corsHeaders = {
 const MILESTONE_KEYS = [
   'earnest_money',
   'inspection_ordered',
+  'inspection_notice_sent',
   'inspection_10day',
-  'financing_contingency',
   'appraisal_received',
+  'financing_contingency',
   'appraisal_satisfied',
-  'insurance_binder',
   'title',
-  'walk_through',
+  'cds_obtained',
   'ctc',
+  'closing_scheduled',
+  'walk_through',
+  'insurance_binder',
 ] as const;
 
 function isGenuineAddress(address: string | null | undefined): boolean {
@@ -1157,9 +1160,9 @@ serve(async (req: Request) => {
       ...incomingCustom,
     };
 
-    // Helper: evaluate Yes / No / Cleared boolean state
-    const evaluateBooleanValue = (val: any): { isYes: boolean; isNo: boolean } => {
-      if (val === null || val === undefined) return { isYes: false, isNo: true };
+    // Helper: evaluate Sisu 4-choice field value (Yes, No, In Progress, N/A)
+    const evaluateStatusValue = (val: any): 'complete' | 'in_progress' | 'na' | 'pending' => {
+      if (val === null || val === undefined) return 'pending';
       const strVal = String(val).trim().toLowerCase();
       if (
         strVal === '' ||
@@ -1169,35 +1172,64 @@ serve(async (req: Request) => {
         strVal === '- select -' ||
         strVal === 'select one' ||
         strVal === '-1' ||
-        strVal === 'n/a' ||
         strVal === 'undefined'
       ) {
-        return { isYes: false, isNo: true };
+        return 'pending';
       }
 
-      // Sisu Multiple Choice form fields store the 0-based option index:
-      // Option 1 ("Yes") -> "0"
-      // Option 2 ("No")  -> "1"
-      // Also handles literal strings "yes", "y", "completed", "satisfied", "done", boolean true
-      const isYes =
+      // Option 4 ("N/A") -> "3", "n/a", "na", "not applicable", "waived"
+      if (
+        strVal === '3' ||
+        strVal === 'n/a' ||
+        strVal === 'na' ||
+        strVal === 'n / a' ||
+        strVal === 'not applicable' ||
+        strVal === 'not_applicable' ||
+        strVal === 'waived'
+      ) {
+        return 'na';
+      }
+
+      // Option 3 ("In Progress") -> "2", "in progress", "in_progress", "progress", "started", "ordered", "notice_sent"
+      if (
+        strVal === '2' ||
+        strVal === 'in progress' ||
+        strVal === 'in_progress' ||
+        strVal === 'inprogress' ||
+        strVal === 'progress' ||
+        strVal === 'started'
+      ) {
+        return 'in_progress';
+      }
+
+      // Option 1 ("Yes") -> "0", "yes", "true", "y", "completed", "complete", "satisfied", "done", boolean true
+      if (
         strVal === '0' ||
         strVal === 'yes' ||
         strVal === 'true' ||
         strVal === 'y' ||
         strVal === 'completed' ||
+        strVal === 'complete' ||
         strVal === 'satisfied' ||
         strVal === 'done' ||
-        val === true;
+        val === true
+      ) {
+        return 'complete';
+      }
 
-      // Option 2 ("No") -> "1", or literal strings "no", "n", "false", boolean false
-      const isNo =
+      // Option 2 ("No") -> "1", "no", "false", "n", "pending", boolean false
+      if (
         strVal === '1' ||
         strVal === 'no' ||
         strVal === 'false' ||
         strVal === 'n' ||
-        val === false;
+        strVal === 'pending' ||
+        val === false
+      ) {
+        return 'pending';
+      }
 
-      return { isYes, isNo };
+      return 'pending';
     };
 
     const incomingEntries = Object.entries(incomingCustom);
@@ -1264,6 +1296,12 @@ serve(async (req: Request) => {
           targets.push('earnest_money');
         } else if (normalizedKey.includes('inspection') || rawNormalized.includes('inspection')) {
           if (
+            normalizedKey.includes('notice') ||
+            normalizedKey.includes('sent') ||
+            rawNormalized.includes('notice')
+          ) {
+            targets.push('inspection_notice_sent');
+          } else if (
             normalizedKey.includes('satisf') ||
             normalizedKey.includes('10day') ||
             normalizedKey.includes('resolut') ||
@@ -1303,7 +1341,7 @@ serve(async (req: Request) => {
           ) {
             targets.push('appraisal_received');
           } else if (normalizedKey.includes('ordr') || normalizedKey.includes('order') || normalizedKey.includes('sched')) {
-            // Appraisal ordered is not a tracked escrow milestone (only appraisal_received & appraisal_satisfied)
+            // Appraisal ordered is not an active milestone
           } else {
             targets.push('appraisal_satisfied');
           }
@@ -1313,8 +1351,18 @@ serve(async (req: Request) => {
           rawNormalized.includes('insurance')
         ) {
           targets.push('insurance_binder');
-        } else if (normalizedKey.includes('title') || rawNormalized.includes('title')) {
+        } else if (
+          normalizedKey.includes('title') ||
+          rawNormalized.includes('title')
+        ) {
           targets.push('title');
+        } else if (
+          normalizedKey.includes('cd') ||
+          normalizedKey.includes('closingdisclosure') ||
+          rawNormalized.includes('cdsobtained') ||
+          rawNormalized.includes('closingdisclosure')
+        ) {
+          targets.push('cds_obtained');
         } else if (
           normalizedKey.includes('financ') ||
           normalizedKey.includes('loan') ||
@@ -1332,6 +1380,11 @@ serve(async (req: Request) => {
         ) {
           targets.push('ctc');
         } else if (
+          (normalizedKey.includes('closing') || normalizedKey.includes('settlement')) &&
+          (normalizedKey.includes('sched') || normalizedKey.includes('set') || normalizedKey.includes('time') || normalizedKey.includes('booked'))
+        ) {
+          targets.push('closing_scheduled');
+        } else if (
           normalizedKey.includes('walk') ||
           normalizedKey.includes('walkthrough') ||
           rawNormalized.includes('walkthrough')
@@ -1343,87 +1396,65 @@ serve(async (req: Request) => {
 
       // Process only the incoming custom fields explicitly updated in this webhook event
       for (const [key, rawValue] of incomingEntries) {
-        const { isYes, isNo } = evaluateBooleanValue(rawValue);
+        const evalStatus = evaluateStatusValue(rawValue);
         const targetFields = getTargetFields(key);
 
         if (targetFields.length > 0) {
           for (const targetField of targetFields) {
             const existingM = latestMilestoneMap.get(targetField);
-            if (isYes) {
-              tasksMatched++;
-              if (existingM) {
-                const isManual = existingM.source === 'manual';
-                const manualUpdatedAt = new Date(existingM.updated_at).getTime();
+            tasksMatched++;
 
-                if (isManual && manualUpdatedAt >= sisuUpdatedAt) {
-                  if (
-                    existingM.actual_date !== receiptDate ||
-                    (existingM.status !== 'complete' && existingM.status !== 'satisfied')
-                  ) {
-                    conflictsFound++;
-                    continue;
-                  }
-                }
+            const isManual = existingM?.source === 'manual';
+            const manualUpdatedAt = existingM ? new Date(existingM.updated_at).getTime() : 0;
+            if (isManual && manualUpdatedAt >= sisuUpdatedAt) {
+              conflictsFound++;
+              continue;
+            }
 
-                await supabase
-                  .from('milestones')
-                  .update({
-                    actual_date: receiptDate,
-                    status: 'complete',
-                    source: 'sisu',
-                    notes: `Completed via Sisu form: ${key}`,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq('id', existingM.id);
+            const actualDate = evalStatus === 'complete' ? (existingM?.actual_date || receiptDate) : null;
+            const notes =
+              evalStatus === 'complete'
+                ? `Completed via Sisu form: ${key}`
+                : evalStatus === 'in_progress'
+                ? `In progress via Sisu form: ${key}`
+                : evalStatus === 'na'
+                ? `N/A via Sisu form: ${key}`
+                : null;
 
-                latestMilestoneMap.set(targetField, {
-                  ...existingM,
-                  actual_date: receiptDate,
-                  status: 'complete',
-                  source: 'sisu',
-                  notes: `Completed via Sisu form: ${key}`,
-                });
-              } else {
-                const { data: newM } = await supabase
-                  .from('milestones')
-                  .insert({
-                    transaction_id: transactionId,
-                    milestone_type: targetField,
-                    actual_date: receiptDate,
-                    status: 'complete',
-                    source: 'sisu',
-                    notes: `Completed via Sisu form: ${key}`,
-                  })
-                  .select()
-                  .maybeSingle();
-
-                if (newM) latestMilestoneMap.set(targetField, newM);
-              }
-            } else if (
-              isNo &&
-              existingM &&
-              (existingM.status === 'complete' || existingM.status === 'satisfied') &&
-              (existingM.source === 'sisu' || existingM.notes?.includes('Completed via Sisu form:'))
-            ) {
-              console.log(`[Sisu Webhook] Reverting milestone ${targetField} to pending because Sisu field ${key} was explicitly set to No/cleared`);
+            if (existingM) {
               await supabase
                 .from('milestones')
                 .update({
-                  status: 'pending',
-                  actual_date: null,
-                  notes: null,
+                  status: evalStatus,
+                  actual_date: actualDate,
                   source: 'sisu',
+                  notes,
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', existingM.id);
 
               latestMilestoneMap.set(targetField, {
                 ...existingM,
-                status: 'pending',
-                actual_date: null,
-                notes: null,
+                status: evalStatus,
+                actual_date: actualDate,
                 source: 'sisu',
+                notes,
               });
+            } else {
+              const { data: newM } = await supabase
+                .from('milestones')
+                .insert({
+                  transaction_id: transactionId,
+                  milestone_type: targetField,
+                  status: evalStatus,
+                  actual_date: actualDate,
+                  source: 'sisu',
+                  notes,
+                })
+                .select()
+                .maybeSingle();
+
+              if (newM) latestMilestoneMap.set(targetField, newM);
             }
           }
         }

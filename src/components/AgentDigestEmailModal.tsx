@@ -5,6 +5,7 @@ import {
   ACTIVE_MILESTONES_SET,
   MILESTONE_LABELS,
   isFieldComplete,
+  getFieldStatus,
 } from '../utils/agentDigestEmail';
 import { OpsTransaction } from '../types/ops';
 import { supabase } from '../integrations/supabase/client';
@@ -127,7 +128,9 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
             m.status === 'satisfied' ||
             m.status === 'complete' ||
             m.status === 'waived' ||
-            isFieldComplete(m.milestone_type, milestonesList, tx.custom_fields);
+            m.status === 'na' ||
+            isFieldComplete(m.milestone_type, milestonesList, tx.custom_fields) ||
+            getFieldStatus(m.milestone_type, milestonesList, tx.custom_fields) === 'na';
           if (m.target_date && m.target_date < todayStr && !isDone) {
             overdue++;
           }
@@ -206,16 +209,17 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
         ACTIVE_MILESTONES_SET.has(m.milestone_type)
       );
 
-      const checkDone = (m: any) => {
+      const checkDoneOrExempt = (m: any) => {
         const s = (m.status || '').toLowerCase();
-        if (s === 'satisfied' || s === 'complete' || s === 'waived') return true;
-        return isFieldComplete(m.milestone_type, milestonesList, tx.custom_fields);
+        if (s === 'satisfied' || s === 'complete' || s === 'waived' || s === 'na') return true;
+        const status = getFieldStatus(m.milestone_type, milestonesList, tx.custom_fields);
+        return status === 'complete' || status === 'na';
       };
 
       const overdue = milestonesList
         .filter((m) => {
           if (!m.target_date) return false;
-          return !checkDone(m) && m.target_date < todayStr;
+          return !checkDoneOrExempt(m) && m.target_date < todayStr;
         })
         .map((m) => {
           const targetMs = new Date(m.target_date!).getTime();
@@ -232,7 +236,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
       const pending = milestonesList
         .filter((m) => {
-          return !checkDone(m) && m.target_date && m.target_date >= todayStr;
+          return !checkDoneOrExempt(m) && m.target_date && m.target_date >= todayStr;
         })
         .sort((a, b) => (a.target_date! > b.target_date! ? 1 : -1));
 

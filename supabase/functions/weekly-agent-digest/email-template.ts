@@ -43,83 +43,124 @@ export interface DigestEmailParams {
 export const ACTIVE_MILESTONES_SET = new Set([
   'earnest_money',
   'inspection_ordered',
+  'inspection_notice_sent',
   'inspection_10day',
   'financing_contingency',
   'appraisal_received',
   'appraisal_satisfied',
-  'insurance_binder',
   'title',
+  'cds_obtained',
   'ctc',
+  'closing_scheduled',
   'walk_through',
+  'insurance_binder',
 ]);
 
 export const MILESTONE_LABELS: Record<string, string> = {
   earnest_money: 'Earnest Money Deposited',
   inspection_ordered: 'Inspection Ordered',
+  inspection_notice_sent: 'Inspection Notice Sent',
   inspection_10day: 'Inspection Satisfied',
   financing_contingency: 'Financing / Loan Commitment',
   appraisal_received: 'Appraisal Received',
   appraisal_satisfied: 'Appraisal Satisfied',
   insurance_binder: 'Insurance Binder Obtained',
   title: 'Title Commitment & Clearance',
+  cds_obtained: 'Closing Disclosures (CDs) Obtained',
   ctc: 'Clear-to-Close (CTC)',
+  closing_scheduled: 'Closing Scheduled',
   walk_through: 'Final Walkthrough',
 };
 
 export const MILESTONE_ORDER_SEQUENCE = [
-  { key: 'earnest_money', shortLabel: 'EMD', label: 'Earnest Money Deposit' },
-  { key: 'inspection', shortLabel: 'INSP', label: 'Home Inspection', subKeys: ['inspection_ordered', 'inspection_10day'] },
-  { key: 'financing_contingency', shortLabel: 'FIN', label: 'Loan Commitment' },
-  { key: 'appraisal', shortLabel: 'APP', label: 'Appraisal', subKeys: ['appraisal_received', 'appraisal_satisfied'] },
-  { key: 'insurance_binder', shortLabel: 'INS', label: 'Insurance Binder' },
-  { key: 'title', shortLabel: 'TITLE', label: 'Title Clearance' },
-  { key: 'ctc', shortLabel: 'CTC', label: 'Clear to Close' },
-  { key: 'walk_through', shortLabel: 'WALK', label: 'Final Walkthrough' },
+  { key: 'earnest_money', shortLabel: 'Earnest Money', label: 'Earnest Money Deposit' },
+  {
+    key: 'inspection',
+    shortLabel: 'Inspection',
+    label: 'Home Inspection',
+    subKeys: ['inspection_ordered', 'inspection_notice_sent', 'inspection_10day'],
+  },
+  { key: 'financing_contingency', shortLabel: 'Financing', label: 'Loan Commitment' },
+  {
+    key: 'appraisal',
+    shortLabel: 'Appraisal',
+    label: 'Appraisal',
+    subKeys: ['appraisal_received', 'appraisal_satisfied'],
+  },
+  { key: 'title', shortLabel: 'Title', label: 'Title Clearance' },
+  { key: 'cds_obtained', shortLabel: 'CDs Obtained', label: 'Closing Disclosures Obtained' },
+  { key: 'ctc', shortLabel: 'Clear to Close', label: 'Clear to Close' },
+  { key: 'closing_scheduled', shortLabel: 'Closing Scheduled', label: 'Closing Scheduled' },
+  { key: 'walk_through', shortLabel: 'Walkthrough', label: 'Final Walkthrough' },
 ];
+
+export function getFieldStatus(
+  mType: string,
+  milestones?: Array<{ milestone_type: string; status: string }>,
+  customFields?: Record<string, any> | null
+): 'complete' | 'in_progress' | 'na' | 'pending' {
+  const list = milestones || [];
+  const found = list.find((m) => m.milestone_type === mType);
+  if (found && found.status) {
+    const s = found.status.toLowerCase().trim();
+    if (s === 'complete' || s === 'satisfied') return 'complete';
+    if (s === 'in_progress') return 'in_progress';
+    if (s === 'na' || s === 'waived') return 'na';
+    if (s === 'pending') return 'pending';
+  }
+
+  if (customFields && typeof customFields === 'object') {
+    const cfMap: Record<string, string[]> = {
+      earnest_money: ['earnest_money_depositeds_63', 'earnest_money_deposited', 'earnest_money_deposited?_(internal_use)'],
+      inspection_ordered: ['inspection_completeds_63', 'inspection_completed', 'inspection_ordred?_-_internal_use'],
+      inspection_notice_sent: ['inspection_notice_sent?_-_internal', 'inspection_notice_sent'],
+      inspection_10day: ['inspection_satisfieds_63', 'inspection_satisfied', 'inspection_satisfied?_-_internal_use'],
+      financing_contingency: [
+        'financing_/_loan_commitment_-_internal_use',
+        'financing_loan_commitment_internal_use',
+        'financing_loan_commitment',
+        'financing_/_loan_commitment_(internal_use)',
+      ],
+      appraisal_received: ['appraisal_received', 'appraisal_received_internal_use', 'appraisal_received_(internal_use)'],
+      appraisal_satisfied: ['appraisal_satisfied', 'appraisal_satisfied_internal_use', 'appraisal_satisfied_(internal_use)'],
+      insurance_binder: ['insurance_obtaineds_63', 'insurance_obtained', 'insurance_obtained_internal_use'],
+      title: ['title_commitment_s_38_clearance', 'title_commitment_clearance_internal_use', 'title_commitment', 'title_commitment_&_clearance_-_internal_use'],
+      cds_obtained: ['cds_obtained_-_internal', 'cds_obtained'],
+      ctc: ['clear-to-close_(ctc)', 'clear_to_close_internal_use', 'clear-to-close', 'clear_to_close', 'clear-to-close_(internal_use)'],
+      closing_scheduled: ['closing_scheduled_-_internal_use', 'closing_scheduled'],
+      walk_through: ['final_walkthrough', 'final_walkthrough_internal_use', 'final_walkthrough_(internal_use)'],
+    };
+
+    const keys = cfMap[mType] || [];
+    for (const k of keys) {
+      if (k in customFields) {
+        const v = customFields[k];
+        const str = String(v).trim().toLowerCase();
+        if (str === '0' || str === 'yes' || str === 'true' || str === 'complete' || str === 'satisfied' || v === true) {
+          return 'complete';
+        }
+        if (str === '2' || str === 'in progress' || str === 'in_progress') {
+          return 'in_progress';
+        }
+        if (str === '3' || str === 'n/a' || str === 'na' || str === 'waived') {
+          return 'na';
+        }
+        if (str === '1' || str === 'no' || str === 'false' || v === false) {
+          return 'pending';
+        }
+      }
+    }
+  }
+
+  return 'pending';
+}
 
 export function isFieldComplete(
   mType: string,
   milestones?: Array<{ milestone_type: string; status: string }>,
   customFields?: Record<string, any> | null
 ): boolean {
-  const list = milestones || [];
-  const found = list.find((m) => m.milestone_type === mType);
-  const s = (found?.status || '').toLowerCase();
-  if (s === 'complete' || s === 'satisfied' || s === 'waived') return true;
-
-  if (customFields && typeof customFields === 'object') {
-    const cfMap: Record<string, string[]> = {
-      earnest_money: ['earnest_money_depositeds_63', 'earnest_money_deposited'],
-      inspection_ordered: ['inspection_completeds_63', 'inspection_completed'],
-      inspection_10day: ['inspection_satisfieds_63', 'inspection_satisfied'],
-      financing_contingency: [
-        'financing_/_loan_commitment_-_internal_use',
-        'financing_loan_commitment_internal_use',
-        'financing_loan_commitment',
-      ],
-      appraisal_received: ['appraisal_received', 'appraisal_received_internal_use'],
-      appraisal_satisfied: ['appraisal_satisfied', 'appraisal_satisfied_internal_use'],
-      insurance_binder: ['insurance_obtaineds_63', 'insurance_obtained', 'insurance_obtained_internal_use'],
-      title: ['title_commitment_s_38_clearance', 'title_commitment_clearance_internal_use', 'title_commitment'],
-      ctc: ['clear-to-close_(ctc)', 'clear_to_close_internal_use', 'clear-to-close', 'clear_to_close'],
-      walk_through: ['final_walkthrough', 'final_walkthrough_internal_use'],
-    };
-
-    const keys = cfMap[mType] || [];
-    for (const k of keys) {
-      const v = customFields[k];
-      if (
-        v === '0' ||
-        v === true ||
-        String(v).toLowerCase() === 'yes' ||
-        String(v).toLowerCase() === 'true'
-      ) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  return getFieldStatus(mType, milestones, customFields) === 'complete';
 }
 
 export function renderMilestoneSequenceHtml(
@@ -129,58 +170,54 @@ export function renderMilestoneSequenceHtml(
   const list = (milestones || []).filter((m) => ACTIVE_MILESTONES_SET.has(m.milestone_type));
 
   const pillsHtml = MILESTONE_ORDER_SEQUENCE.map((item, idx) => {
-    let status = 'pending';
+    let status: 'complete' | 'in_progress' | 'na' | 'pending' = 'pending';
     let isHalf = false;
 
     if (item.subKeys && item.subKeys.length > 0) {
-      const allDone = item.subKeys.every((sk) => isFieldComplete(sk, list, customFields));
-      const anyDone = item.subKeys.some((sk) => isFieldComplete(sk, list, customFields));
+      const statuses = item.subKeys.map((sk) => getFieldStatus(sk, list, customFields));
+      const nonNa = statuses.filter((s) => s !== 'na');
 
-      if (allDone) {
-        status = 'satisfied';
-      } else if (anyDone) {
+      if (nonNa.length === 0) {
+        status = 'na';
+      } else if (nonNa.every((s) => s === 'complete')) {
+        status = 'complete';
+      } else if (nonNa.some((s) => s === 'complete' || s === 'in_progress')) {
         status = 'in_progress';
         isHalf = true;
       } else {
         status = 'pending';
       }
     } else {
-      const done = isFieldComplete(item.key, list, customFields);
-      if (done) {
-        status = 'satisfied';
-      } else {
-        const match = list.find((m) => m.milestone_type === item.key);
-        status = (match?.status || 'pending').toLowerCase();
-      }
+      status = getFieldStatus(item.key, list, customFields);
     }
 
-    let bg = '#d97706';
-    let text = '#0f172a';
-    let border = '#f59e0b';
+    let bg = '#1e293b';
+    let text = '#fcd34d';
+    let border = '#d97706';
+    let textDecoration = 'none';
+    let opacity = '1.0';
 
-    if (status === 'satisfied' || status === 'complete') {
-      bg = '#10b981';
-      text = '#0f172a';
-      border = '#34d399';
-    } else if (status === 'in_progress' || status === 'ordered' || status === 'notice_sent') {
-      bg = '#0ea5e9';
-      text = '#0f172a';
-      border = '#38bdf8';
-    } else if (status === 'waived') {
-      bg = '#6366f1';
-      text = '#ffffff';
-      border = '#818cf8';
+    if (status === 'complete') {
+      bg = '#064e3b';
+      text = '#6ee7b7';
+      border = '#059669';
+    } else if (status === 'in_progress') {
+      bg = '#0c4a6e';
+      text = '#7dd3fc';
+      border = '#0284c7';
     } else if (status === 'na') {
       bg = '#1e293b';
       text = '#64748b';
       border = '#334155';
+      textDecoration = 'line-through';
+      opacity = '0.65';
     }
 
-    const pill = `<span style="display: inline-block; padding: 2.5px 8px; border-radius: 9999px; font-size: 9px; font-family: monospace, sans-serif; font-weight: 800; background-color: ${bg}; color: ${text}; border: 1px solid ${border}; vertical-align: middle;">${item.shortLabel}${isHalf ? ' <span style="font-size: 8px; opacity: 0.85;">½</span>' : ''}</span>`;
+    const pill = `<span style="display: inline-block; margin: 2px 1px; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; background-color: ${bg}; color: ${text}; border: 1px solid ${border}; text-decoration: ${textDecoration}; opacity: ${opacity}; vertical-align: middle; white-space: nowrap;">${item.shortLabel}${isHalf ? ' <span style="font-size: 9px; opacity: 0.9;">½</span>' : ''}</span>`;
 
     const connector =
       idx < MILESTONE_ORDER_SEQUENCE.length - 1
-        ? `<span style="display: inline-block; width: 6px; height: 2px; background-color: #334155; vertical-align: middle; margin: 0 1.5px;"></span>`
+        ? `<span style="display: inline-block; width: 4px; height: 1.5px; background-color: #334155; vertical-align: middle; margin: 0 1px;"></span>`
         : '';
 
     return pill + connector;
@@ -191,7 +228,7 @@ export function renderMilestoneSequenceHtml(
       <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;">
         ESCROW MILESTONE PROGRESS:
       </div>
-      <div style="line-height: 1.6; white-space: nowrap; overflow-x: auto;">
+      <div style="line-height: 1.8; overflow-x: auto;">
         ${pillsHtml}
       </div>
     </div>

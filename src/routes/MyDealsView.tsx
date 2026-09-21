@@ -523,30 +523,36 @@ export const MyDealsView: React.FC = () => {
                           .map((m) => {
                             const config = ALL_MILESTONES_CONFIG.find((c) => c.type === m.milestone_type)!;
 
-                          return (
-                            <div
-                              key={m.milestone_type}
-                              className="p-3.5 bg-[#1e293b] border border-[#334155] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
-                            >
-                              <div className="space-y-0.5">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-sm text-[#f8fafc]">
-                                    {config.label}
-                                  </span>
-                                  <span
-                                    className={`px-2 py-0.2 rounded-full text-[10px] font-bold uppercase border ${
-                                      m.status === 'satisfied' || m.status === 'complete'
-                                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                                        : m.status === 'notice_sent' || m.status === 'ordered'
-                                        ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
-                                        : m.status === 'waived'
-                                        ? 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30'
-                                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                                    }`}
-                                  >
-                                    {m.status}
-                                  </span>
-                                </div>
+                            const isNa = m.status === 'na' || m.status === 'waived';
+                            const isComplete = m.status === 'satisfied' || m.status === 'complete';
+                            const isInProgress = m.status === 'in_progress' || m.status === 'notice_sent' || m.status === 'ordered';
+
+                            return (
+                              <div
+                                key={m.milestone_type}
+                                className={`p-3.5 bg-[#1e293b] border border-[#334155] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-opacity ${
+                                  isNa ? 'opacity-50' : ''
+                                }`}
+                              >
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`font-bold text-sm ${isNa ? 'text-slate-400 line-through' : 'text-[#f8fafc]'}`}>
+                                      {config.label}
+                                    </span>
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                                        isComplete
+                                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                          : isInProgress
+                                          ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
+                                          : isNa
+                                          ? 'bg-slate-800 text-slate-400 border-slate-700'
+                                          : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                                      }`}
+                                    >
+                                      {isComplete ? 'Complete' : isInProgress ? 'In Progress' : isNa ? 'N/A' : 'Pending'}
+                                    </span>
+                                  </div>
                                 {m.notes && (
                                   <p className="text-xs text-[#94a3b8] italic">{m.notes}</p>
                                 )}
