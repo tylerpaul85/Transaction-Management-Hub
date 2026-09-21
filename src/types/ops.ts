@@ -69,55 +69,69 @@ export interface OpsTransaction {
   milestones: OpsMilestone[];
 }
 
-export const MILESTONE_ORDER: {
+export function getMilestoneOrder(side?: 'buyer' | 'seller' | 'dual' | string): {
   type: MilestoneType;
   label: string;
   shortLabel: string;
   subTypes?: MilestoneType[];
-}[] = [
-  { type: 'earnest_money', label: 'Earnest Money', shortLabel: 'Earnest Money' },
-  {
-    type: 'inspection_10day',
-    label: 'Inspection',
-    shortLabel: 'Inspection',
-    subTypes: ['inspection_ordered', 'inspection_notice_sent', 'inspection_10day'],
-  },
-  { type: 'financing_contingency', label: 'Financing', shortLabel: 'Financing' },
-  {
-    type: 'appraisal_satisfied',
-    label: 'Appraisal',
-    shortLabel: 'Appraisal',
-    subTypes: ['appraisal_received', 'appraisal_satisfied'],
-  },
-  { type: 'title', label: 'Title Clearance', shortLabel: 'Title' },
-  { type: 'cds_obtained', label: 'CDs Obtained', shortLabel: 'CDs Obtained' },
-  { type: 'ctc', label: 'Clear to Close', shortLabel: 'Clear to Close' },
-  { type: 'closing_scheduled', label: 'Closing Scheduled', shortLabel: 'Closing Scheduled' },
-  { type: 'walk_through', label: 'Walkthrough', shortLabel: 'Walkthrough' },
-];
+}[] {
+  const isSeller = side === 'seller';
+  return [
+    { type: 'earnest_money', label: 'Earnest Money Deposited', shortLabel: 'Earnest Money' },
+    { type: 'inspection_ordered', label: 'Inspection Ordered', shortLabel: 'Inspection Ordered' },
+    {
+      type: 'inspection_notice_sent',
+      label: isSeller ? 'Inspection Notice Received? - Listing' : 'Inspection Notice Sent? - Buyer',
+      shortLabel: isSeller ? 'Notice Received' : 'Notice Sent',
+    },
+    { type: 'inspection_10day', label: 'Inspection Satisfied', shortLabel: 'Inspection Satisfied' },
+    { type: 'appraisal_received', label: 'Appraisal Received', shortLabel: 'Appraisal Received' },
+    { type: 'financing_contingency', label: 'Financing / Loan Commitment', shortLabel: 'Financing / Loan' },
+    { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', shortLabel: 'Appraisal Satisfied' },
+    { type: 'title', label: 'Title Commitment & Clearance', shortLabel: 'Title Clearance' },
+    { type: 'cds_obtained', label: 'CDs Obtained', shortLabel: 'CDs Obtained' },
+    { type: 'ctc', label: 'Clear-to-Close (CTC)', shortLabel: 'Clear to Close' },
+    { type: 'closing_scheduled', label: 'Closing Scheduled', shortLabel: 'Closing Scheduled' },
+    { type: 'walk_through', label: 'Final Walkthrough', shortLabel: 'Walkthrough' },
+  ];
+}
 
-export const ALL_MILESTONES_CONFIG: {
+export const MILESTONE_ORDER = getMilestoneOrder('buyer');
+
+export function getAllMilestonesConfig(side?: 'buyer' | 'seller' | 'dual' | string): {
   type: MilestoneType;
   label: string;
   shortLabel: string;
   description: string;
   isSubItem?: boolean;
   parentGroup?: 'inspection' | 'appraisal' | 'closing';
-}[] = [
-  { type: 'earnest_money', label: 'Earnest Money Deposited', shortLabel: 'Earnest Money', description: 'Initial escrow deposit slip and verification' },
-  { type: 'inspection_ordered', label: 'Inspection Ordered', shortLabel: 'Inspection Ordered', description: 'Home inspector booked by buyer/agent', isSubItem: true, parentGroup: 'inspection' },
-  { type: 'inspection_notice_sent', label: 'Inspection Notice Sent', shortLabel: 'Notice Sent', description: 'Inspection report and amendment notice delivered', isSubItem: true, parentGroup: 'inspection' },
-  { type: 'inspection_10day', label: 'Inspection Satisfied', shortLabel: 'Inspection Satisfied', description: 'Contractual inspection deadline and repair resolution', isSubItem: true, parentGroup: 'inspection' },
-  { type: 'appraisal_received', label: 'Appraisal Received', shortLabel: 'Appraisal Received', description: 'Appraisal report delivered to buyer/lender', isSubItem: true, parentGroup: 'appraisal' },
-  { type: 'financing_contingency', label: 'Financing / Loan Commitment', shortLabel: 'Financing / Loan', description: 'Mortgage lender approval condition deadline' },
-  { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', shortLabel: 'Appraisal Satisfied', description: 'Appraisal valuation condition met', isSubItem: true, parentGroup: 'appraisal' },
-  { type: 'title', label: 'Title Commitment & Clearance', shortLabel: 'Title Clearance', description: 'Preliminary title Schedule B review and clearance' },
-  { type: 'cds_obtained', label: 'CDs Obtained', shortLabel: 'CDs Obtained', description: 'Closing Disclosures obtained and acknowledged' },
-  { type: 'ctc', label: 'Clear-to-Close (CTC)', shortLabel: 'Clear to Close', description: 'Final underwriter loan clearance' },
-  { type: 'closing_scheduled', label: 'Closing Scheduled', shortLabel: 'Closing Scheduled', description: 'Settlement time and location confirmed with title and clients' },
-  { type: 'walk_through', label: 'Final Walkthrough', shortLabel: 'Walkthrough', description: 'Pre-closing property inspection' },
-  { type: 'insurance_binder', label: 'Insurance Binder Obtained', shortLabel: 'Insurance Binder', description: 'Homeowners insurance binder delivered to lender/title' },
-];
+}[] {
+  const isSeller = side === 'seller';
+  return [
+    { type: 'earnest_money', label: 'Earnest Money Deposited', shortLabel: 'Earnest Money', description: 'Initial escrow deposit slip and verification' },
+    { type: 'inspection_ordered', label: 'Inspection Ordered', shortLabel: 'Inspection Ordered', description: 'Home inspector booked by buyer/agent', isSubItem: true, parentGroup: 'inspection' },
+    {
+      type: 'inspection_notice_sent',
+      label: isSeller ? 'Inspection Notice Received? - Listing' : 'Inspection Notice Sent? - Buyer',
+      shortLabel: isSeller ? 'Notice Received' : 'Notice Sent',
+      description: isSeller ? 'Inspection report and repair amendment notice received from buyer agent' : 'Inspection report and amendment notice delivered to listing agent',
+      isSubItem: true,
+      parentGroup: 'inspection',
+    },
+    { type: 'inspection_10day', label: 'Inspection Satisfied', shortLabel: 'Inspection Satisfied', description: 'Contractual inspection deadline and repair resolution', isSubItem: true, parentGroup: 'inspection' },
+    { type: 'appraisal_received', label: 'Appraisal Received', shortLabel: 'Appraisal Received', description: 'Appraisal report delivered to buyer/lender', isSubItem: true, parentGroup: 'appraisal' },
+    { type: 'financing_contingency', label: 'Financing / Loan Commitment', shortLabel: 'Financing / Loan', description: 'Mortgage lender approval condition deadline' },
+    { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', shortLabel: 'Appraisal Satisfied', description: 'Appraisal valuation condition met', isSubItem: true, parentGroup: 'appraisal' },
+    { type: 'title', label: 'Title Commitment & Clearance', shortLabel: 'Title Clearance', description: 'Preliminary title Schedule B review and clearance' },
+    { type: 'cds_obtained', label: 'CDs Obtained', shortLabel: 'CDs Obtained', description: 'Closing Disclosures obtained and acknowledged' },
+    { type: 'ctc', label: 'Clear-to-Close (CTC)', shortLabel: 'Clear to Close', description: 'Final underwriter loan clearance' },
+    { type: 'closing_scheduled', label: 'Closing Scheduled', shortLabel: 'Closing Scheduled', description: 'Settlement time and location confirmed with title and clients' },
+    { type: 'walk_through', label: 'Final Walkthrough', shortLabel: 'Walkthrough', description: 'Pre-closing property inspection' },
+    { type: 'insurance_binder', label: 'Insurance Binder Obtained', shortLabel: 'Insurance Binder', description: 'Homeowners insurance binder delivered to lender/title' },
+  ];
+}
+
+export const ALL_MILESTONES_CONFIG = getAllMilestonesConfig('buyer');
 
 /**
  * Universal evaluator for Sisu 4-choice values (Yes, No, In Progress, N/A)

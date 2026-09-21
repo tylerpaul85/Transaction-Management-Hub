@@ -468,7 +468,7 @@ export const MyDealsView: React.FC = () => {
 
                     {/* Milestone Progress Dots */}
                     <div className="self-start sm:self-center">
-                      <MilestoneDotSequence milestones={tx.milestones} />
+                      <MilestoneDotSequence milestones={tx.milestones} side={tx.side} />
                     </div>
                   </div>
                 </div>

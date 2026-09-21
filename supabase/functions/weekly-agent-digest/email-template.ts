@@ -56,43 +56,52 @@ export const ACTIVE_MILESTONES_SET = new Set([
   'insurance_binder',
 ]);
 
-export const MILESTONE_LABELS: Record<string, string> = {
-  earnest_money: 'Earnest Money Deposited',
-  inspection_ordered: 'Inspection Ordered',
-  inspection_notice_sent: 'Inspection Notice Sent',
-  inspection_10day: 'Inspection Satisfied',
-  financing_contingency: 'Financing / Loan Commitment',
-  appraisal_received: 'Appraisal Received',
-  appraisal_satisfied: 'Appraisal Satisfied',
-  insurance_binder: 'Insurance Binder Obtained',
-  title: 'Title Commitment & Clearance',
-  cds_obtained: 'Closing Disclosures (CDs) Obtained',
-  ctc: 'Clear-to-Close (CTC)',
-  closing_scheduled: 'Closing Scheduled',
-  walk_through: 'Final Walkthrough',
-};
+export function getMilestoneLabels(side?: 'buyer' | 'seller'): Record<string, string> {
+  const isSeller = side === 'seller';
+  return {
+    earnest_money: 'Earnest Money Deposited',
+    inspection_ordered: 'Inspection Ordered',
+    inspection_notice_sent: isSeller
+      ? 'Inspection Notice Received? - Listing'
+      : 'Inspection Notice Sent? - Buyer',
+    inspection_10day: 'Inspection Satisfied',
+    financing_contingency: 'Financing / Loan Commitment',
+    appraisal_received: 'Appraisal Received',
+    appraisal_satisfied: 'Appraisal Satisfied',
+    insurance_binder: 'Insurance Binder Obtained',
+    title: 'Title Commitment & Clearance',
+    cds_obtained: 'Closing Disclosures (CDs) Obtained',
+    ctc: 'Clear-to-Close (CTC)',
+    closing_scheduled: 'Closing Scheduled',
+    walk_through: 'Final Walkthrough',
+  };
+}
 
-export const MILESTONE_ORDER_SEQUENCE = [
-  { key: 'earnest_money', shortLabel: 'Earnest Money', label: 'Earnest Money Deposit' },
-  {
-    key: 'inspection',
-    shortLabel: 'Inspection',
-    label: 'Home Inspection',
-    subKeys: ['inspection_ordered', 'inspection_notice_sent', 'inspection_10day'],
-  },
-  { key: 'financing_contingency', shortLabel: 'Financing', label: 'Loan Commitment' },
-  {
-    key: 'appraisal',
-    shortLabel: 'Appraisal',
-    label: 'Appraisal',
-    subKeys: ['appraisal_received', 'appraisal_satisfied'],
-  },
-  { key: 'title', shortLabel: 'Title', label: 'Title Clearance' },
-  { key: 'cds_obtained', shortLabel: 'CDs Obtained', label: 'Closing Disclosures Obtained' },
-  { key: 'ctc', shortLabel: 'Clear to Close', label: 'Clear to Close' },
-  { key: 'closing_scheduled', shortLabel: 'Closing Scheduled', label: 'Closing Scheduled' },
-  { key: 'walk_through', shortLabel: 'Walkthrough', label: 'Final Walkthrough' },
-];
+export const MILESTONE_LABELS = getMilestoneLabels('buyer');
+
+export function getMilestoneOrderSequence(side?: 'buyer' | 'seller') {
+  const isSeller = side === 'seller';
+  return [
+    { key: 'earnest_money', shortLabel: 'Earnest Money', label: 'Earnest Money Deposited' },
+    { key: 'inspection_ordered', shortLabel: 'Inspection Ordered', label: 'Inspection Ordered' },
+    {
+      key: 'inspection_notice_sent',
+      shortLabel: isSeller ? 'Notice Received' : 'Notice Sent',
+      label: isSeller ? 'Inspection Notice Received? - Listing' : 'Inspection Notice Sent? - Buyer',
+    },
+    { key: 'inspection_10day', shortLabel: 'Inspection Satisfied', label: 'Inspection Satisfied' },
+    { key: 'appraisal_received', shortLabel: 'Appraisal Received', label: 'Appraisal Received' },
+    { key: 'financing_contingency', shortLabel: 'Financing', label: 'Financing / Loan Commitment' },
+    { key: 'appraisal_satisfied', shortLabel: 'Appraisal Satisfied', label: 'Appraisal Satisfied' },
+    { key: 'title', shortLabel: 'Title', label: 'Title Commitment & Clearance' },
+    { key: 'cds_obtained', shortLabel: 'CDs Obtained', label: 'Closing Disclosures Obtained' },
+    { key: 'ctc', shortLabel: 'Clear to Close', label: 'Clear to Close' },
+    { key: 'closing_scheduled', shortLabel: 'Closing Scheduled', label: 'Closing Scheduled' },
+    { key: 'walk_through', shortLabel: 'Walkthrough', label: 'Final Walkthrough' },
+  ];
+}
+
+export const MILESTONE_ORDER_SEQUENCE = getMilestoneOrderSequence('buyer');
 
 export function getFieldStatus(
   mType: string,
@@ -112,8 +121,17 @@ export function getFieldStatus(
   if (customFields && typeof customFields === 'object') {
     const cfMap: Record<string, string[]> = {
       earnest_money: ['earnest_money_depositeds_63', 'earnest_money_deposited', 'earnest_money_deposited?_(internal_use)'],
-      inspection_ordered: ['inspection_completeds_63', 'inspection_completed', 'inspection_ordred?_-_internal_use'],
-      inspection_notice_sent: ['inspection_notice_sent?_-_internal', 'inspection_notice_sent'],
+      inspection_ordered: ['inspection_completeds_63', 'inspection_completed', 'inspection_ordred?_-_internal_use', 'inspection_ordered?_-_internal_use', 'inspection_ordered'],
+      inspection_notice_sent: [
+        'inspection_notice_sent?_-_internal',
+        'inspection_notice_sent',
+        'inspection_notice_received?_-_listing',
+        'inspection_notice_received',
+        'inspection_notice_received_listing',
+        'inspection_notice_received?_-_internal_use',
+        'inspection_notice_sent?_-_buyer',
+        'inspection_notice_sent?_-_internal_use',
+      ],
       inspection_10day: ['inspection_satisfieds_63', 'inspection_satisfied', 'inspection_satisfied?_-_internal_use'],
       financing_contingency: [
         'financing_/_loan_commitment_-_internal_use',
@@ -165,23 +183,25 @@ export function isFieldComplete(
 
 export function renderMilestoneSequenceHtml(
   milestones?: Array<{ milestone_type: string; status: string }>,
-  customFields?: Record<string, any> | null
+  customFields?: Record<string, any> | null,
+  side?: 'buyer' | 'seller'
 ): string {
   const list = (milestones || []).filter((m) => ACTIVE_MILESTONES_SET.has(m.milestone_type));
+  const sequence = getMilestoneOrderSequence(side);
 
-  const pillsHtml = MILESTONE_ORDER_SEQUENCE.map((item, idx) => {
+  const pillsHtml = sequence.map((item, idx) => {
     let status: 'complete' | 'in_progress' | 'na' | 'pending' = 'pending';
     let isHalf = false;
 
-    if (item.subKeys && item.subKeys.length > 0) {
-      const statuses = item.subKeys.map((sk) => getFieldStatus(sk, list, customFields));
-      const nonNa = statuses.filter((s) => s !== 'na');
+    if ((item as any).subKeys && (item as any).subKeys.length > 0) {
+      const statuses = (item as any).subKeys.map((sk: string) => getFieldStatus(sk, list, customFields));
+      const nonNa = statuses.filter((s: string) => s !== 'na');
 
       if (nonNa.length === 0) {
         status = 'na';
-      } else if (nonNa.every((s) => s === 'complete')) {
+      } else if (nonNa.every((s: string) => s === 'complete')) {
         status = 'complete';
-      } else if (nonNa.some((s) => s === 'complete' || s === 'in_progress')) {
+      } else if (nonNa.some((s: string) => s === 'complete' || s === 'in_progress')) {
         status = 'in_progress';
         isHalf = true;
       } else {
@@ -216,7 +236,7 @@ export function renderMilestoneSequenceHtml(
     const pill = `<span style="display: inline-block; margin: 2px 1px; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; background-color: ${bg}; color: ${text}; border: 1px solid ${border}; text-decoration: ${textDecoration}; opacity: ${opacity}; vertical-align: middle; white-space: nowrap;">${item.shortLabel}${isHalf ? ' <span style="font-size: 9px; opacity: 0.9;">½</span>' : ''}</span>`;
 
     const connector =
-      idx < MILESTONE_ORDER_SEQUENCE.length - 1
+      idx < sequence.length - 1
         ? `<span style="display: inline-block; width: 4px; height: 1.5px; background-color: #334155; vertical-align: middle; margin: 0 1px;"></span>`
         : '';
 
@@ -279,7 +299,7 @@ export function renderAgentDigestEmail(params: DigestEmailParams): {
       const sideBg = tx.side.toLowerCase() === 'buyer' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.12)';
       const sideBorder = tx.side.toLowerCase() === 'buyer' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(217, 119, 6, 0.3)';
 
-      const milestoneSeqHtml = renderMilestoneSequenceHtml(tx.milestones, tx.custom_fields);
+      const milestoneSeqHtml = renderMilestoneSequenceHtml(tx.milestones, tx.custom_fields, tx.side as any);
 
       // Overdue Callout HTML
       const overdueHtml =

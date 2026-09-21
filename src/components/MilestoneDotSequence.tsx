@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { OpsMilestone, MILESTONE_ORDER, ALL_MILESTONES_CONFIG } from '../types/ops';
+import { OpsMilestone, getMilestoneOrder, getAllMilestonesConfig } from '../types/ops';
 import { Check, Clock, Minus, Circle } from 'lucide-react';
 
 interface MilestoneDotSequenceProps {
   milestones: OpsMilestone[];
+  side?: 'buyer' | 'seller' | 'dual' | string;
   onMilestoneClick?: (milestone: OpsMilestone) => void;
 }
 
 export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
   milestones,
+  side = 'buyer',
   onMilestoneClick,
 }) => {
   const [hoveredType, setHoveredType] = useState<string | null>(null);
+
+  const milestoneOrder = getMilestoneOrder(side);
+  const allConfigs = getAllMilestonesConfig(side);
 
   const milestoneMap = new Map<string, OpsMilestone>();
   milestones.forEach((m) => milestoneMap.set(m.milestone_type, m));
@@ -56,7 +61,7 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 py-1">
-      {MILESTONE_ORDER.map((item) => {
+      {milestoneOrder.map((item) => {
         let displayStatus = 'pending';
         let subItemsStatus: { label: string; status: string; milestone?: OpsMilestone }[] = [];
         let primaryMilestone = milestoneMap.get(item.type);
@@ -91,7 +96,7 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
           }
 
           subItemsStatus = subMilestones.map((sm) => {
-            const conf = ALL_MILESTONES_CONFIG.find((c) => c.type === sm.type);
+            const conf = allConfigs.find((c) => c.type === sm.type);
             return {
               label: conf?.label || sm.type,
               status: sm.status,

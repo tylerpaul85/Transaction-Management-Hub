@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
-import { OpsTransaction, OpsMilestone, ALL_MILESTONES_CONFIG } from '../types/ops';
+import { OpsTransaction, OpsMilestone, getAllMilestonesConfig, ALL_MILESTONES_CONFIG } from '../types/ops';
 import { MilestoneStatus, MilestoneSource } from '../types/database.types';
 import {
   X,
@@ -556,8 +556,9 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                     </thead>
                     <tbody className="divide-y divide-[#334155]/60">
                       {milestones.map((m) => {
+                        const sideConfigs = getAllMilestonesConfig(side);
                         const config =
-                          ALL_MILESTONES_CONFIG.find((c) => c.type === m.milestone_type) || {
+                          sideConfigs.find((c) => c.type === m.milestone_type) || {
                             label: m.milestone_type,
                             description: '',
                             parentGroup: undefined as 'inspection' | 'appraisal' | undefined,

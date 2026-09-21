@@ -1086,7 +1086,7 @@ export const OpsDashboard: React.FC = () => {
                         <span className="text-[10px] text-[#94a3b8] font-bold uppercase tracking-wider block">
                           Escrow Milestone Progress:
                         </span>
-                        <MilestoneDotSequence milestones={tx.milestones} onMilestoneClick={() => setSelectedTx(tx)} />
+                        <MilestoneDotSequence milestones={tx.milestones} side={tx.side} onMilestoneClick={() => setSelectedTx(tx)} />
                       </div>
 
                       {/* Footer Actions */}
@@ -1162,7 +1162,7 @@ export const OpsDashboard: React.FC = () => {
                           </td>
 
                           <td className="py-3.5 px-4">
-                            <MilestoneDotSequence milestones={tx.milestones} onMilestoneClick={() => setSelectedTx(tx)} />
+                            <MilestoneDotSequence milestones={tx.milestones} side={tx.side} onMilestoneClick={() => setSelectedTx(tx)} />
                           </td>
 
                           <td className="py-3.5 px-4 text-xs">
