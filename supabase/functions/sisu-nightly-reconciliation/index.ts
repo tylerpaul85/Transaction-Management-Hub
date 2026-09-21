@@ -278,6 +278,18 @@ serve(async (req: Request) => {
         const contractDate = String(r['Under Contract Date'] || '').slice(0, 10) || new Date().toISOString().split('T')[0];
         const closingDate = String(r['Forecasted Closed Date'] || r['Closed (Settlement) Date'] || '').slice(0, 10) || null;
 
+        const agentName = String(r['Agent'] || r['agent_name'] || r['agent'] || '').toLowerCase();
+        let assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e'; // default Ashley Charette
+        const KATIE_AGENTS = [
+          'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
+          'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
+          'marissa beatty', 'michael odle', 'robert montenegro', 'ryan reagan', 
+          'sebastian rush', 'shawn mcarthur', 'shawn witzemann'
+        ];
+        if (KATIE_AGENTS.some((a) => agentName.includes(a))) {
+          assignedTcId = '5580daa6-415d-4385-986a-69bc94421c0c'; // Katie Harold
+        }
+
         return {
           sisu_transaction_id: sisuId,
           property_address: addr,
@@ -289,6 +301,7 @@ serve(async (req: Request) => {
           client_phone: clientPhone,
           contract_date: contractDate,
           other_party_agent: r['Cooperating Agent Name'] || null,
+          assigned_tc_id: assignedTcId,
         };
       });
 
@@ -615,6 +628,19 @@ serve(async (req: Request) => {
           txUpdates.contract_date = contractDate.trim();
         }
 
+        if (!existingTx.assigned_tc_id) {
+          const checkAgent = String(sisuData.agent_name || sisuData.agent?.full_name || '').toLowerCase();
+          const KATIE_AGENTS = [
+            'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
+            'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
+            'marissa beatty', 'michael odle', 'robert montenegro', 'ryan reagan', 
+            'sebastian rush', 'shawn mcarthur', 'shawn witzemann'
+          ];
+          txUpdates.assigned_tc_id = KATIE_AGENTS.some((a) => checkAgent.includes(a))
+            ? '5580daa6-415d-4385-986a-69bc94421c0c'
+            : 'f4436dcc-4d52-4a26-af80-05096b76067e';
+        }
+
         await supabase
           .from('transactions')
           .update(txUpdates)
@@ -634,6 +660,17 @@ serve(async (req: Request) => {
         const insertCity = (rawCity && typeof rawCity === 'string' && rawCity.trim()) || 'Waynesville';
         const insertState = (rawState && typeof rawState === 'string' && rawState.trim()) || 'MO';
         const insertSide = side || 'buyer';
+
+        const checkAgent = String(sisuData.agent_name || sisuData.agent?.full_name || '').toLowerCase();
+        const KATIE_AGENTS = [
+          'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
+          'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
+          'marissa beatty', 'michael odle', 'robert montenegro', 'ryan reagan', 
+          'sebastian rush', 'shawn mcarthur', 'shawn witzemann'
+        ];
+        const assignedTcId = KATIE_AGENTS.some((a) => checkAgent.includes(a))
+          ? '5580daa6-415d-4385-986a-69bc94421c0c'
+          : 'f4436dcc-4d52-4a26-af80-05096b76067e';
 
         const { data: newTx } = await supabase
           .from('transactions')
@@ -657,6 +694,7 @@ serve(async (req: Request) => {
             title_company: titleCompany || null,
             target_closing_date: closingTargetDate || null,
             contract_date: contractDate || null,
+            assigned_tc_id: assignedTcId,
           })
           .select('id')
           .single();

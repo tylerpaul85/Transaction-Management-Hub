@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../integrations/supabase/client';
-import { OpsTransaction, OpsMilestone, ALL_MILESTONES_CONFIG } from '../types/ops';
+import { OpsTransaction, OpsMilestone, ALL_MILESTONES_CONFIG, resolveTcForAgent } from '../types/ops';
 import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
 import {
   Building,
@@ -72,8 +72,9 @@ export const MyDealsView: React.FC = () => {
             const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
             const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
             const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
-            const tcName = t.assigned_tc?.name || t.tc_name || 'Unassigned TC';
-            const tcEmail = t.assigned_tc?.email || t.tc_email || '';
+            const fallbackTc = resolveTcForAgent(agentName);
+            const tcName = t.assigned_tc?.name || (t.tc_name && t.tc_name !== 'Unassigned TC' ? t.tc_name : fallbackTc.tc_name);
+            const tcEmail = t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email;
 
             return {
               id: t.id,

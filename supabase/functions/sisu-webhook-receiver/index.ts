@@ -471,7 +471,19 @@ serve(async (req: Request) => {
     }
 
     const tcEmail = sisuData.assigned_tc?.email || payload.assigned_tc?.email || sisuData.tc_email || payload.tc_email;
-    if (tcEmail) {
+    const tcAgentId = String(
+      fullObj.tc_agent_id || 
+      updatedVals.tc_agent_id || 
+      sisuData.tc_agent_id || 
+      payload.tc_agent_id || 
+      ''
+    );
+
+    if (tcAgentId === '53175') {
+      assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e'; // Ashley Charette
+    } else if (tcAgentId === '26136' || tcAgentId === '31410') {
+      assignedTcId = '5580daa6-415d-4385-986a-69bc94421c0c'; // Katie Harold
+    } else if (tcEmail) {
       let { data: matchedTc } = await supabase
         .from('ops_users')
         .select('id')
@@ -495,6 +507,37 @@ serve(async (req: Request) => {
 
       if (matchedTc) {
         assignedTcId = matchedTc.id;
+      }
+    }
+
+    // Fallback: dedicated agent-to-TC roster mapping
+    if (!assignedTcId) {
+      const checkAgentName = (
+        agentRecord.full_name ||
+        sisuData.agent_name ||
+        payload.agent_name ||
+        ''
+      ).toLowerCase();
+
+      const ASHLEY_AGENTS = [
+        'ben blickhan', 'brittney soto', 'chayce switzer', 'ciara giacomini', 
+        'haley bradshaw', 'ian brand', 'jonathan pimentel', 'kent wheelock', 
+        'kody jones', 'kristen reagan', 'lance lewis', 'michael dimond', 
+        'nick lein', 'tasha mcbride', 'tyler paul', 'yuba martinez', 'storm kittel'
+      ];
+      const KATIE_AGENTS = [
+        'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
+        'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
+        'marissa beatty', 'michael odle', 'robert montenegro', 'ryan reagan', 
+        'sebastian rush', 'shawn mcarthur', 'shawn witzemann'
+      ];
+
+      if (ASHLEY_AGENTS.some((a) => checkAgentName.includes(a))) {
+        assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e';
+      } else if (KATIE_AGENTS.some((a) => checkAgentName.includes(a))) {
+        assignedTcId = '5580daa6-415d-4385-986a-69bc94421c0c';
+      } else {
+        assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e'; // default to Ashley
       }
     }
 

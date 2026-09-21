@@ -132,3 +132,27 @@ export interface SisuUnmatchedTask {
   task_payload?: any;
 }
 
+export function resolveTcForAgent(agentName: string | null | undefined): { tc_name: string; tc_email: string; tc_id: string } {
+  const check = (agentName || '').toLowerCase();
+  const KATIE_AGENTS = [
+    'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
+    'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
+    'marissa beatty', 'michael odle', 'robert montenegro', 'ryan reagan', 
+    'sebastian rush', 'shawn mcarthur', 'shawn witzemann'
+  ];
+
+  if (KATIE_AGENTS.some((a) => check.includes(a))) {
+    return {
+      tc_name: 'Katie Harold',
+      tc_email: 'katie.harold@mattsmithrealestategroup.com',
+      tc_id: '5580daa6-415d-4385-986a-69bc94421c0c',
+    };
+  }
+
+  return {
+    tc_name: 'Ashley Charette',
+    tc_email: 'ashley.charette@mattsmithrealestategroup.com',
+    tc_id: 'f4436dcc-4d52-4a26-af80-05096b76067e',
+  };
+}
+
