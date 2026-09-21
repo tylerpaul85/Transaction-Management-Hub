@@ -231,6 +231,13 @@ export function renderMilestoneSequenceHtml(
       <div style="line-height: 1.8; overflow-x: auto;">
         ${pillsHtml}
       </div>
+      <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #1e293b; font-size: 9.5px; color: #94a3b8; line-height: 1.4;">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;">Milestone Key:</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #34d399; font-weight: bold;">●</span> Done</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #38bdf8; font-weight: bold;">●</span> In Progress</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #fbbf24; font-weight: bold;">●</span> Upcoming / Open</span>
+        <span style="display: inline-block;"><span style="color: #64748b; font-weight: bold;">●</span> N/A</span>
+      </div>
     </div>
   `;
 }
@@ -382,6 +389,19 @@ export function renderAgentDigestEmail(params: DigestEmailParams): {
                   </td>
                 </tr>
               </table>
+            </td>
+          </tr>
+
+          <!-- Milestone Status Guide -->
+          <tr>
+            <td style="padding: 0 24px 8px 24px;">
+              <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #94a3b8; line-height: 1.5;">
+                <span style="color: #f8fafc; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; margin-right: 6px;">Status Guide:</span>
+                <span style="display: inline-block; margin-right: 8px;"><span style="color: #34d399; font-weight: bold;">●</span> <strong>Green:</strong> Done</span>
+                <span style="display: inline-block; margin-right: 8px;"><span style="color: #38bdf8; font-weight: bold;">●</span> <strong>Blue:</strong> In Progress</span>
+                <span style="display: inline-block; margin-right: 8px;"><span style="color: #fbbf24; font-weight: bold;">●</span> <strong>Orange:</strong> Upcoming (Not Due Yet)</span>
+                <span style="display: inline-block;"><span style="color: #64748b; font-weight: bold;">●</span> <strong>Grey:</strong> N/A</span>
+              </div>
             </td>
           </tr>
 

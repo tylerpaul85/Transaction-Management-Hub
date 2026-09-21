@@ -220,6 +220,13 @@ export function renderMilestoneSequenceHtml(
       <div style="line-height: 1.8; overflow-x: auto;">
         ${pillsHtml}
       </div>
+      <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #1e293b; font-size: 9.5px; color: #94a3b8; line-height: 1.4;">
+        <span style="color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;">Milestone Key:</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #34d399; font-weight: bold;">●</span> Done</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #38bdf8; font-weight: bold;">●</span> In Progress</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #fbbf24; font-weight: bold;">●</span> Upcoming / Open</span>
+        <span style="display: inline-block;"><span style="color: #64748b; font-weight: bold;">●</span> N/A</span>
+      </div>
     </div>
   `;
 }
@@ -338,9 +345,16 @@ export function renderAgentDigestEmail(params: {
     </div>
     <div style="background-color: #1e293b; border-radius: 16px; padding: 20px; border: 1px solid #334155; margin-bottom: 24px;">
       <h2 style="margin: 0 0 8px 0; font-size: 18px; color: #f8fafc;">Hello ${agentName},</h2>
-      <p style="margin: 0; font-size: 14px; color: #cbd5e1; line-height: 1.5;">
+      <p style="margin: 0 0 12px 0; font-size: 14px; color: #cbd5e1; line-height: 1.5;">
         Here is your transaction overview report (${totalDeals} active escrow${totalDeals === 1 ? '' : 's'}).
       </p>
+      <div style="background-color: #131826; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #94a3b8; line-height: 1.5;">
+        <span style="font-weight: 700; color: #f8fafc; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; margin-right: 6px;">Milestone Status Guide:</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #34d399; font-weight: bold;">●</span> <strong>Green:</strong> Done</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #38bdf8; font-weight: bold;">●</span> <strong>Blue:</strong> In Progress</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #fbbf24; font-weight: bold;">●</span> <strong>Orange:</strong> Upcoming (Not Due Yet)</span>
+        <span style="display: inline-block;"><span style="color: #64748b; font-weight: bold;">●</span> <strong>Grey:</strong> N/A</span>
+      </div>
     </div>
     ${transactionRowsHtml}
     <div style="text-align: center; font-size: 11px; color: #64748b; padding-top: 16px; border-top: 1px solid #334155;">
@@ -356,6 +370,7 @@ Matt Smith Real Estate Group - ${frequencyName} Agent Transaction Digest
 Hello ${agentName},
 
 You currently have ${totalDeals} active escrow(s).
+Milestone Status Guide: Green = Done | Blue = In Progress | Orange = Upcoming (Not Due Yet) | Grey = N/A
 
 ${transactions
   .map(
