@@ -50,10 +50,10 @@ export const OpsDashboard: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncStatusText, setSyncStatusText] = useState<string | null>(null);
 
-  // Main Dashboard Tab: 'tc_escrows' | 'lc_listings' | 'all_files' | 'users' | 'tasks'
-  const [activeSection, setActiveSection] = useState<'tc_escrows' | 'lc_listings' | 'all_files' | 'users' | 'tasks'>(
-    currentUser?.role === 'listing_coordinator' ? 'lc_listings' : 'tc_escrows'
-  );
+  // Main Dashboard View Section: 'escrows' | 'users' | 'tasks'
+  const [activeSection, setActiveSection] = useState<'escrows' | 'users' | 'tasks'>('escrows');
+  // Representation Tab: 'all' | 'buyer' | 'seller'
+  const [representationTab, setRepresentationTab] = useState<'all' | 'buyer' | 'seller'>('all');
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -66,7 +66,6 @@ export const OpsDashboard: React.FC = () => {
 
   // Quick Add Modals
   const [isAddEscrowModalOpen, setIsAddEscrowModalOpen] = useState(false);
-  const [isAddListingModalOpen, setIsAddListingModalOpen] = useState(false);
   const [isBatchImportModalOpen, setIsBatchImportModalOpen] = useState(false);
   const [batchImportText, setBatchImportText] = useState('');
   const [isBatchImporting, setIsBatchImporting] = useState(false);
@@ -84,19 +83,6 @@ export const OpsDashboard: React.FC = () => {
   const [newEscrowAgent, setNewEscrowAgent] = useState('');
   const [newEscrowTc, setNewEscrowTc] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Form states for New Listing (LC)
-  const [newListingAddress, setNewListingAddress] = useState('');
-  const [newListingCity, setNewListingCity] = useState('Waynesville');
-  const [newListingState, setNewListingState] = useState('MO');
-  const [newListingPrice, setNewListingPrice] = useState('');
-  const [newListingMls, setNewListingMls] = useState('');
-  const [newListingStatus, setNewListingStatus] = useState<'pre_listing' | 'coming_soon' | 'active'>('active');
-  const [newListingClient, setNewListingClient] = useState('');
-  const [newListingClientPhone, setNewListingClientPhone] = useState('');
-  const [newListingDate, setNewListingDate] = useState('');
-  const [newListingAgent, setNewListingAgent] = useState('');
-  const [newListingPhotoStatus, setNewListingPhotoStatus] = useState<'pending' | 'scheduled' | 'completed'>('scheduled');
 
   const [allAgentProfiles, setAllAgentProfiles] = useState<{ id: string; name: string; email: string }[]>([]);
   const [allOpsUsers, setAllOpsUsers] = useState<{ id: string; name: string; email: string }[]>([]);
@@ -402,44 +388,6 @@ export const OpsDashboard: React.FC = () => {
     }
   };
 
-  // Create Listing (LC)
-  const handleCreateListing = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newListingAddress.trim()) return;
-
-    setIsSubmitting(true);
-    try {
-      const numericPrice = parseFloat(newListingPrice.replace(/[^0-9.]/g, '')) || null;
-
-      const { error: txErr } = await (supabase.from('transactions') as any).insert({
-        property_address: newListingAddress,
-        city: newListingCity,
-        side: 'seller',
-        status: newListingStatus,
-        client_name: newListingClient || 'Property Seller',
-        client_phone: newListingClientPhone || null,
-        price: numericPrice,
-        contract_date: newListingDate || new Date().toISOString().split('T')[0],
-        listing_agent_id: newListingAgent || null,
-      });
-
-      if (txErr) throw txErr;
-
-      setIsAddListingModalOpen(false);
-      setNewListingAddress('');
-      setNewListingPrice('');
-      setNewListingMls('');
-      setNewListingClient('');
-      setNewListingClientPhone('');
-      setNewListingAgent('');
-      await loadLiveTransactions();
-    } catch (err: any) {
-      console.error('Failed to create listing:', err);
-      alert(`Could not save listing: ${err?.message || String(err)}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // Toggle Friday review flag
   const handleToggleReviewFlag = async (txId: string, e: React.MouseEvent) => {
@@ -574,7 +522,7 @@ export const OpsDashboard: React.FC = () => {
     return Array.from(set).sort();
   }, [transactions]);
 
-  // Section Segmented Lists
+  // Active TC Escrows (Under Contract / Pending)
   const tcEscrows = useMemo(() => {
     return transactions.filter((t) => {
       const s = (t.status || '').toLowerCase().replace(/_/g, ' ').trim();
@@ -602,41 +550,20 @@ export const OpsDashboard: React.FC = () => {
     });
   }, [transactions]);
 
-  const lcListings = useMemo(() => {
-    return transactions.filter((t) => {
-      const s = (t.status || '').toLowerCase().replace(/_/g, ' ').trim();
-      if (
-        s === 'closed' ||
-        s.startsWith('closed') ||
-        s.includes('terminated') ||
-        s.includes('cancelled') ||
-        s.includes('cancel') ||
-        s.includes('fell through') ||
-        s.includes('archived')
-      ) {
-        return false;
-      }
-      const isSeller = (t.side || '').toLowerCase() === 'seller';
-      return (
-        isSeller ||
-        s.includes('listing') ||
-        s.includes('active') ||
-        s.includes('signed') ||
-        s.includes('set') ||
-        s.includes('met') ||
-        s.includes('showing') ||
-        s.includes('pre') ||
-        s.includes('coming') ||
-        s.includes('pipeline')
-      );
-    });
-  }, [transactions]);
+  // Dedicated Buyer and Seller Escrow Files
+  const buyerEscrows = useMemo(() => {
+    return tcEscrows.filter((t) => (t.side || '').toLowerCase() === 'buyer');
+  }, [tcEscrows]);
 
-  // Active Filtered List based on selected Tab
+  const sellerEscrows = useMemo(() => {
+    return tcEscrows.filter((t) => (t.side || '').toLowerCase() === 'seller');
+  }, [tcEscrows]);
+
+  // Active Filtered List based on selected Representation Tab
   const displayList = useMemo(() => {
-    let baseList = transactions;
-    if (activeSection === 'tc_escrows') baseList = tcEscrows;
-    else if (activeSection === 'lc_listings') baseList = lcListings;
+    let baseList = tcEscrows;
+    if (representationTab === 'buyer') baseList = buyerEscrows;
+    else if (representationTab === 'seller') baseList = sellerEscrows;
 
     return baseList.filter((t) => {
       if (statusFilter !== 'All') {
@@ -659,17 +586,15 @@ export const OpsDashboard: React.FC = () => {
 
       return true;
     });
-  }, [transactions, activeSection, tcEscrows, lcListings, statusFilter, tcFilter, agentFilter, reviewOnlyFilter, searchQuery]);
+  }, [tcEscrows, buyerEscrows, sellerEscrows, representationTab, statusFilter, tcFilter, agentFilter, reviewOnlyFilter, searchQuery]);
 
   // Summary Metrics
   const metrics = useMemo(() => {
-    const needsReview = transactions.filter((t) => t.flagged_for_review).length;
-    const totalEscrows = tcEscrows.length;
-    const totalListings = lcListings.length;
+    const needsReview = tcEscrows.filter((t) => t.flagged_for_review).length;
     let manualMilestonesCount = 0;
     let totalMilestonesCount = 0;
 
-    transactions.forEach((t) => {
+    tcEscrows.forEach((t) => {
       t.milestones.forEach((m) => {
         totalMilestonesCount++;
         if (m.source === 'manual') manualMilestonesCount++;
@@ -678,12 +603,13 @@ export const OpsDashboard: React.FC = () => {
 
     return {
       needsReview,
-      totalEscrows,
-      totalListings,
+      totalEscrows: tcEscrows.length,
+      buyerEscrows: buyerEscrows.length,
+      sellerEscrows: sellerEscrows.length,
       manualMilestonesCount,
       totalMilestonesCount,
     };
-  }, [transactions, tcEscrows, lcListings]);
+  }, [tcEscrows, buyerEscrows, sellerEscrows]);
 
   if (!currentUser) return null;
 
@@ -695,17 +621,17 @@ export const OpsDashboard: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="p-1.5 rounded-lg bg-[#d97706]/15 border border-[#d97706]/30 text-[#d97706]">
-                <Settings className="h-4 w-4" />
+                <ShieldCheck className="h-4 w-4" />
               </span>
               <h1 className="font-editorial text-2xl sm:text-3xl font-bold text-[#f8fafc]">
-                Operations & Coordination Command Center
+                Transaction Coordination Command Center
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30 uppercase">
-                {currentUser.role.replace('_', ' ')} View
+                TC Workspace
               </span>
             </div>
             <p className="text-xs sm:text-sm text-[#94a3b8]">
-              Manage live TC escrows and LC listing pipelines, audit Sisu sync, and track contract milestones in real time.
+              Manage contract-to-close Buyer and Seller escrows, audit Sisu sync, and track contract milestones in real time.
             </p>
           </div>
 
@@ -732,21 +658,16 @@ export const OpsDashboard: React.FC = () => {
               <span>Import Sisu Batch (CSV/JSON)</span>
             </button>
 
-            {/* Quick Add Buttons */}
+            {/* Quick Add Escrow Button */}
             <button
-              onClick={() => setIsAddEscrowModalOpen(true)}
+              onClick={() => {
+                setNewEscrowSide(representationTab === 'seller' ? 'seller' : 'buyer');
+                setIsAddEscrowModalOpen(true);
+              }}
               className="px-3.5 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500 text-sky-300 hover:text-[#0f172a] border border-sky-500/40 text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px]"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>+ Add Escrow (TC)</span>
-            </button>
-
-            <button
-              onClick={() => setIsAddListingModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-[#d97706]/20 hover:bg-[#d97706] text-[#d97706] hover:text-[#0f172a] border border-[#d97706]/40 text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px]"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>+ Add Listing (LC)</span>
+              <span>+ Add Escrow Deal</span>
             </button>
 
             {/* Dynamic Agent Update Email Button */}
@@ -790,46 +711,55 @@ export const OpsDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Coordinator Workspace Tab Switcher Bar */}
+        {/* Workspace Tab Switcher Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#334155]">
-          <div className="flex items-center bg-[#131826] p-1.5 rounded-2xl border border-[#334155] gap-1">
-            {/* TC Tab */}
+          <div className="flex flex-wrap items-center bg-[#131826] p-1.5 rounded-2xl border border-[#334155] gap-1">
+            {/* All Escrows Tab */}
             <button
-              onClick={() => setActiveSection('tc_escrows')}
+              onClick={() => {
+                setActiveSection('escrows');
+                setRepresentationTab('all');
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeSection === 'tc_escrows'
+                activeSection === 'escrows' && representationTab === 'all'
                   ? 'bg-sky-500 text-[#0f172a] shadow-lg'
                   : 'text-[#94a3b8] hover:text-[#f8fafc]'
               }`}
             >
               <ShieldCheck className="h-4 w-4" />
-              <span>TC: Under-Contract Escrows ({metrics.totalEscrows})</span>
+              <span>All Escrows ({metrics.totalEscrows})</span>
             </button>
 
-            {/* LC Tab */}
+            {/* Buyer Files Tab */}
             <button
-              onClick={() => setActiveSection('lc_listings')}
+              onClick={() => {
+                setActiveSection('escrows');
+                setRepresentationTab('buyer');
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeSection === 'lc_listings'
+                activeSection === 'escrows' && representationTab === 'buyer'
+                  ? 'bg-indigo-500 text-[#0f172a] shadow-lg'
+                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+              }`}
+            >
+              <User className="h-4 w-4" />
+              <span>Buyer Files ({metrics.buyerEscrows})</span>
+            </button>
+
+            {/* Seller Files (Pending Listings) Tab */}
+            <button
+              onClick={() => {
+                setActiveSection('escrows');
+                setRepresentationTab('seller');
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeSection === 'escrows' && representationTab === 'seller'
                   ? 'bg-[#d97706] text-[#0f172a] shadow-lg'
                   : 'text-[#94a3b8] hover:text-[#f8fafc]'
               }`}
             >
               <Home className="h-4 w-4" />
-              <span>LC: Current Listings ({metrics.totalListings})</span>
-            </button>
-
-            {/* All Files Tab */}
-            <button
-              onClick={() => setActiveSection('all_files')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeSection === 'all_files'
-                  ? 'bg-[#334155] text-[#f8fafc] shadow-lg'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
-              }`}
-            >
-              <Layers className="h-4 w-4 text-slate-300" />
-              <span>All Master Files ({transactions.length})</span>
+              <span>Seller Files ({metrics.sellerEscrows})</span>
             </button>
 
             {/* Admin User Management */}
@@ -873,7 +803,7 @@ export const OpsDashboard: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-[#334155]/60">
           <div className="p-3 bg-[#131826] rounded-xl border border-[#334155]">
             <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
-              TC Active Escrows
+              Total Active Escrows
             </span>
             <span className="font-mono-code text-base sm:text-lg font-bold text-sky-400">
               {metrics.totalEscrows} Files
@@ -882,10 +812,19 @@ export const OpsDashboard: React.FC = () => {
 
           <div className="p-3 bg-[#131826] rounded-xl border border-[#334155]">
             <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
-              LC Current Listings
+              Buyer Files
+            </span>
+            <span className="font-mono-code text-base sm:text-lg font-bold text-indigo-400">
+              {metrics.buyerEscrows} Files
+            </span>
+          </div>
+
+          <div className="p-3 bg-[#131826] rounded-xl border border-[#334155]">
+            <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
+              Seller Files (Pending Listings)
             </span>
             <span className="font-mono-code text-base sm:text-lg font-bold text-[#d97706]">
-              {metrics.totalListings} Listings
+              {metrics.sellerEscrows} Files
             </span>
           </div>
 
@@ -895,15 +834,6 @@ export const OpsDashboard: React.FC = () => {
             </span>
             <span className="font-mono-code text-base sm:text-lg font-bold text-amber-400">
               {metrics.needsReview} Flagged
-            </span>
-          </div>
-
-          <div className="p-3 bg-[#131826] rounded-xl border border-[#334155]">
-            <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
-              Provenance Protection
-            </span>
-            <span className="font-mono-code text-base sm:text-lg font-bold text-slate-300">
-              {metrics.manualMilestonesCount} Manual Protected
             </span>
           </div>
         </div>
@@ -994,9 +924,9 @@ export const OpsDashboard: React.FC = () => {
             <div className="bg-[#1e293b] p-4 rounded-2xl border border-[#334155] flex items-center justify-between shadow-md">
               <div className="flex items-center gap-2">
                 <h2 className="font-editorial text-lg font-bold text-[#f8fafc]">
-                  {activeSection === 'tc_escrows' && `Active TC Escrows (${displayList.length})`}
-                  {activeSection === 'lc_listings' && `Current LC Listings (${displayList.length})`}
-                  {activeSection === 'all_files' && `Master Active Files (${displayList.length})`}
+                  {representationTab === 'all' && `All Active Escrows (${displayList.length})`}
+                  {representationTab === 'buyer' && `Buyer Escrow Files (${displayList.length})`}
+                  {representationTab === 'seller' && `Seller Escrows / Pending Listings (${displayList.length})`}
                 </h2>
               </div>
 
@@ -1032,16 +962,21 @@ export const OpsDashboard: React.FC = () => {
                 <Building className="h-12 w-12 mx-auto text-[#94a3b8]/30" />
                 <p className="font-bold text-[#f8fafc] text-lg">No active files found</p>
                 <p className="text-xs text-[#94a3b8] max-w-md mx-auto">
-                  {activeSection === 'lc_listings'
-                    ? 'No seller listings match your current filters. Click below to create a listing or resync.'
-                    : 'No active contract-to-close escrow files match your filters. Click below to add an escrow deal.'}
+                  {representationTab === 'seller'
+                    ? 'No pending seller listings match your current filters. Click below to add an escrow deal or adjust your filters.'
+                    : representationTab === 'buyer'
+                    ? 'No pending buyer files match your current filters. Click below to add an escrow deal or adjust your filters.'
+                    : 'No active contract-to-close escrow files match your current filters. Click below to add an escrow deal.'}
                 </p>
                 <div className="flex items-center justify-center gap-3 pt-2">
                   <button
-                    onClick={() => (activeSection === 'lc_listings' ? setIsAddListingModalOpen(true) : setIsAddEscrowModalOpen(true))}
+                    onClick={() => {
+                      setNewEscrowSide(representationTab === 'seller' ? 'seller' : 'buyer');
+                      setIsAddEscrowModalOpen(true);
+                    }}
                     className="px-5 py-2.5 bg-[#d97706] text-[#0f172a] rounded-xl font-bold text-xs hover:bg-[#b45309] transition-all shadow-md"
                   >
-                    + Add New Active File
+                    + Add New Escrow File
                   </button>
                 </div>
               </div>
@@ -1409,169 +1344,7 @@ export const OpsDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Add Listing Modal (LC) */}
-      {isAddListingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-3xl w-full max-w-xl p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-[#334155] pb-4">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-[#d97706]/20 text-[#d97706] border border-[#d97706]/40">
-                  <Home className="h-5 w-5" />
-                </span>
-                <div>
-                  <h3 className="font-editorial text-xl font-bold text-[#f8fafc]">
-                    New Listing Pipeline Intake (LC)
-                  </h3>
-                  <p className="text-xs text-[#94a3b8]">
-                    Add a new property listing for listing coordination, photography, and MLS entry.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsAddListingModalOpen(false)}
-                className="p-1 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#334155]"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            <form onSubmit={handleCreateListing} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
-                  Property Address *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newListingAddress}
-                  onChange={(e) => setNewListingAddress(e.target.value)}
-                  placeholder="e.g. 1428 N State Parkway"
-                  className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-amber-400 uppercase mb-1">
-                  Listing Team Agent (Account)
-                </label>
-                <select
-                  value={newListingAgent}
-                  onChange={(e) => setNewListingAgent(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
-                >
-                  <option value="">-- Select Team Agent --</option>
-                  {allAgentProfiles.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({a.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
-                    Listing Price ($)
-                  </label>
-                  <input
-                    type="text"
-                    value={newListingPrice}
-                    onChange={(e) => setNewListingPrice(e.target.value)}
-                    placeholder="e.g. 1,450,000"
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
-                    Listing Status
-                  </label>
-                  <select
-                    value={newListingStatus}
-                    onChange={(e) => setNewListingStatus(e.target.value as any)}
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-bold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
-                  >
-                    <option value="active">Active Listing</option>
-                    <option value="coming_soon">Coming Soon</option>
-                    <option value="pre_listing">Pre-Listing / Preparation</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
-                    Seller Client Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newListingClient}
-                    onChange={(e) => setNewListingClient(e.target.value)}
-                    placeholder="e.g. Harrison Vanderbilt"
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
-                    Client Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={newListingClientPhone}
-                    onChange={(e) => setNewListingClientPhone(e.target.value)}
-                    placeholder="(312) 555-7000"
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
-                    Listing Date
-                  </label>
-                  <input
-                    type="date"
-                    value={newListingDate}
-                    onChange={(e) => setNewListingDate(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
-                    Photography Status
-                  </label>
-                  <select
-                    value={newListingPhotoStatus}
-                    onChange={(e) => setNewListingPhotoStatus(e.target.value as any)}
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-bold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
-                  >
-                    <option value="scheduled">Photography Scheduled</option>
-                    <option value="completed">Photos Completed / Edited</option>
-                    <option value="pending">Pending Staging</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#334155]">
-                <button
-                  type="button"
-                  onClick={() => setIsAddListingModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#94a3b8] hover:text-[#f8fafc]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2.5 rounded-xl bg-[#d97706] hover:bg-[#b45309] text-[#0f172a] text-xs font-bold transition-all shadow-lg"
-                >
-                  {isSubmitting ? 'Saving...' : 'Add Listing to Pipeline'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Sisu Batch CSV/JSON Import Modal */}
       {isBatchImportModalOpen && (

@@ -3,10 +3,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { TransactionProvider } from './context/TransactionContext';
 import { RoleGuard } from './components/RoleGuard';
 import { Navbar } from './components/Navbar';
-import { PipelineBoard } from './components/PipelineBoard';
-import { TableView } from './components/TableView';
-import { DeadlinesView } from './components/DeadlinesView';
-import { HubHome } from './routes/HubHome';
 import { MyDealsView } from './routes/MyDealsView';
 import { OpsDashboard } from './routes/OpsDashboard';
 import { AdminSyncDebug } from './routes/AdminSyncDebug';
@@ -15,7 +11,6 @@ import { GoogleAuthGate } from './components/GoogleAuthGate';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
 import { NewTransactionModal } from './components/NewTransactionModal';
 import { CDAPrintModal } from './components/CDAPrintModal';
-import { useTransactions } from './context/TransactionContext';
 import { Loader2 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -44,15 +39,15 @@ const AuthenticatedLayout: React.FC = () => {
 
   // Determine default landing route based on role
   const getDefaultRoute = (): string => {
-    if (!currentUser) return '/';
+    if (!currentUser) return '/ops';
     switch (currentUser.role) {
       case 'agent':
         return '/my-deals';
       case 'tc':
       case 'listing_coordinator':
-        return '/ops';
+      case 'admin':
       default:
-        return '/';
+        return '/ops';
     }
   };
 
@@ -61,15 +56,11 @@ const AuthenticatedLayout: React.FC = () => {
     // If landing on root or login, redirect to role-appropriate route
     if (path === '/' || path === '/login') {
       const defaultRoute = getDefaultRoute();
-      if (defaultRoute !== '/') {
-        window.history.replaceState({}, '', defaultRoute);
-        return defaultRoute;
-      }
+      window.history.replaceState({}, '', defaultRoute);
+      return defaultRoute;
     }
     return path;
   });
-
-  const { viewMode } = useTransactions();
 
   const handleNavigate = (path: string) => {
     setCurrentPath(path);
@@ -78,7 +69,7 @@ const AuthenticatedLayout: React.FC = () => {
 
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentPath(window.location.pathname || '/');
+      setCurrentPath(window.location.pathname || '/ops');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -91,34 +82,15 @@ const AuthenticatedLayout: React.FC = () => {
 
       {/* Main Routed Content */}
       <main className="flex-1 w-full pb-12">
-        {currentPath === '/' && (
-          <div>
-            <HubHome onNavigate={handleNavigate} />
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
-              <div className="border-t border-[#334155] pt-6">
-                <h3 className="font-editorial text-lg font-bold text-[#f8fafc] mb-2">
-                  Transaction Pipeline
-                </h3>
-                <p className="text-xs text-[#94a3b8] mb-4">
-                  Visual Kanban, Table, and Deadlines views powered by live data.
-                </p>
-              </div>
-            </div>
-            {viewMode === 'kanban' && <PipelineBoard />}
-            {viewMode === 'table' && <TableView />}
-            {viewMode === 'deadlines' && <DeadlinesView />}
-          </div>
+        {(currentPath === '/' || currentPath === '/ops') && (
+          <RoleGuard allowedRoles={['tc', 'listing_coordinator', 'admin']} routeName="/ops" onNavigate={handleNavigate}>
+            <OpsDashboard />
+          </RoleGuard>
         )}
 
         {currentPath === '/my-deals' && (
           <RoleGuard allowedRoles={['agent', 'admin', 'tc', 'listing_coordinator']} routeName="/my-deals" onNavigate={handleNavigate}>
             <MyDealsView />
-          </RoleGuard>
-        )}
-
-        {currentPath === '/ops' && (
-          <RoleGuard allowedRoles={['tc', 'listing_coordinator', 'admin']} routeName="/ops" onNavigate={handleNavigate}>
-            <OpsDashboard />
           </RoleGuard>
         )}
 

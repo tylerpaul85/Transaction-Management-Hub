@@ -1,22 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useTransactions, ViewMode } from '../context/TransactionContext';
+import { useTransactions } from '../context/TransactionContext';
 import { useAuth } from '../context/AuthContext';
 import {
-  LayoutGrid,
-  ListFilter,
-  CalendarClock,
   Plus,
   Search,
-  TrendingUp,
-  DollarSign,
-  Calendar,
-  AlertTriangle,
   LogOut,
   ChevronDown,
-  Home,
   Briefcase,
-  Settings,
-  Users,
+  Layers,
   Bug,
 } from 'lucide-react';
 
@@ -27,17 +18,12 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
   const {
-    viewMode,
-    setViewMode,
     searchQuery,
     setSearchQuery,
-    filterRepresentation,
-    setFilterRepresentation,
     setIsNewModalOpen,
-    metrics,
   } = useTransactions();
 
-  const { currentUser, signOut, isAgent, isOps, isAdmin } = useAuth();
+  const { currentUser, signOut, isOps, isAdmin } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -51,14 +37,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(val);
-  };
 
   const getInitials = (name: string) => {
     return name
@@ -101,9 +79,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
 
   // Build nav items based on role
   const navItems: { label: string; path: string; icon: React.ReactNode; show: boolean }[] = [
-    { label: 'Overview', path: '/', icon: <Home className="h-3.5 w-3.5" />, show: true },
+    { label: 'Escrows', path: '/ops', icon: <Layers className="h-3.5 w-3.5" />, show: isOps },
     { label: 'My Deals', path: '/my-deals', icon: <Briefcase className="h-3.5 w-3.5" />, show: true },
-    { label: 'Operations', path: '/ops', icon: <Settings className="h-3.5 w-3.5" />, show: isOps },
     { label: 'Sync Debug', path: '/admin/sync-debug', icon: <Bug className="h-3.5 w-3.5" />, show: isAdmin },
   ];
 
@@ -113,7 +90,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-4">
           {/* Brand Logo & Title */}
-          <div className="flex items-center gap-3.5 min-w-max">
+          <button
+            onClick={() => onNavigate(isOps ? '/ops' : '/my-deals')}
+            className="flex items-center gap-3.5 min-w-max text-left hover:opacity-95 transition-opacity cursor-pointer"
+          >
             <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-[#1e293b] border border-[#334155] p-1.5 flex items-center justify-center shadow-inner">
               <img
                 src="/msreg-logo.png"
@@ -137,7 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
                 Contract-to-Close Pipeline & Compliance
               </p>
             </div>
-          </div>
+          </button>
 
           {/* Search Bar */}
           <div className="flex-1 max-w-md mx-2">
@@ -243,70 +223,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
                 <span>{item.label}</span>
               </button>
             ))}
-          </div>
-        </div>
-      </div>
-
-
-
-      {/* Subnav & View Switcher */}
-      <div className="border-t border-[#334155]/50 bg-[#131826]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center justify-between gap-3">
-          {/* Representation Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <span className="text-xs text-[#94a3b8] font-medium mr-1.5 hidden md:inline">
-              Filter:
-            </span>
-            {(['All', 'Buyer', 'Seller', 'Dual'] as const).map((rep) => (
-              <button
-                key={rep}
-                onClick={() => setFilterRepresentation(rep)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all min-h-[36px] flex items-center ${
-                  filterRepresentation === rep
-                    ? 'bg-[#d97706]/20 text-[#d97706] border border-[#d97706]/40 font-semibold shadow-sm'
-                    : 'bg-[#1e293b]/70 text-[#94a3b8] border border-[#334155] hover:text-[#f8fafc] hover:bg-[#1e293b]'
-                }`}
-              >
-                {rep === 'All' ? 'All Roles' : `${rep} Rep`}
-              </button>
-            ))}
-          </div>
-
-          {/* View Mode Toggle Switcher */}
-          <div className="flex items-center bg-[#1e293b] p-1 rounded-xl border border-[#334155]">
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
-                viewMode === 'kanban'
-                  ? 'bg-[#0f172a] text-[#f8fafc] border border-[#334155] shadow-sm font-semibold'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
-              }`}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-              <span>Pipeline</span>
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
-                viewMode === 'table'
-                  ? 'bg-[#0f172a] text-[#f8fafc] border border-[#334155] shadow-sm font-semibold'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
-              }`}
-            >
-              <ListFilter className="h-3.5 w-3.5" />
-              <span>Table</span>
-            </button>
-            <button
-              onClick={() => setViewMode('deadlines')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
-                viewMode === 'deadlines'
-                  ? 'bg-[#0f172a] text-[#f8fafc] border border-[#334155] shadow-sm font-semibold'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
-              }`}
-            >
-              <CalendarClock className="h-3.5 w-3.5" />
-              <span>Deadlines</span>
-            </button>
           </div>
         </div>
       </div>
