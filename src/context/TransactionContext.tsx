@@ -238,6 +238,8 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 dueDate: m.target_date || undefined,
                 completedAt: m.actual_date || undefined,
               })),
+              customFields: t.custom_fields || undefined,
+              sisuTransactionId: t.sisu_transaction_id || undefined,
               activityLog: [
                 {
                   id: `act-init-${t.id}`,
@@ -265,6 +267,13 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'transactions' },
+        () => {
+          loadSupabaseData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'milestones' },
         () => {
           loadSupabaseData();
         }

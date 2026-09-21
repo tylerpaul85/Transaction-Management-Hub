@@ -175,6 +175,7 @@ export interface Database {
           other_party_email?: string | null;
           other_party_phone?: string | null;
           other_party_brokerage?: string | null;
+          custom_fields?: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -212,6 +213,7 @@ export interface Database {
           other_party_email?: string | null;
           other_party_phone?: string | null;
           other_party_brokerage?: string | null;
+          custom_fields?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -249,6 +251,7 @@ export interface Database {
           other_party_email?: string | null;
           other_party_phone?: string | null;
           other_party_brokerage?: string | null;
+          custom_fields?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

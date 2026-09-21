@@ -139,6 +139,33 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
     });
   });
 
+  // Re-sync milestones when parent transaction updates in real-time
+  useEffect(() => {
+    if (!transaction.milestones) return;
+    const map = new Map<string, OpsMilestone>();
+    transaction.milestones.forEach((m) => map.set(m.milestone_type, m));
+
+    setMilestones((prev) =>
+      ALL_MILESTONES_CONFIG.map((cfg) => {
+        const remote = map.get(cfg.type);
+        if (remote) return remote;
+        const existingLocal = prev.find((p) => p.milestone_type === cfg.type);
+        if (existingLocal) return existingLocal;
+        return {
+          id: `m-new-${cfg.type}-${Date.now()}`,
+          transaction_id: transaction.id,
+          milestone_type: cfg.type,
+          target_date: null,
+          actual_date: null,
+          status: 'pending' as MilestoneStatus,
+          source: 'manual' as MilestoneSource,
+          notes: null,
+          updated_at: new Date().toISOString(),
+        };
+      })
+    );
+  }, [transaction.milestones]);
+
   const [activeTab, setActiveTab] = useState<'sheet' | 'other_agent' | 'audit'>('sheet');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -643,6 +670,73 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                   </table>
                 </div>
               </div>
+
+              {/* Sisu Custom Form Responses Card */}
+              {transaction.custom_fields && Object.keys(transaction.custom_fields).length > 0 && (
+                <div className="bg-[#1e293b] p-6 rounded-2xl border border-[#334155] space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#334155] pb-3">
+                    <div>
+                      <h3 className="font-editorial text-base font-bold text-[#f8fafc] flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-[#d97706]" />
+                        <span>Sisu Custom Form Responses</span>
+                      </h3>
+                      <p className="text-xs text-[#94a3b8] mt-0.5">
+                        Live snapshot of custom fields and questions answered on Sisu forms
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-mono-code text-[#94a3b8] px-2.5 py-1 rounded-lg bg-[#131826] border border-[#334155]">
+                      {Object.keys(transaction.custom_fields).length} Fields
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {Object.entries(transaction.custom_fields).map(([key, val]) => {
+                      const label = key
+                        .replace(/s_\d+$|_\d+$/g, '')
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+                      const isYes =
+                        val === '1' ||
+                        val === 1 ||
+                        val === true ||
+                        String(val).toLowerCase() === 'yes' ||
+                        String(val).toLowerCase() === 'true';
+
+                      const isNo =
+                        val === '0' ||
+                        val === 0 ||
+                        val === false ||
+                        String(val).toLowerCase() === 'no' ||
+                        String(val).toLowerCase() === 'false';
+
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between p-3 rounded-xl bg-[#131826] border border-[#334155]/80"
+                        >
+                          <span className="text-xs text-[#f8fafc] font-medium pr-2 truncate">
+                            {label}
+                          </span>
+                          {isYes ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                              Yes
+                            </span>
+                          ) : isNo ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-[#94a3b8] border border-[#334155] whitespace-nowrap">
+                              No
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#1e293b] text-[#94a3b8] border border-[#334155] whitespace-nowrap">
+                              {String(val ?? '—')}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

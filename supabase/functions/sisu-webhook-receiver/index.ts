@@ -1320,6 +1320,21 @@ serve(async (req: Request) => {
       }
     }
 
+    // 7c. Persist full custom_fields snapshot to transactions table and touch updated_at
+    // This guarantees any realtime listener on 'transactions' fires AFTER all milestones are committed.
+    if (transactionId) {
+      const finalTxUpdates: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      };
+      if (hasFullCustomState) {
+        finalTxUpdates.custom_fields = fullCustom;
+      }
+      await supabase
+        .from('transactions')
+        .update(finalTxUpdates)
+        .eq('id', transactionId);
+    }
+
     // 8. Mark Webhook Log as processed
     if (logId) {
       await supabase

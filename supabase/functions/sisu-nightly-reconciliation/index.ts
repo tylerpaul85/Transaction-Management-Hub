@@ -1120,6 +1120,19 @@ serve(async (req: Request) => {
             }
           }
         }
+
+        if (transactionId) {
+          const finalTxUpdates: Record<string, any> = {
+            updated_at: new Date().toISOString(),
+          };
+          if (hasFullCustomState) {
+            finalTxUpdates.custom_fields = fullCustom;
+          }
+          await supabase
+            .from('transactions')
+            .update(finalTxUpdates)
+            .eq('id', transactionId);
+        }
       }
 
       runDetails.push({

@@ -171,7 +171,7 @@ export const OpsDashboard: React.FC = () => {
             listing_date: t.listing_date || undefined,
             photography_status: t.photography_status || 'scheduled',
             sign_lockbox_status: t.sign_lockbox_status || 'installed',
-            days_on_market: t.days_on_market || (t.contract_date ? 14 : 7),
+            custom_fields: t.custom_fields || undefined,
             milestones: (t.milestones || []).map((m: any) => ({
               id: m.id,
               transaction_id: m.transaction_id,
@@ -187,6 +187,7 @@ export const OpsDashboard: React.FC = () => {
         });
 
         setTransactions(mapped);
+        setSelectedTx((prev) => (prev ? mapped.find((t) => t.id === prev.id) || prev : null));
       }
     } catch (err) {
       console.warn('Live transactions query error:', err);

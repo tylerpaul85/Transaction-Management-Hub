@@ -423,6 +423,68 @@ export const TransactionDetailModal: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Sisu Custom Form Responses */}
+              {trx.customFields && Object.keys(trx.customFields).length > 0 && (
+                <div className="p-4 bg-[#131826] border border-[#334155] rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-editorial text-base font-bold text-[#f8fafc] flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-[#d97706]" />
+                      <span>Sisu Custom Form Responses</span>
+                    </h3>
+                    <span className="text-[11px] font-mono-code text-[#94a3b8]">
+                      Live sync from Sisu forms
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {Object.entries(trx.customFields).map(([key, val]) => {
+                      const label = key
+                        .replace(/s_\d+$|_\d+$/g, '')
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+                      const isYes =
+                        val === '1' ||
+                        val === 1 ||
+                        val === true ||
+                        String(val).toLowerCase() === 'yes' ||
+                        String(val).toLowerCase() === 'true';
+
+                      const isNo =
+                        val === '0' ||
+                        val === 0 ||
+                        val === false ||
+                        String(val).toLowerCase() === 'no' ||
+                        String(val).toLowerCase() === 'false';
+
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between p-3 rounded-lg bg-[#1e293b] border border-[#334155]/80"
+                        >
+                          <span className="text-xs text-[#f8fafc] font-medium pr-2 truncate">
+                            {label}
+                          </span>
+                          {isYes ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                              Yes
+                            </span>
+                          ) : isNo ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-700/50 text-[#94a3b8] border border-[#334155] whitespace-nowrap">
+                              No
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0f172a] text-[#94a3b8] border border-[#334155] whitespace-nowrap">
+                              {String(val ?? '—')}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

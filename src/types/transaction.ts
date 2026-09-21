@@ -138,6 +138,8 @@ export interface Transaction {
   parties: PartyContact[];
   commission: CommissionBreakdown;
   milestones: MilestoneItem[];
+  customFields?: Record<string, any>;
+  sisuTransactionId?: string;
   activityLog: ActivityNote[];
 }
 
