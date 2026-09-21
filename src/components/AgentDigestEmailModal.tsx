@@ -192,7 +192,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
       const overdue = milestonesList
         .filter((m) => {
           if (!m.target_date) return false;
-          const isDone = m.status === 'satisfied' || m.status === 'waived';
+          const isDone = m.status === 'satisfied' || m.status === 'complete' || m.status === 'waived';
           return !isDone && m.target_date < todayStr;
         })
         .map((m) => {
@@ -210,7 +210,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
       const pending = milestonesList
         .filter((m) => {
-          const isDone = m.status === 'satisfied' || m.status === 'waived';
+          const isDone = m.status === 'satisfied' || m.status === 'complete' || m.status === 'waived';
           return !isDone && m.target_date && m.target_date >= todayStr;
         })
         .sort((a, b) => (a.target_date! > b.target_date! ? 1 : -1));
@@ -224,6 +224,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
         side: tx.side,
         contract_date: tx.contract_date,
         target_closing_date: tx.target_closing_date,
+        custom_fields: tx.custom_fields,
         next_milestone: nextM
           ? {
               type: nextM.milestone_type,

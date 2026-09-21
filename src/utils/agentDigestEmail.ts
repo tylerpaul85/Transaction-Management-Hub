@@ -7,6 +7,7 @@ export interface DigestTransactionItem {
   side: 'buyer' | 'seller' | string;
   contract_date?: string | null;
   target_closing_date?: string | null;
+  custom_fields?: Record<string, any> | null;
   next_milestone?: {
     type: string;
     label: string;
@@ -38,6 +39,7 @@ export const MILESTONE_LABELS: Record<string, string> = {
   appraisal_ordered: 'Appraisal Ordered',
   appraisal_received: 'Appraisal Received',
   appraisal_satisfied: 'Appraisal Condition Clearance',
+  insurance_binder: 'Insurance Binder Obtained',
   title: 'Title Commitment Review',
   walk_through: 'Final Walkthrough',
   ctc: 'Clear-to-Close (CTC)',
@@ -55,34 +57,82 @@ export const MILESTONE_ORDER_SEQUENCE = [
   { key: 'walk_through', shortLabel: 'WALK', label: 'Final Walkthrough' },
 ];
 
-export function renderMilestoneSequenceHtml(milestones?: Array<{ milestone_type: string; status: string }>): string {
+export function isFieldComplete(
+  mType: string,
+  milestones?: Array<{ milestone_type: string; status: string }>,
+  customFields?: Record<string, any> | null
+): boolean {
+  const list = milestones || [];
+  const found = list.find((m) => m.milestone_type === mType);
+  const s = (found?.status || '').toLowerCase();
+  if (s === 'complete' || s === 'satisfied' || s === 'waived') return true;
+
+  if (customFields && typeof customFields === 'object') {
+    const cfMap: Record<string, string[]> = {
+      earnest_money: ['earnest_money_depositeds_63', 'earnest_money_deposited'],
+      inspection_ordered: ['inspection_completeds_63', 'inspection_completed'],
+      inspection_10day: ['inspection_satisfieds_63', 'inspection_satisfied'],
+      financing_contingency: [
+        'financing_/_loan_commitment_-_internal_use',
+        'financing_loan_commitment_internal_use',
+        'financing_loan_commitment',
+      ],
+      appraisal_received: ['appraisal_received', 'appraisal_received_internal_use'],
+      appraisal_satisfied: ['appraisal_satisfied', 'appraisal_satisfied_internal_use'],
+      insurance_binder: ['insurance_obtaineds_63', 'insurance_obtained', 'insurance_obtained_internal_use'],
+      title: ['title_commitment_s_38_clearance', 'title_commitment_clearance_internal_use', 'title_commitment'],
+      ctc: ['clear-to-close_(ctc)', 'clear_to_close_internal_use', 'clear-to-close', 'clear_to_close'],
+      walk_through: ['final_walkthrough', 'final_walkthrough_internal_use'],
+    };
+
+    const keys = cfMap[mType] || [];
+    for (const k of keys) {
+      const v = customFields[k];
+      if (
+        v === '1' ||
+        v === '0' ||
+        v === true ||
+        String(v).toLowerCase() === 'yes' ||
+        String(v).toLowerCase() === 'true'
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+export function renderMilestoneSequenceHtml(
+  milestones?: Array<{ milestone_type: string; status: string }>,
+  customFields?: Record<string, any> | null
+): string {
   const list = milestones || [];
 
   const pillsHtml = MILESTONE_ORDER_SEQUENCE.map((item, idx) => {
     let status = 'pending';
+    let isHalf = false;
 
     if (item.subKeys && item.subKeys.length > 0) {
-      const allDone = item.subKeys.every((sk) => {
-        const found = list.find((m) => m.milestone_type === sk);
-        const s = (found?.status || '').toLowerCase();
-        return s === 'satisfied' || s === 'complete';
-      });
-      const anyDone = item.subKeys.some((sk) => {
-        const found = list.find((m) => m.milestone_type === sk);
-        const s = (found?.status || '').toLowerCase();
-        return s === 'satisfied' || s === 'complete' || s === 'ordered';
-      });
+      const allDone = item.subKeys.every((sk) => isFieldComplete(sk, list, customFields));
+      const anyDone = item.subKeys.some((sk) => isFieldComplete(sk, list, customFields));
 
       if (allDone) {
         status = 'satisfied';
       } else if (anyDone) {
         status = 'in_progress';
+        isHalf = true;
       } else {
         status = 'pending';
       }
     } else {
-      const match = list.find((m) => m.milestone_type === item.key);
-      status = (match?.status || 'pending').toLowerCase();
+      const done = isFieldComplete(item.key, list, customFields);
+      if (done) {
+        status = 'satisfied';
+      } else {
+        const match = list.find((m) => m.milestone_type === item.key);
+        status = (match?.status || 'pending').toLowerCase();
+      }
     }
 
     let bg = '#d97706';
@@ -107,7 +157,7 @@ export function renderMilestoneSequenceHtml(milestones?: Array<{ milestone_type:
       border = '#334155';
     }
 
-    const pill = `<span style="display: inline-block; padding: 2.5px 8px; border-radius: 9999px; font-size: 9px; font-family: monospace, sans-serif; font-weight: 800; background-color: ${bg}; color: ${text}; border: 1px solid ${border}; vertical-align: middle;">${item.shortLabel}</span>`;
+    const pill = `<span style="display: inline-block; padding: 2.5px 8px; border-radius: 9999px; font-size: 9px; font-family: monospace, sans-serif; font-weight: 800; background-color: ${bg}; color: ${text}; border: 1px solid ${border}; vertical-align: middle;">${item.shortLabel}${isHalf ? ' <span style="font-size: 8px; opacity: 0.85;">½</span>' : ''}</span>`;
 
     const connector =
       idx < MILESTONE_ORDER_SEQUENCE.length - 1
@@ -167,7 +217,7 @@ export function renderAgentDigestEmail(params: {
       const sideBg = tx.side.toLowerCase() === 'buyer' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.12)';
       const sideBorder = tx.side.toLowerCase() === 'buyer' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(217, 119, 6, 0.3)';
 
-      const milestoneSeqHtml = renderMilestoneSequenceHtml(tx.milestones);
+      const milestoneSeqHtml = renderMilestoneSequenceHtml(tx.milestones, tx.custom_fields);
 
       const overdueHtml =
         tx.overdue_milestones && tx.overdue_milestones.length > 0

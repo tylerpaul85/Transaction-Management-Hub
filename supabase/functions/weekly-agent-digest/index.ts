@@ -137,6 +137,7 @@ serve(async (req: Request) => {
           target_closing_date,
           listing_agent_id,
           selling_agent_id,
+          custom_fields,
           milestones (
             id,
             milestone_type,
@@ -190,11 +191,11 @@ serve(async (req: Request) => {
       const digestTransactions: DigestTransactionItem[] = agentTransactions.map((tx: any) => {
         const milestonesList: any[] = tx.milestones || [];
 
-        // Identify overdue milestones: target_date < today AND status NOT IN ('satisfied', 'waived')
+        // Identify overdue milestones: target_date < today AND status NOT IN ('satisfied', 'complete', 'waived')
         const overdueMilestones = milestonesList
           .filter((m) => {
             if (!m.target_date) return false;
-            const isCompleted = m.status === 'satisfied' || m.status === 'waived';
+            const isCompleted = m.status === 'satisfied' || m.status === 'complete' || m.status === 'waived';
             return !isCompleted && m.target_date < todayStr;
           })
           .map((m) => {
@@ -211,10 +212,10 @@ serve(async (req: Request) => {
             };
           });
 
-        // Identify next upcoming milestone: target_date >= today AND status NOT IN ('satisfied', 'waived')
+        // Identify next upcoming milestone: target_date >= today AND status NOT IN ('satisfied', 'complete', 'waived')
         const pendingMilestones = milestonesList
           .filter((m) => {
-            const isCompleted = m.status === 'satisfied' || m.status === 'waived';
+            const isCompleted = m.status === 'satisfied' || m.status === 'complete' || m.status === 'waived';
             return !isCompleted && m.target_date && m.target_date >= todayStr;
           })
           .sort((a, b) => (a.target_date > b.target_date ? 1 : -1));
@@ -228,6 +229,7 @@ serve(async (req: Request) => {
           side: tx.side,
           contract_date: tx.contract_date,
           target_closing_date: tx.target_closing_date,
+          custom_fields: tx.custom_fields,
           next_milestone: nextM
             ? {
                 type: nextM.milestone_type,
