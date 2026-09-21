@@ -14,6 +14,7 @@ import {
 import { INITIAL_TRANSACTIONS } from '../data/mockTransactions';
 
 import { supabase } from '../integrations/supabase/client';
+import { ALL_MILESTONES_CONFIG } from '../types/ops';
 
 export type ViewMode = 'kanban' | 'table' | 'deadlines';
 
@@ -231,13 +232,17 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 cdaNumber: `CDA-2026-${String(idx + 1).padStart(3, '0')}`,
                 cdaStatus: 'Draft',
               },
-              milestones: (t.milestones || []).map((m: any) => ({
-                id: m.id,
-                title: m.milestone_type.replace(/_/g, ' ').toUpperCase(),
-                completed: m.status === 'satisfied' || m.status === 'complete',
-                dueDate: m.target_date || undefined,
-                completedAt: m.actual_date || undefined,
-              })),
+              milestones: (t.milestones || [])
+                .filter((m: any) => ALL_MILESTONES_CONFIG.some((c) => c.type === m.milestone_type))
+                .map((m: any) => ({
+                  id: m.id,
+                  title:
+                    ALL_MILESTONES_CONFIG.find((c) => c.type === m.milestone_type)?.label ||
+                    m.milestone_type.replace(/_/g, ' ').toUpperCase(),
+                  completed: m.status === 'satisfied' || m.status === 'complete',
+                  dueDate: m.target_date || undefined,
+                  completedAt: m.actual_date || undefined,
+                })),
               customFields: t.custom_fields || undefined,
               sisuTransactionId: t.sisu_transaction_id || undefined,
               activityLog: [

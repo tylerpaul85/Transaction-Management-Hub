@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { renderAgentDigestEmail, DigestTransactionItem } from '../utils/agentDigestEmail';
+import {
+  renderAgentDigestEmail,
+  DigestTransactionItem,
+  ACTIVE_MILESTONES_SET,
+  MILESTONE_LABELS,
+  isFieldComplete,
+} from '../utils/agentDigestEmail';
 import { OpsTransaction } from '../types/ops';
 import { supabase } from '../integrations/supabase/client';
 import {
@@ -113,8 +119,16 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
       let overdue = 0;
       data.txs.forEach((tx) => {
-        (tx.milestones || []).forEach((m) => {
-          if (m.target_date && m.target_date < todayStr && m.status !== 'satisfied' && m.status !== 'waived') {
+        const milestonesList = (tx.milestones || []).filter((m) =>
+          ACTIVE_MILESTONES_SET.has(m.milestone_type)
+        );
+        milestonesList.forEach((m) => {
+          const isDone =
+            m.status === 'satisfied' ||
+            m.status === 'complete' ||
+            m.status === 'waived' ||
+            isFieldComplete(m.milestone_type, milestonesList, tx.custom_fields);
+          if (m.target_date && m.target_date < todayStr && !isDone) {
             overdue++;
           }
         });
@@ -188,12 +202,20 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
   // Convert transactions into DigestTransactionItems for preview
   const singleAgentDigestItems: DigestTransactionItem[] = useMemo(() => {
     return currentAgentTransactions.map((tx) => {
-      const milestonesList = tx.milestones || [];
+      const milestonesList = (tx.milestones || []).filter((m) =>
+        ACTIVE_MILESTONES_SET.has(m.milestone_type)
+      );
+
+      const checkDone = (m: any) => {
+        const s = (m.status || '').toLowerCase();
+        if (s === 'satisfied' || s === 'complete' || s === 'waived') return true;
+        return isFieldComplete(m.milestone_type, milestonesList, tx.custom_fields);
+      };
+
       const overdue = milestonesList
         .filter((m) => {
           if (!m.target_date) return false;
-          const isDone = m.status === 'satisfied' || m.status === 'complete' || m.status === 'waived';
-          return !isDone && m.target_date < todayStr;
+          return !checkDone(m) && m.target_date < todayStr;
         })
         .map((m) => {
           const targetMs = new Date(m.target_date!).getTime();
@@ -201,7 +223,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
           const diffDays = Math.max(1, Math.round((nowMs - targetMs) / (1000 * 60 * 60 * 24)));
           return {
             type: m.milestone_type,
-            label: m.milestone_type.replace(/_/g, ' ').toUpperCase(),
+            label: MILESTONE_LABELS[m.milestone_type] || m.milestone_type,
             target_date: m.target_date,
             status: m.status,
             days_overdue: diffDays,
@@ -210,8 +232,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
       const pending = milestonesList
         .filter((m) => {
-          const isDone = m.status === 'satisfied' || m.status === 'complete' || m.status === 'waived';
-          return !isDone && m.target_date && m.target_date >= todayStr;
+          return !checkDone(m) && m.target_date && m.target_date >= todayStr;
         })
         .sort((a, b) => (a.target_date! > b.target_date! ? 1 : -1));
 
@@ -228,7 +249,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
         next_milestone: nextM
           ? {
               type: nextM.milestone_type,
-              label: nextM.milestone_type.replace(/_/g, ' ').toUpperCase(),
+              label: MILESTONE_LABELS[nextM.milestone_type] || nextM.milestone_type,
               target_date: nextM.target_date,
               status: nextM.status,
             }

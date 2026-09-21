@@ -13,18 +13,14 @@ const corsHeaders = {
 const MILESTONE_KEYS = [
   'earnest_money',
   'inspection_ordered',
-  'inspection_notice_sent',
   'inspection_10day',
-  'sale_contingency',
   'financing_contingency',
-  'appraisal_ordered',
   'appraisal_received',
   'appraisal_satisfied',
   'insurance_binder',
   'title',
   'walk_through',
   'ctc',
-  'closing',
 ] as const;
 
 function isGenuineAddress(address: string | null | undefined): boolean {
@@ -882,19 +878,11 @@ serve(async (req: Request) => {
       appraisal_satisfied: {
         target_date: loanAppraisalTargetDate,
       },
-      appraisal_ordered: {
-        target_date: loanAppraisalTargetDate,
-      },
       appraisal_received: {
         target_date: loanAppraisalTargetDate,
       },
       title: {
         target_date: titleTargetDate,
-      },
-      closing: {
-        target_date: closingTargetDate,
-        actual_date: closedActualDate || (isClosedStage ? new Date().toISOString().split('T')[0] : null),
-        status: (closedActualDate || isClosedStage) ? 'complete' : undefined,
       },
     };
 
@@ -1315,7 +1303,7 @@ serve(async (req: Request) => {
           ) {
             targets.push('appraisal_received');
           } else if (normalizedKey.includes('ordr') || normalizedKey.includes('order') || normalizedKey.includes('sched')) {
-            targets.push('appraisal_ordered');
+            // Appraisal ordered is not a tracked escrow milestone (only appraisal_received & appraisal_satisfied)
           } else {
             targets.push('appraisal_satisfied');
           }
@@ -1349,12 +1337,6 @@ serve(async (req: Request) => {
           rawNormalized.includes('walkthrough')
         ) {
           targets.push('walk_through');
-        } else if (
-          normalizedKey.includes('closing') ||
-          normalizedKey.includes('closed') ||
-          normalizedKey.includes('settlement')
-        ) {
-          targets.push('closing');
         }
         return targets;
       };

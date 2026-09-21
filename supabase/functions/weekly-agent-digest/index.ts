@@ -7,6 +7,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import {
   renderAgentDigestEmail,
   MILESTONE_LABELS,
+  ACTIVE_MILESTONES_SET,
+  isFieldComplete,
   DigestTransactionItem,
 } from './email-template.ts';
 
@@ -189,14 +191,23 @@ serve(async (req: Request) => {
 
       // 3. Transform transactions and compute milestone deadlines
       const digestTransactions: DigestTransactionItem[] = agentTransactions.map((tx: any) => {
-        const milestonesList: any[] = tx.milestones || [];
+        const rawMilestones: any[] = tx.milestones || [];
+        const milestonesList: any[] = rawMilestones.filter((m: any) =>
+          ACTIVE_MILESTONES_SET.has(m.milestone_type)
+        );
 
-        // Identify overdue milestones: target_date < today AND status NOT IN ('satisfied', 'complete', 'waived')
+        // Helper to check if milestone is completed (either via milestone status or custom_fields)
+        const checkDone = (m: any) => {
+          const s = (m.status || '').toLowerCase();
+          if (s === 'satisfied' || s === 'complete' || s === 'waived') return true;
+          return isFieldComplete(m.milestone_type, milestonesList, tx.custom_fields);
+        };
+
+        // Identify overdue milestones: target_date < today AND status NOT completed
         const overdueMilestones = milestonesList
           .filter((m) => {
             if (!m.target_date) return false;
-            const isCompleted = m.status === 'satisfied' || m.status === 'complete' || m.status === 'waived';
-            return !isCompleted && m.target_date < todayStr;
+            return !checkDone(m) && m.target_date < todayStr;
           })
           .map((m) => {
             const targetMs = new Date(m.target_date).getTime();
@@ -212,11 +223,10 @@ serve(async (req: Request) => {
             };
           });
 
-        // Identify next upcoming milestone: target_date >= today AND status NOT IN ('satisfied', 'complete', 'waived')
+        // Identify next upcoming milestone: target_date >= today AND status NOT completed
         const pendingMilestones = milestonesList
           .filter((m) => {
-            const isCompleted = m.status === 'satisfied' || m.status === 'complete' || m.status === 'waived';
-            return !isCompleted && m.target_date && m.target_date >= todayStr;
+            return !checkDone(m) && m.target_date && m.target_date >= todayStr;
           })
           .sort((a, b) => (a.target_date > b.target_date ? 1 : -1));
 

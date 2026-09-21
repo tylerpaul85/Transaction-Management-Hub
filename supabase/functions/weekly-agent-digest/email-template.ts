@@ -40,21 +40,30 @@ export interface DigestEmailParams {
   subtitle?: string;
 }
 
+export const ACTIVE_MILESTONES_SET = new Set([
+  'earnest_money',
+  'inspection_ordered',
+  'inspection_10day',
+  'financing_contingency',
+  'appraisal_received',
+  'appraisal_satisfied',
+  'insurance_binder',
+  'title',
+  'ctc',
+  'walk_through',
+]);
+
 export const MILESTONE_LABELS: Record<string, string> = {
-  earnest_money: 'Earnest Money Deposit',
+  earnest_money: 'Earnest Money Deposited',
   inspection_ordered: 'Inspection Ordered',
-  inspection_notice_sent: 'Inspection Notice Sent',
-  inspection_10day: '10-Day Inspection Resolution',
-  sale_contingency: 'Home Sale Contingency',
-  financing_contingency: 'Loan Commitment / Financing',
-  appraisal_ordered: 'Appraisal Ordered',
+  inspection_10day: 'Inspection Satisfied',
+  financing_contingency: 'Financing / Loan Commitment',
   appraisal_received: 'Appraisal Received',
-  appraisal_satisfied: 'Appraisal Condition Clearance',
+  appraisal_satisfied: 'Appraisal Satisfied',
   insurance_binder: 'Insurance Binder Obtained',
-  title: 'Title Commitment Review',
-  walk_through: 'Final Walkthrough',
+  title: 'Title Commitment & Clearance',
   ctc: 'Clear-to-Close (CTC)',
-  closing: 'Closing & Settlement',
+  walk_through: 'Final Walkthrough',
 };
 
 export const MILESTONE_ORDER_SEQUENCE = [
@@ -117,7 +126,7 @@ export function renderMilestoneSequenceHtml(
   milestones?: Array<{ milestone_type: string; status: string }>,
   customFields?: Record<string, any> | null
 ): string {
-  const list = milestones || [];
+  const list = (milestones || []).filter((m) => ACTIVE_MILESTONES_SET.has(m.milestone_type));
 
   const pillsHtml = MILESTONE_ORDER_SEQUENCE.map((item, idx) => {
     let status = 'pending';

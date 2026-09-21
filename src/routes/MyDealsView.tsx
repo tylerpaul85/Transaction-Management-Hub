@@ -518,12 +518,10 @@ export const MyDealsView: React.FC = () => {
                       </div>
 
                       <div className="space-y-2">
-                        {tx.milestones.map((m) => {
-                          const config =
-                            ALL_MILESTONES_CONFIG.find((c) => c.type === m.milestone_type) || {
-                              label: m.milestone_type,
-                              description: '',
-                            };
+                        {tx.milestones
+                          .filter((m) => ALL_MILESTONES_CONFIG.some((c) => c.type === m.milestone_type))
+                          .map((m) => {
+                            const config = ALL_MILESTONES_CONFIG.find((c) => c.type === m.milestone_type)!;
 
                           return (
                             <div
