@@ -912,27 +912,41 @@ serve(async (req: Request) => {
       const evaluateBooleanValue = (val: any): { isYes: boolean; isNo: boolean } => {
         if (val === null || val === undefined) return { isYes: false, isNo: true };
         const strVal = String(val).trim().toLowerCase();
-        if (strVal === '' || strVal === 'none' || strVal === 'null' || strVal === 'unmarked' || strVal === '- select -' || strVal === 'n/a') {
+        if (
+          strVal === '' ||
+          strVal === 'none' ||
+          strVal === 'null' ||
+          strVal === 'unmarked' ||
+          strVal === '- select -' ||
+          strVal === 'select one' ||
+          strVal === '-1' ||
+          strVal === 'n/a' ||
+          strVal === 'undefined'
+        ) {
           return { isYes: false, isNo: true };
         }
+
+        // Sisu Multiple Choice form fields store the 0-based option index:
+        // Option 1 ("Yes") -> "0"
+        // Option 2 ("No")  -> "1"
+        // Also handles literal strings "yes", "y", "completed", "satisfied", "done", boolean true
         const isYes =
+          strVal === '0' ||
           strVal === 'yes' ||
           strVal === 'true' ||
           strVal === 'y' ||
-          strVal === '1' ||
           strVal === 'completed' ||
           strVal === 'satisfied' ||
           strVal === 'done' ||
-          val === true ||
-          val === 1;
+          val === true;
 
+        // Option 2 ("No") -> "1", or literal strings "no", "n", "false", boolean false
         const isNo =
+          strVal === '1' ||
           strVal === 'no' ||
           strVal === 'false' ||
           strVal === 'n' ||
-          strVal === '0' ||
-          val === false ||
-          val === 0;
+          val === false;
 
         return { isYes, isNo };
       };
@@ -987,7 +1001,7 @@ serve(async (req: Request) => {
               normalizedKey.includes('resolut') ||
               normalizedKey.includes('satisf')
             ) {
-              targets.push('inspection_10day', 'inspection_ordered');
+              targets.push('inspection_10day');
             } else {
               targets.push('inspection_ordered');
             }

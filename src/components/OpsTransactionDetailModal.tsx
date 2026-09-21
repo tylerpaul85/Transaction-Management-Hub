@@ -697,15 +697,13 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                         .replace(/\b\w/g, (c) => c.toUpperCase());
 
                       const isYes =
-                        val === '1' ||
-                        val === 1 ||
+                        val === '0' ||
                         val === true ||
                         String(val).toLowerCase() === 'yes' ||
                         String(val).toLowerCase() === 'true';
 
                       const isNo =
-                        val === '0' ||
-                        val === 0 ||
+                        val === '1' ||
                         val === false ||
                         String(val).toLowerCase() === 'no' ||
                         String(val).toLowerCase() === 'false';
