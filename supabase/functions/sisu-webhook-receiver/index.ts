@@ -1181,9 +1181,19 @@ serve(async (req: Request) => {
       const mappingMap = new Map<string, any>();
       (activeMappings || []).forEach((m: any) => {
         if (m.sisu_task_name) {
-          mappingMap.set(m.sisu_task_name.trim(), m);
-          mappingMap.set(m.sisu_task_name.trim().toLowerCase(), m);
-          mappingMap.set(m.sisu_task_name.trim().toLowerCase().replace(/[\s\-_?]/g, ''), m);
+          const raw = m.sisu_task_name.trim();
+          const lower = raw.toLowerCase();
+          const stripped = lower.replace(/[\(\[\{]?internal\s*use[\)\]\}]?/gi, '').trim();
+          const clean = stripped.replace(/[_\s\-]+/g, ' ').trim();
+          const normalized = clean.replace(/[^a-z0-9]/g, '');
+          const rawNormalized = lower.replace(/[^a-z0-9]/g, '');
+
+          mappingMap.set(raw, m);
+          mappingMap.set(lower, m);
+          mappingMap.set(stripped, m);
+          mappingMap.set(clean, m);
+          mappingMap.set(normalized, m);
+          mappingMap.set(rawNormalized, m);
         }
       });
 
@@ -1199,66 +1209,102 @@ serve(async (req: Request) => {
 
       // Helper to map custom field key to transaction milestones
       const getTargetFields = (fieldKey: string): string[] => {
-        const baseKey = fieldKey.replace(/s_\d+$|_\d+$/g, '').toLowerCase().trim();
-        const normalizedKey = baseKey.replace(/[\s\-_?]/g, '');
-        const cleanKey = baseKey.replace(/_/g, ' ').trim().toLowerCase();
+        const rawKey = fieldKey.trim();
+        const lowerKey = rawKey.toLowerCase();
+        const baseKey = lowerKey.replace(/(_?s_?\d+)$/i, '').trim();
+        const strippedKey = baseKey.replace(/[\(\[\{]?internal\s*use[\)\]\}]?/gi, '').trim();
+        const cleanKey = strippedKey.replace(/[_\s\-]+/g, ' ').trim();
+        const normalizedKey = cleanKey.replace(/[^a-z0-9]/g, '');
+        const rawNormalized = lowerKey.replace(/[^a-z0-9]/g, '');
 
         const matched =
-          mappingMap.get(fieldKey) ||
-          mappingMap.get(fieldKey.toLowerCase()) ||
+          mappingMap.get(rawKey) ||
+          mappingMap.get(lowerKey) ||
           mappingMap.get(baseKey) ||
+          mappingMap.get(strippedKey) ||
           mappingMap.get(cleanKey) ||
-          mappingMap.get(normalizedKey);
+          mappingMap.get(normalizedKey) ||
+          mappingMap.get(rawNormalized);
 
         if (matched) return [matched.milestone_field];
 
         const targets: string[] = [];
-        if (normalizedKey.includes('earnest') || normalizedKey.includes('emd')) {
+        if (normalizedKey.includes('earnest') || normalizedKey.includes('emd') || rawNormalized.includes('earnest')) {
           targets.push('earnest_money');
-        } else if (normalizedKey.includes('inspection')) {
+        } else if (normalizedKey.includes('inspection') || rawNormalized.includes('inspection')) {
           if (
+            normalizedKey.includes('ordr') ||
             normalizedKey.includes('order') ||
             normalizedKey.includes('sched') ||
-            normalizedKey.includes('book')
+            normalizedKey.includes('book') ||
+            rawNormalized.includes('ordr') ||
+            rawNormalized.includes('order')
           ) {
             targets.push('inspection_ordered');
           } else if (
             normalizedKey.includes('satisf') ||
             normalizedKey.includes('complet') ||
             normalizedKey.includes('10day') ||
-            normalizedKey.includes('resolut')
+            normalizedKey.includes('resolut') ||
+            normalizedKey.includes('pass') ||
+            rawNormalized.includes('satisf') ||
+            rawNormalized.includes('complet')
           ) {
             targets.push('inspection_10day');
           } else {
             targets.push('inspection_ordered');
           }
-        } else if (normalizedKey.includes('appraisal')) {
+        } else if (normalizedKey.includes('appraisal') || rawNormalized.includes('appraisal')) {
           if (
             normalizedKey.includes('satisf') ||
             normalizedKey.includes('met') ||
-            normalizedKey.includes('condit')
+            normalizedKey.includes('condit') ||
+            normalizedKey.includes('pass') ||
+            rawNormalized.includes('satisf')
           ) {
             targets.push('appraisal_satisfied');
           } else if (
             normalizedKey.includes('receiv') ||
             normalizedKey.includes('in') ||
-            normalizedKey.includes('deliver')
+            normalizedKey.includes('deliver') ||
+            normalizedKey.includes('got') ||
+            rawNormalized.includes('receiv')
           ) {
             targets.push('appraisal_received');
-          } else if (normalizedKey.includes('order') || normalizedKey.includes('sched')) {
+          } else if (normalizedKey.includes('ordr') || normalizedKey.includes('order') || normalizedKey.includes('sched')) {
             targets.push('appraisal_ordered');
           } else {
             targets.push('appraisal_satisfied');
           }
-        } else if (normalizedKey.includes('insurance') || normalizedKey.includes('binder')) {
+        } else if (
+          normalizedKey.includes('insurance') ||
+          normalizedKey.includes('binder') ||
+          rawNormalized.includes('insurance')
+        ) {
           targets.push('insurance_binder');
-        } else if (normalizedKey.includes('financ') || normalizedKey.includes('loan')) {
-          targets.push('financing_contingency');
-        } else if (normalizedKey.includes('title')) {
+        } else if (normalizedKey.includes('title') || rawNormalized.includes('title')) {
           targets.push('title');
-        } else if (normalizedKey.includes('ctc') || normalizedKey.includes('cleartoclose')) {
+        } else if (
+          normalizedKey.includes('financ') ||
+          normalizedKey.includes('loan') ||
+          normalizedKey.includes('commit') ||
+          rawNormalized.includes('financ') ||
+          rawNormalized.includes('loan')
+        ) {
+          targets.push('financing_contingency');
+        } else if (
+          normalizedKey.includes('ctc') ||
+          normalizedKey.includes('cleartoclose') ||
+          (normalizedKey.includes('clear') && normalizedKey.includes('close')) ||
+          rawNormalized.includes('cleartoclose') ||
+          rawNormalized.includes('ctc')
+        ) {
           targets.push('ctc');
-        } else if (normalizedKey.includes('walk') || normalizedKey.includes('walkthrough')) {
+        } else if (
+          normalizedKey.includes('walk') ||
+          normalizedKey.includes('walkthrough') ||
+          rawNormalized.includes('walkthrough')
+        ) {
           targets.push('walk_through');
         } else if (
           normalizedKey.includes('closing') ||

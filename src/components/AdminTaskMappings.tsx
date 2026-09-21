@@ -53,17 +53,18 @@ export const AdminTaskMappings: React.FC = () => {
   const [manualMilestoneField, setManualMilestoneField] = useState<string>('earnest_money');
   const [isSavingManual, setIsSavingManual] = useState<boolean>(false);
 
-  // Quick-test suggestions (both checklist task names and Sisu form custom fields)
+  // Quick-test suggestions (matching the 10 Sisu form custom fields)
   const TEST_SUGGESTIONS = [
-    { name: 'Earnest money Deposited?', defaultField: 'earnest_money' },
-    { name: 'Inspection Completed?', defaultField: 'inspection_10day' },
-    { name: 'Earnest Money Deposited - Transaction Hub', defaultField: 'earnest_money' },
-    { name: 'Inspection Ordered - Transaction Hub', defaultField: 'inspection_ordered' },
-    { name: 'Appraisal Completed?', defaultField: 'appraisal_satisfied' },
-    { name: 'Loan Commitment Received?', defaultField: 'financing_contingency' },
-    { name: 'Title Cleared?', defaultField: 'title' },
-    { name: 'Clear to Close Received?', defaultField: 'ctc' },
-    { name: 'Closing Completed?', defaultField: 'closing' },
+    { name: 'Earnest money Deposited? (internal use)', defaultField: 'earnest_money' },
+    { name: 'Inspection ordred? - Internal Use', defaultField: 'inspection_ordered' },
+    { name: 'Inspection Satisfied? - Internal Use', defaultField: 'inspection_10day' },
+    { name: 'Financing / Loan Commitment - internal use', defaultField: 'financing_contingency' },
+    { name: 'Appraisal Received (internal use)', defaultField: 'appraisal_received' },
+    { name: 'Appraisal Satisfied (internal use)', defaultField: 'appraisal_satisfied' },
+    { name: 'Insurance Obtained? - Internal Use', defaultField: 'insurance_binder' },
+    { name: 'Title Commitment & Clearance - Internal use', defaultField: 'title' },
+    { name: 'Clear-to-Close (internal use)', defaultField: 'ctc' },
+    { name: 'Final Walkthrough (internal use)', defaultField: 'walk_through' },
   ];
 
   const fetchData = async () => {
