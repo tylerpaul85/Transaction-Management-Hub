@@ -694,28 +694,31 @@ serve(async (req: Request) => {
 
         const { data: newTx } = await supabase
           .from('transactions')
-          .insert({
-            sisu_transaction_id: sisuTxId,
-            status: insertStatus,
-            property_address: insertAddress,
-            city: insertCity,
-            state: insertState,
-            side: insertSide,
-            client_name: insertClientName,
-            client_phone: clientPhone || null,
-            other_party_name: otherPartyName || null,
-            other_party_agent: otherPartyAgent || null,
-            other_party_phone: otherPartyPhone || null,
-            other_party_email: otherPartyEmail || null,
-            lender_name: lenderName || null,
-            lender_email: lenderEmail || null,
-            lender_phone: lenderPhone || null,
-            loan_type: loanType || null,
-            title_company: titleCompany || null,
-            target_closing_date: closingTargetDate || null,
-            contract_date: contractDate || null,
-            assigned_tc_id: assignedTcId,
-          })
+          .upsert(
+            {
+              sisu_transaction_id: sisuTxId,
+              status: insertStatus,
+              property_address: insertAddress,
+              city: insertCity,
+              state: insertState,
+              side: insertSide,
+              client_name: insertClientName,
+              client_phone: clientPhone || null,
+              other_party_name: otherPartyName || null,
+              other_party_agent: otherPartyAgent || null,
+              other_party_phone: otherPartyPhone || null,
+              other_party_email: otherPartyEmail || null,
+              lender_name: lenderName || null,
+              lender_email: lenderEmail || null,
+              lender_phone: lenderPhone || null,
+              loan_type: loanType || null,
+              title_company: titleCompany || null,
+              target_closing_date: closingTargetDate || null,
+              contract_date: contractDate || null,
+              assigned_tc_id: assignedTcId,
+            },
+            { onConflict: 'sisu_transaction_id' }
+          )
           .select('id')
           .single();
 
@@ -841,15 +844,19 @@ serve(async (req: Request) => {
             .update(updateMilestoneData)
             .eq('id', existingM.id);
         } else {
-          await supabase.from('milestones').insert({
-            transaction_id: transactionId,
-            milestone_type: mKey,
-            target_date: targetDate,
-            actual_date: actualDate,
-            status: mStatus || 'pending',
-            source: 'sisu',
-            notes: mNotes,
-          });
+          await supabase.from('milestones').upsert(
+            {
+              transaction_id: transactionId,
+              milestone_type: mKey,
+              target_date: targetDate,
+              actual_date: actualDate,
+              status: mStatus || 'pending',
+              source: 'sisu',
+              notes: mNotes,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'transaction_id,milestone_type' }
+          );
         }
       }
 
@@ -959,13 +966,17 @@ serve(async (req: Request) => {
               } else {
                 const { data: newM } = await supabase
                   .from(matchedMapping.milestone_table || 'milestones')
-                  .insert({
-                    transaction_id: transactionId,
-                    milestone_type: targetField,
-                    actual_date: actualDate,
-                    status: 'complete',
-                    source: 'sisu',
-                  })
+                  .upsert(
+                    {
+                      transaction_id: transactionId,
+                      milestone_type: targetField,
+                      actual_date: actualDate,
+                      status: 'complete',
+                      source: 'sisu',
+                      updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: 'transaction_id,milestone_type' }
+                  )
                   .select()
                   .maybeSingle();
 
@@ -1271,14 +1282,18 @@ serve(async (req: Request) => {
               } else {
                 const { data: newM } = await supabase
                   .from('milestones')
-                  .insert({
-                    transaction_id: transactionId,
-                    milestone_type: targetField,
-                    actual_date: actualDate,
-                    status: evalStatus,
-                    source: 'sisu',
-                    notes,
-                  })
+                  .upsert(
+                    {
+                      transaction_id: transactionId,
+                      milestone_type: targetField,
+                      actual_date: actualDate,
+                      status: evalStatus,
+                      source: 'sisu',
+                      notes,
+                      updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: 'transaction_id,milestone_type' }
+                  )
                   .select()
                   .maybeSingle();
 

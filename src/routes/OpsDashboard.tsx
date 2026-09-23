@@ -377,7 +377,9 @@ export const OpsDashboard: React.FC = () => {
           notes: `Created via TC Intake on ${new Date().toLocaleDateString()}`,
         }));
 
-        await (supabase.from('milestones') as any).insert(milestoneInserts);
+        await (supabase.from('milestones') as any).upsert(milestoneInserts, {
+          onConflict: 'transaction_id,milestone_type',
+        });
       }
 
       setIsAddEscrowModalOpen(false);

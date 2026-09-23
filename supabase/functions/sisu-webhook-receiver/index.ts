@@ -850,33 +850,36 @@ serve(async (req: Request) => {
 
       const { data: newTx, error: insertErr } = await supabase
         .from('transactions')
-        .insert({
-          sisu_transaction_id: finalSisuId,
-          status: insertStatus,
-          property_address: insertAddress,
-          city: insertCity,
-          state: insertState,
-          zip: (rawZip && typeof rawZip === 'string' && rawZip.trim()) || null,
-          side: insertSide,
-          client_name: insertClientName,
-          client_phone: (rawClientPhone && typeof rawClientPhone === 'string' && rawClientPhone.trim()) || null,
-          client_email: (rawClientEmail && typeof rawClientEmail === 'string' && rawClientEmail.trim()) || null,
-          other_party_name: (otherPartyName && typeof otherPartyName === 'string' && otherPartyName.trim()) || null,
-          other_party_agent: (otherPartyAgent && typeof otherPartyAgent === 'string' && otherPartyAgent.trim()) || null,
-          other_party_phone: (otherPartyPhone && typeof otherPartyPhone === 'string' && otherPartyPhone.trim()) || null,
-          other_party_email: (otherPartyEmail && typeof otherPartyEmail === 'string' && otherPartyEmail.trim()) || null,
-          lender_name: (lenderName && typeof lenderName === 'string' && lenderName.trim()) || null,
-          lender_email: (lenderEmail && typeof lenderEmail === 'string' && lenderEmail.trim()) || null,
-          lender_phone: (lenderPhone && typeof lenderPhone === 'string' && lenderPhone.trim()) || null,
-          loan_type: (loanType && typeof loanType === 'string' && loanType.trim()) || null,
-          title_company: (titleCompany && typeof titleCompany === 'string' && titleCompany.trim()) || null,
-          target_closing_date: closingTargetDate || null,
-          listing_agent_id: listingAgentId,
-          selling_agent_id: sellingAgentId,
-          assigned_tc_id: assignedTcId,
-          contract_date: (contractDate && typeof contractDate === 'string' && contractDate.trim()) || null,
-          price: (rawPrice !== null && rawPrice !== undefined && !isNaN(Number(rawPrice))) ? Number(rawPrice) : null,
-        })
+        .upsert(
+          {
+            sisu_transaction_id: finalSisuId,
+            status: insertStatus,
+            property_address: insertAddress,
+            city: insertCity,
+            state: insertState,
+            zip: (rawZip && typeof rawZip === 'string' && rawZip.trim()) || null,
+            side: insertSide,
+            client_name: insertClientName,
+            client_phone: (rawClientPhone && typeof rawClientPhone === 'string' && rawClientPhone.trim()) || null,
+            client_email: (rawClientEmail && typeof rawClientEmail === 'string' && rawClientEmail.trim()) || null,
+            other_party_name: (otherPartyName && typeof otherPartyName === 'string' && otherPartyName.trim()) || null,
+            other_party_agent: (otherPartyAgent && typeof otherPartyAgent === 'string' && otherPartyAgent.trim()) || null,
+            other_party_phone: (otherPartyPhone && typeof otherPartyPhone === 'string' && otherPartyPhone.trim()) || null,
+            other_party_email: (otherPartyEmail && typeof otherPartyEmail === 'string' && otherPartyEmail.trim()) || null,
+            lender_name: (lenderName && typeof lenderName === 'string' && lenderName.trim()) || null,
+            lender_email: (lenderEmail && typeof lenderEmail === 'string' && lenderEmail.trim()) || null,
+            lender_phone: (lenderPhone && typeof lenderPhone === 'string' && lenderPhone.trim()) || null,
+            loan_type: (loanType && typeof loanType === 'string' && loanType.trim()) || null,
+            title_company: (titleCompany && typeof titleCompany === 'string' && titleCompany.trim()) || null,
+            target_closing_date: closingTargetDate || null,
+            listing_agent_id: listingAgentId,
+            selling_agent_id: sellingAgentId,
+            assigned_tc_id: assignedTcId,
+            contract_date: (contractDate && typeof contractDate === 'string' && contractDate.trim()) || null,
+            price: (rawPrice !== null && rawPrice !== undefined && !isNaN(Number(rawPrice))) ? Number(rawPrice) : null,
+          },
+          { onConflict: 'sisu_transaction_id' }
+        )
         .select('id')
         .single();
 
@@ -1001,15 +1004,19 @@ serve(async (req: Request) => {
           .update(updateMilestoneData)
           .eq('id', existingM.id);
       } else {
-        await supabase.from('milestones').insert({
-          transaction_id: transactionId,
-          milestone_type: mKey,
-          target_date: targetDate,
-          actual_date: actualDate,
-          status: mStatus || 'pending',
-          source: 'sisu',
-          notes: mNotes,
-        });
+        await supabase.from('milestones').upsert(
+          {
+            transaction_id: transactionId,
+            milestone_type: mKey,
+            target_date: targetDate,
+            actual_date: actualDate,
+            status: mStatus || 'pending',
+            source: 'sisu',
+            notes: mNotes,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'transaction_id,milestone_type' }
+        );
       }
     }
 
@@ -1133,16 +1140,20 @@ serve(async (req: Request) => {
                 source: 'sisu',
               });
             } else {
-              // Insert new milestone
+              // Upsert new milestone to avoid race condition constraint violations
               const { data: newM } = await supabase
                 .from(matchedMapping.milestone_table || 'milestones')
-                .insert({
-                  transaction_id: transactionId,
-                  milestone_type: targetField,
-                  actual_date: actualDate,
-                  status: 'complete',
-                  source: 'sisu',
-                })
+                .upsert(
+                  {
+                    transaction_id: transactionId,
+                    milestone_type: targetField,
+                    actual_date: actualDate,
+                    status: 'complete',
+                    source: 'sisu',
+                    updated_at: new Date().toISOString(),
+                  },
+                  { onConflict: 'transaction_id,milestone_type' }
+                )
                 .select()
                 .maybeSingle();
 
@@ -1472,14 +1483,18 @@ serve(async (req: Request) => {
             } else {
               const { data: newM } = await supabase
                 .from('milestones')
-                .insert({
-                  transaction_id: transactionId,
-                  milestone_type: targetField,
-                  status: evalStatus,
-                  actual_date: actualDate,
-                  source: 'sisu',
-                  notes,
-                })
+                .upsert(
+                  {
+                    transaction_id: transactionId,
+                    milestone_type: targetField,
+                    status: evalStatus,
+                    actual_date: actualDate,
+                    source: 'sisu',
+                    notes,
+                    updated_at: new Date().toISOString(),
+                  },
+                  { onConflict: 'transaction_id,milestone_type' }
+                )
                 .select()
                 .maybeSingle();
 
