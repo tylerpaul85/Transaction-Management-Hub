@@ -261,6 +261,12 @@ serve(async (req: Request) => {
         
         let status = 'under_contract';
         const rawStat = String(r['Status'] || r['status'] || '').toLowerCase();
+        if (rawStat.includes('lost') || rawStat === 'lost') {
+          if (sisuId) {
+            await supabase.from('transactions').delete().eq('sisu_transaction_id', sisuId);
+          }
+          continue;
+        }
         if (rawStat.includes('list') || rawStat.includes('active')) {
           status = 'active';
         } else if (rawStat.includes('close')) {
@@ -546,6 +552,21 @@ serve(async (req: Request) => {
       const titleTargetDate = parseSisuDate(fullObj.custom?.title_deadline || sisuData.custom?.title_deadline);
 
       const sisuUpdatedAt = new Date(sisuData.updated_at || new Date()).getTime();
+
+      // If marked as lost, take it off completely
+      const isLost =
+        (status && status.trim() === 'lost') ||
+        (fullObj.pipeline_status && String(fullObj.pipeline_status).toLowerCase().trim() === 'lost') ||
+        (sisuData.stage && String(sisuData.stage).toLowerCase().trim() === 'lost') ||
+        (sisuData.status && String(sisuData.status).toLowerCase().trim() === 'lost') ||
+        Boolean(sisuData.is_lost || fullObj.is_lost || sisuData.date_lost || fullObj.date_lost);
+
+      if (isLost) {
+        if (sisuTxId) {
+          await supabase.from('transactions').delete().eq('sisu_transaction_id', sisuTxId);
+        }
+        continue;
+      }
 
       // Find in DB
       const { data: existingTx } = await supabase

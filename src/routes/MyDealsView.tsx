@@ -68,7 +68,11 @@ export const MyDealsView: React.FC = () => {
         }
 
         if (data) {
-          const mapped: OpsTransaction[] = data.map((t: any) => {
+          const nonLost = data.filter((t: any) => {
+            const s = String(t.status || '').toLowerCase().trim();
+            return s !== 'lost' && !s.includes('lost');
+          });
+          const mapped: OpsTransaction[] = nonLost.map((t: any) => {
             const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
             const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
             const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
@@ -158,6 +162,9 @@ export const MyDealsView: React.FC = () => {
   // Filter deals to selected agent profile or current logged-in agent
   const myDeals = useMemo(() => {
     return dealsList.filter((t) => {
+      const stat = String(t.status || '').toLowerCase().trim();
+      if (stat === 'lost' || stat.includes('lost')) return false;
+
       if (selectedAgentFilter !== 'All') {
         const isSelectedAgent = t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase();
         if (!isSelectedAgent) return false;

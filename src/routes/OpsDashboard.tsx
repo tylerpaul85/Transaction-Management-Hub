@@ -118,7 +118,11 @@ export const OpsDashboard: React.FC = () => {
       }
 
       if (data) {
-        const mapped: OpsTransaction[] = data.map((t: any) => {
+        const nonLost = data.filter((t: any) => {
+          const s = String(t.status || '').toLowerCase().trim();
+          return s !== 'lost' && !s.includes('lost');
+        });
+        const mapped: OpsTransaction[] = nonLost.map((t: any) => {
           const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
           const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
           const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
@@ -268,6 +272,8 @@ export const OpsDashboard: React.FC = () => {
       }
 
       const validRows = rows.filter((r) => {
+        const stat = String(r.status || r.pipeline_status || r.stage || '').toLowerCase().trim();
+        if (stat === 'lost' || stat.includes('lost')) return false;
         const addr = (r.property_address || r.address || r.address_1 || r['street address'] || r['property address'] || '').trim();
         return addr.length > 0 && addr.toLowerCase() !== 'tbd' && addr.toLowerCase() !== 'unknown address';
       });
@@ -416,6 +422,29 @@ export const OpsDashboard: React.FC = () => {
     typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
   const handleSaveTransaction = async (updatedTx: OpsTransaction) => {
+    // If marked as lost, take it off completely from database and UI
+    if (updatedTx.status.toLowerCase() === 'lost' || updatedTx.status.toLowerCase().includes('lost')) {
+      try {
+        const { error: delErr } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('id', updatedTx.id);
+
+        if (delErr) {
+          console.error('Error deleting lost transaction from Supabase:', delErr);
+          throw delErr;
+        }
+
+        setTransactions((prev) => prev.filter((t) => t.id !== updatedTx.id));
+        setSelectedTx(null);
+        await loadLiveTransactions();
+        return;
+      } catch (err) {
+        console.error('Failed to remove lost transaction:', err);
+        throw err;
+      }
+    }
+
     setTransactions((prev) => prev.map((t) => (t.id === updatedTx.id ? updatedTx : t)));
     setSelectedTx(updatedTx);
 
@@ -528,6 +557,8 @@ export const OpsDashboard: React.FC = () => {
     return transactions.filter((t) => {
       const s = (t.status || '').toLowerCase().replace(/_/g, ' ').trim();
       if (
+        s === 'lost' ||
+        s.includes('lost') ||
         s === 'closed' ||
         s.startsWith('closed') ||
         s.includes('terminated') ||

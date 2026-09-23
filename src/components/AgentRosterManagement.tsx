@@ -88,7 +88,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
       // Fetch transaction counts per agent
       const { data: txData } = await (supabase.from('transactions') as any)
         .select('id, listing_agent_id, selling_agent_id')
-        .not('status', 'in', '("closed","terminated")');
+        .not('status', 'in', '("closed","terminated","lost","Lost")');
 
       if (txData) {
         const counts: Record<string, number> = {};

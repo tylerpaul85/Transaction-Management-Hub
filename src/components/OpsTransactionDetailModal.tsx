@@ -20,6 +20,7 @@ import {
   Mail,
   RefreshCw,
   Info,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -302,6 +303,27 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                 <span>{flaggedForReview ? 'Flagged for Friday Review' : 'Mark Friday Verified'}</span>
               </button>
 
+              {/* Mark as Lost Action */}
+              <button
+                type="button"
+                onClick={async () => {
+                  if (
+                    window.confirm(
+                      `Are you sure you want to mark "${address || 'this deal'}" as LOST? This file will be completely removed.`
+                    )
+                  ) {
+                    setStatus('lost');
+                    await onSave({ ...transaction, status: 'lost' });
+                    onClose();
+                  }
+                }}
+                className="px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all min-h-[44px] bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20 active:scale-[0.98]"
+                title="Mark deal as lost and remove it completely"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Mark as Lost</span>
+              </button>
+
               <button
                 onClick={handleSaveAll}
                 className="px-5 py-2 rounded-xl bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-all shadow-lg min-h-[44px]"
@@ -401,6 +423,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                       <option value="coming_soon">Coming Soon</option>
                       <option value="closed">Closed</option>
                       <option value="terminated">Terminated</option>
+                      <option value="lost">Lost (Remove File)</option>
                     </select>
                   </div>
 

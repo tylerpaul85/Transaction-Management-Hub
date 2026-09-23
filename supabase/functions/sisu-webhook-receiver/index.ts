@@ -674,6 +674,35 @@ serve(async (req: Request) => {
       updatedVals.trans_amt ||
       null;
 
+    // If marked as lost, take it off completely
+    const isLost =
+      (rawStatus && String(rawStatus).toLowerCase().trim() === 'lost') ||
+      (fullObj.pipeline_status && String(fullObj.pipeline_status).toLowerCase().trim() === 'lost') ||
+      (sisuData.stage && String(sisuData.stage).toLowerCase().trim() === 'lost') ||
+      (sisuData.status && String(sisuData.status).toLowerCase().trim() === 'lost') ||
+      Boolean(sisuData.is_lost || fullObj.is_lost || payload.is_lost || sisuData.date_lost || fullObj.date_lost || payload.date_lost);
+
+    if (isLost) {
+      console.log(`[Sisu Webhook] Transaction ${finalSisuId} is marked as LOST. Taking off completely.`);
+      if (finalSisuId) {
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('sisu_transaction_id', finalSisuId);
+      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          action: 'deleted_lost',
+          message: `Transaction ${finalSisuId} is marked as lost and was completely removed.`,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
     // Check if transaction already exists
     const { data: existingTx } = await supabase
       .from('transactions')

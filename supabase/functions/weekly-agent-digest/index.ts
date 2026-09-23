@@ -151,7 +151,7 @@ serve(async (req: Request) => {
             notes
           )
         `)
-        .not('status', 'in', '("closed","terminated")');
+        .not('status', 'in', '("closed","terminated","lost","Lost")');
 
       if (resolvedAgentId && !resolvedAgentId.startsWith('agent-target')) {
         txQuery = txQuery.or(
@@ -159,7 +159,7 @@ serve(async (req: Request) => {
         );
       }
 
-      const { data: agentTransactions, error: txError } = await txQuery;
+      const { data: agentTransactionsRaw, error: txError } = await txQuery;
 
       if (txError) {
         console.error(`Error querying transactions for agent ${agent.name} (${agent.id}):`, txError);
@@ -175,6 +175,12 @@ serve(async (req: Request) => {
         });
         continue;
       }
+
+      // Filter out any lost transactions
+      const agentTransactions = (agentTransactionsRaw || []).filter((tx: any) => {
+        const s = String(tx.status || '').toLowerCase().trim();
+        return s !== 'lost' && !s.includes('lost');
+      });
 
       // Requirement: Skip agents with zero active transactions (don't send empty email)
       if (!agentTransactions || agentTransactions.length === 0) {

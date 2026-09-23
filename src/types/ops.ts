@@ -18,7 +18,7 @@ export type ListingStage = 'pre_listing' | 'coming_soon' | 'active_listing' | 'p
 export interface OpsTransaction {
   id: string;
   sisu_transaction_id: string | null;
-  status: 'active' | 'pending' | 'closed' | 'terminated' | 'under_contract' | 'pre_listing' | 'coming_soon';
+  status: 'active' | 'pending' | 'closed' | 'terminated' | 'under_contract' | 'pre_listing' | 'coming_soon' | 'lost';
   property_address: string;
   city: string;
   state?: string;
