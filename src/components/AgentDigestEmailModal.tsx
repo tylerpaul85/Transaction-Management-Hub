@@ -89,6 +89,40 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
   const todayStr = new Date().toISOString().split('T')[0];
 
+  // Strictly sanitize transactions to active escrows only (excluding closed, expired, lost, signed, etc.)
+  const activeTransactions = useMemo(() => {
+    return (transactions || []).filter((tx) => {
+      const s = String(tx.status || '').toLowerCase().replace(/_/g, ' ').trim();
+      if (
+        s === 'closed' ||
+        s.includes('closed') ||
+        s === 'lost' ||
+        s.includes('lost') ||
+        s === 'signed' ||
+        s.includes('signed') ||
+        s.includes('release') ||
+        s.includes('cancel') ||
+        s.includes('terminate') ||
+        s.includes('fell through') ||
+        s.includes('archived') ||
+        s.includes('appt') ||
+        s.includes('pipeline') ||
+        s.includes('expired') ||
+        s.includes('showing') ||
+        s.includes('live listing')
+      ) {
+        return false;
+      }
+      return (
+        s.includes('under contract') ||
+        s.includes('pending') ||
+        s.includes('escrow') ||
+        s.includes('closing') ||
+        s.includes('clear to close')
+      );
+    });
+  }, [transactions]);
+
   // Group all transactions by agent for the multi-agent view
   const agentGroups: AgentGroupInfo[] = useMemo(() => {
     const map = new Map<string, { canonicalName: string; id?: string; email?: string; txs: OpsTransaction[] }>();
@@ -101,7 +135,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
     });
 
     // Distribute transactions to agents
-    transactions.forEach((tx) => {
+    activeTransactions.forEach((tx) => {
       const rawName = (tx.agent_name || 'Unassigned Agent').trim();
       const key = rawName.toLowerCase();
       if (!map.has(key)) {
@@ -151,7 +185,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
     // Sort: highest overdue first, then most deals
     return list.sort((a, b) => b.overdueCount - a.overdueCount || b.totalDeals - a.totalDeals);
-  }, [transactions, allAgentProfiles, todayStr]);
+  }, [activeTransactions, allAgentProfiles, todayStr]);
 
   // Initialize selected agents to all agents with deals
   useState(() => {
@@ -197,12 +231,12 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
   // Transactions for the currently viewed single agent
   const currentAgentTransactions = useMemo(() => {
     if (!activeAgentName || activeAgentName === 'All') {
-      return transactions;
+      return activeTransactions;
     }
-    return transactions.filter(
+    return activeTransactions.filter(
       (tx) => (tx.agent_name || '').toLowerCase() === activeAgentName.toLowerCase()
     );
-  }, [transactions, activeAgentName]);
+  }, [activeTransactions, activeAgentName]);
 
   // Convert transactions into DigestTransactionItems for preview
   const singleAgentDigestItems: DigestTransactionItem[] = useMemo(() => {
@@ -288,6 +322,10 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
         body: {
           agent_name: activeAgentName,
           agent_email: recipientEmail,
+          subject: subject,
+          html: html,
+          text: text,
+          target_transaction_ids: singleAgentDigestItems.map((t) => t.id),
         },
       });
 
@@ -328,6 +366,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
         id: g.id,
         name: g.name,
         email: g.email,
+        target_transaction_ids: g.transactions.map((t) => t.id),
       }));
 
     setIsSending(true);

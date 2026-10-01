@@ -119,8 +119,10 @@ export const OpsDashboard: React.FC = () => {
 
       if (data) {
         const activeOnly = data.filter((t: any) => {
-          const s = String(t.status || '').toLowerCase().trim();
+          const s = String(t.status || '').toLowerCase().replace(/_/g, ' ').trim();
           if (
+            s === 'closed' ||
+            s.includes('closed') ||
             s === 'lost' ||
             s.includes('lost') ||
             s === 'signed' ||
@@ -132,11 +134,19 @@ export const OpsDashboard: React.FC = () => {
             s.includes('archived') ||
             s.includes('appt') ||
             s.includes('pipeline') ||
-            s.includes('expired')
+            s.includes('expired') ||
+            s.includes('showing') ||
+            s.includes('live listing')
           ) {
             return false;
           }
-          return true;
+          return (
+            s.includes('under contract') ||
+            s.includes('pending') ||
+            s.includes('escrow') ||
+            s.includes('closing') ||
+            s.includes('clear to close')
+          );
         });
         const mapped: OpsTransaction[] = activeOnly.map((t: any) => {
           const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
@@ -553,25 +563,6 @@ export const OpsDashboard: React.FC = () => {
     return Array.from(set).sort();
   }, [allAgentProfiles, transactions]);
 
-  const selectedAgentDealCount = useMemo(() => {
-    if (agentFilter === 'All') return transactions.length;
-    return transactions.filter(
-      (t) => (t.agent_name || '').toLowerCase() === agentFilter.toLowerCase()
-    ).length;
-  }, [transactions, agentFilter]);
-
-  const selectedAgentEmail = useMemo(() => {
-    if (agentFilter === 'All') return '';
-    const matchProfile = allAgentProfiles.find(
-      (a) => a.name.toLowerCase() === agentFilter.toLowerCase()
-    );
-    if (matchProfile?.email) return matchProfile.email;
-    const matchTx = transactions.find(
-      (t) => (t.agent_name || '').toLowerCase() === agentFilter.toLowerCase()
-    );
-    return matchTx?.agent_email || '';
-  }, [allAgentProfiles, transactions, agentFilter]);
-
   // Active TC Escrows (Under Contract / Pending only)
   const tcEscrows = useMemo(() => {
     return transactions.filter((t) => {
@@ -603,6 +594,25 @@ export const OpsDashboard: React.FC = () => {
       );
     });
   }, [transactions]);
+
+  const selectedAgentDealCount = useMemo(() => {
+    if (agentFilter === 'All') return tcEscrows.length;
+    return tcEscrows.filter(
+      (t) => (t.agent_name || '').toLowerCase() === agentFilter.toLowerCase()
+    ).length;
+  }, [tcEscrows, agentFilter]);
+
+  const selectedAgentEmail = useMemo(() => {
+    if (agentFilter === 'All') return '';
+    const matchProfile = allAgentProfiles.find(
+      (a) => a.name.toLowerCase() === agentFilter.toLowerCase()
+    );
+    if (matchProfile?.email) return matchProfile.email;
+    const matchTx = transactions.find(
+      (t) => (t.agent_name || '').toLowerCase() === agentFilter.toLowerCase()
+    );
+    return matchTx?.agent_email || '';
+  }, [allAgentProfiles, transactions, agentFilter]);
 
   // Status options derived strictly from active escrows
   const allStatusOptions = useMemo(() => {
@@ -1508,8 +1518,8 @@ export const OpsDashboard: React.FC = () => {
           agentEmail={selectedAgentEmail}
           transactions={
             agentFilter === 'All'
-              ? transactions
-              : transactions.filter(
+              ? tcEscrows
+              : tcEscrows.filter(
                   (t) => (t.agent_name || '').toLowerCase() === agentFilter.toLowerCase()
                 )
           }

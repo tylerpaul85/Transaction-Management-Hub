@@ -51,14 +51,18 @@ serve(async (req: Request) => {
     const targetAgentId = body?.agent_id;
     const targetAgentEmail = body?.agent_email;
     const targetAgentName = body?.agent_name;
-    const targetAgentsList: Array<{ id?: string; name: string; email: string }> | undefined = body?.target_agents;
+    const targetAgentsList: Array<{ id?: string; name: string; email: string; target_transaction_ids?: string[] }> | undefined = body?.target_agents;
+    const targetTransactionIds: string[] | undefined = body?.target_transaction_ids;
+    const customSubject: string | undefined = body?.subject;
+    const customHtml: string | undefined = body?.html;
+    const customText: string | undefined = body?.text;
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY') || body?.resend_api_key || '';
     const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || body?.from_email || 'MSREG Operations <operations@msreginternal.com>';
     const appBaseUrl = Deno.env.get('APP_BASE_URL') || body?.app_base_url || 'https://hub.msreg.com';
 
     // 1. Fetch active agents (or single targeted agent, or explicit list)
-    let activeAgents: Array<{ id: string; name: string; email: string; phone?: string; active?: boolean }> = [];
+    let activeAgents: Array<{ id: string; name: string; email: string; phone?: string; active?: boolean; target_transaction_ids?: string[] }> = [];
 
     if (Array.isArray(targetAgentsList) && targetAgentsList.length > 0) {
       activeAgents = targetAgentsList.map((a, idx) => ({
@@ -67,6 +71,7 @@ serve(async (req: Request) => {
         email: a.email || 'agent@mattsmithrealestategroup.com',
         phone: '',
         active: true,
+        target_transaction_ids: a.target_transaction_ids,
       }));
     } else {
       let agentQuery = supabase
@@ -99,6 +104,7 @@ serve(async (req: Request) => {
             email: targetAgentEmail || 'agent@mattsmithrealestategroup.com',
             phone: '',
             active: true,
+            target_transaction_ids: targetTransactionIds,
           },
         ];
       }
@@ -150,13 +156,29 @@ serve(async (req: Request) => {
             source,
             notes
           )
-        `)
-        .not('status', 'in', '("closed","terminated","lost","Lost")');
+        `);
 
-      if (resolvedAgentId && !resolvedAgentId.startsWith('agent-target')) {
-        txQuery = txQuery.or(
-          `listing_agent_id.eq.${resolvedAgentId},selling_agent_id.eq.${resolvedAgentId}`
-        );
+      const explicitTxIds = agent.target_transaction_ids || targetTransactionIds;
+      if (Array.isArray(explicitTxIds) && explicitTxIds.length > 0) {
+        txQuery = txQuery.in('id', explicitTxIds);
+      } else {
+        txQuery = txQuery
+          .not('status', 'ilike', '%closed%')
+          .not('status', 'ilike', '%expired%')
+          .not('status', 'ilike', '%lost%')
+          .not('status', 'ilike', '%terminate%')
+          .not('status', 'ilike', '%cancel%')
+          .not('status', 'ilike', '%release%')
+          .not('status', 'ilike', '%archive%')
+          .not('status', 'ilike', '%appt%')
+          .not('status', 'ilike', '%showing%')
+          .not('status', 'ilike', '%live listing%');
+
+        if (resolvedAgentId && !resolvedAgentId.startsWith('agent-target')) {
+          txQuery = txQuery.or(
+            `listing_agent_id.eq.${resolvedAgentId},selling_agent_id.eq.${resolvedAgentId}`
+          );
+        }
       }
 
       const { data: agentTransactionsRaw, error: txError } = await txQuery;
@@ -176,14 +198,14 @@ serve(async (req: Request) => {
         continue;
       }
 
-      // Filter out any non-pending, lost, released, or signed transactions
+      // Filter out any non-pending, closed, expired, lost, released, or signed transactions
       const agentTransactions = (agentTransactionsRaw || []).filter((tx: any) => {
-        const s = String(tx.status || '').toLowerCase().trim();
+        const s = String(tx.status || '').toLowerCase().replace(/_/g, ' ').trim();
         if (
+          s === 'closed' ||
+          s.includes('closed') ||
           s === 'lost' ||
           s.includes('lost') ||
-          s === 'closed' ||
-          s.startsWith('closed') ||
           s === 'signed' ||
           s.includes('signed') ||
           s.includes('release') ||
@@ -192,7 +214,10 @@ serve(async (req: Request) => {
           s.includes('fell through') ||
           s.includes('appt') ||
           s.includes('pipeline') ||
-          s.includes('expired')
+          s.includes('expired') ||
+          s.includes('archive') ||
+          s.includes('showing') ||
+          s.includes('live listing')
         ) {
           return false;
         }
@@ -298,6 +323,19 @@ serve(async (req: Request) => {
         frequencyName: 'Weekly',
       });
 
+      const finalSubject =
+        customSubject && (targetAgentEmail || activeAgents.length === 1)
+          ? customSubject
+          : emailContent.subject;
+      const finalHtml =
+        customHtml && (targetAgentEmail || activeAgents.length === 1)
+          ? customHtml
+          : emailContent.html;
+      const finalText =
+        customText && (targetAgentEmail || activeAgents.length === 1)
+          ? customText
+          : emailContent.text;
+
       // 5. Send via Resend
       let resendMessageId: string | null = null;
       let sendStatus: 'sent' | 'failed' = 'sent';
@@ -315,9 +353,9 @@ serve(async (req: Request) => {
             body: JSON.stringify({
               from: fromAddress,
               to: [agent.email],
-              subject: emailContent.subject,
-              html: emailContent.html,
-              text: emailContent.text,
+              subject: finalSubject,
+              html: finalHtml,
+              text: finalText,
             }),
           });
 
