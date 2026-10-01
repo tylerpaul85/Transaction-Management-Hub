@@ -153,12 +153,14 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
             const isSeller = t.side === 'seller';
             const price = Number(t.price || t.list_price || 248000);
 
-            // Calculate milestone steps
+            // Calculate milestone steps from live milestones
             const defaultNewListing = buildDefaultSellerNewListingRoadmap();
             const defaultUnderContract = buildDefaultUnderContractRoadmap();
 
-            const completedCount = defaultNewListing.filter((s) => s.status === 'completed').length;
-            const percentage = Math.round((completedCount / defaultNewListing.length) * 100);
+            const liveMilestones = t.milestones || [];
+            const completedCount = liveMilestones.filter((m: any) => m.status === 'satisfied' || m.status === 'complete').length;
+            const totalMilestones = liveMilestones.length > 0 ? liveMilestones.length : 13;
+            const percentage = Math.round((completedCount / totalMilestones) * 100);
 
             return {
               id: t.id,

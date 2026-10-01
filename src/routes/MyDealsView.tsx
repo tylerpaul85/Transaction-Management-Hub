@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../integrations/supabase/client';
-import { OpsTransaction, resolveTcForAgent } from '../types/ops';
+import { OpsTransaction, resolveTcForAgent, getAllMilestonesConfig } from '../types/ops';
+import { MilestoneType, MilestoneStatus } from '../types/database.types';
 import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
 import { CircularProgressGauge } from '../components/hub/CircularProgressGauge';
 import { RoadmapStepCard } from '../components/hub/RoadmapStepCard';
@@ -41,11 +42,6 @@ import {
   Check,
 } from 'lucide-react';
 import { HubRoadmapStep, RoadmapTabType, StepStatus } from '../types/hub';
-import {
-  buildDefaultBuyerRoadmap,
-  buildDefaultUnderContractRoadmap,
-  DEFAULT_SERVICES,
-} from '../data/hubReferenceData';
 
 export const MyDealsView: React.FC = () => {
   const { currentUser, isOps, isAdmin } = useAuth();
@@ -301,6 +297,7 @@ export const MyDealsView: React.FC = () => {
   }, [selectedTxId, myDeals]);
 
   // Calculate stats for current agent
+  // Calculate stats for current agent
   const agentStats = useMemo(() => {
     const totalActive = myDeals.length;
     const buyerCount = myDeals.filter((d) => d.side.toLowerCase() === 'buyer').length;
@@ -310,8 +307,9 @@ export const MyDealsView: React.FC = () => {
     let completedMilestones = 0;
 
     myDeals.forEach((d) => {
+      const configCount = getAllMilestonesConfig(d.side).length;
+      totalMilestones += configCount;
       d.milestones.forEach((m) => {
-        totalMilestones++;
         if (m.status === 'satisfied' || m.status === 'complete') {
           completedMilestones++;
         }
@@ -319,7 +317,7 @@ export const MyDealsView: React.FC = () => {
     });
 
     const completionRate =
-      totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 75;
+      totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0;
 
     return {
       totalActive,
@@ -342,59 +340,226 @@ export const MyDealsView: React.FC = () => {
     }
   }, [selectedTransaction]);
 
-  // Roadmap Steps for selected transaction
+  // True Contract-to-Close Roadmap Steps for selected transaction (matching ops config and Supabase milestones)
   const currentRoadmapSteps: HubRoadmapStep[] = useMemo(() => {
     if (!selectedTransaction) return [];
 
-    const defaultSteps =
-      activeTab === 'buyer_roadmap'
-        ? buildDefaultBuyerRoadmap()
-        : buildDefaultUnderContractRoadmap();
+    const configMilestones = getAllMilestonesConfig(selectedTransaction.side);
+    const category: RoadmapTabType =
+      selectedTransaction.side.toLowerCase() === 'seller' ? 'under_contract' : 'buyer_roadmap';
 
-    // Map live Supabase milestone statuses if available
-    return defaultSteps.map((step) => {
-      const matchMilestone = selectedTransaction.milestones.find((m) => {
-        const mType = m.milestone_type.toLowerCase();
-        const sTitle = step.title.toLowerCase();
-        if (mType.includes('inspection') && sTitle.includes('inspection')) return true;
-        if (mType.includes('appraisal') && sTitle.includes('appraisal')) return true;
-        if (mType.includes('title') && sTitle.includes('title')) return true;
-        if (mType.includes('financing') && sTitle.includes('loan')) return true;
-        if (mType.includes('earnest') && sTitle.includes('earnest')) return true;
-        if (mType.includes('closing') && sTitle.includes('closing')) return true;
-        if (mType.includes('walk_through') && sTitle.includes('walk')) return true;
-        if (mType.includes('ctc') && (sTitle.includes('clear') || sTitle.includes('approval'))) return true;
-        return false;
-      });
+    return configMilestones.map((cfg, idx) => {
+      const matchMilestone = selectedTransaction.milestones?.find(
+        (m) => m.milestone_type === cfg.type
+      );
+
+      let stepStatus: StepStatus = 'pending';
+      let date: string | null = null;
+      let updatedAt: string | null = null;
+      let description = cfg.description;
 
       if (matchMilestone) {
-        let stepStatus: StepStatus = 'pending';
         if (matchMilestone.status === 'satisfied' || matchMilestone.status === 'complete') {
           stepStatus = 'completed';
-        } else if (matchMilestone.status === 'in_progress' || matchMilestone.status === 'ordered') {
+        } else if (
+          matchMilestone.status === 'in_progress' ||
+          matchMilestone.status === 'ordered' ||
+          matchMilestone.status === 'notice_sent'
+        ) {
           stepStatus = 'in_progress';
-        } else if (matchMilestone.status === 'waived') {
+        } else if (matchMilestone.status === 'waived' || matchMilestone.status === 'na') {
           stepStatus = 'waived';
+        } else {
+          stepStatus = 'pending';
         }
 
-        return {
-          ...step,
-          status: stepStatus,
-          date: matchMilestone.actual_date || matchMilestone.target_date || step.date,
-          updatedAt: matchMilestone.updated_at,
-        };
+        date = matchMilestone.actual_date || matchMilestone.target_date || null;
+        if (matchMilestone.updated_at) {
+          try {
+            updatedAt = new Date(matchMilestone.updated_at).toLocaleDateString('en-US');
+          } catch {
+            updatedAt = matchMilestone.updated_at;
+          }
+        }
+        if (matchMilestone.notes && matchMilestone.notes.trim()) {
+          description = `${cfg.description} — ${matchMilestone.notes.trim()}`;
+        }
       }
 
-      return step;
+      return {
+        id: cfg.type,
+        roadmapCategory: category,
+        title: cfg.label,
+        description,
+        status: stepStatus,
+        date,
+        updatedAt,
+        order: idx + 1,
+      };
     });
-  }, [selectedTransaction, activeTab]);
+  }, [selectedTransaction]);
 
   // Calculate completion percentage for currently selected transaction
   const transactionProgress = useMemo(() => {
-    if (!selectedTransaction) return 0;
+    if (!selectedTransaction || currentRoadmapSteps.length === 0) return 0;
     const completed = currentRoadmapSteps.filter((s) => s.status === 'completed').length;
-    return Math.round((completed / (currentRoadmapSteps.length || 1)) * 100);
+    return Math.round((completed / currentRoadmapSteps.length) * 100);
   }, [selectedTransaction, currentRoadmapSteps]);
+
+  // Active step highlight: defaults to first in_progress or first pending step
+  const highlightedStepId = useMemo(() => {
+    if (activeStepId) return activeStepId;
+    const inProg = currentRoadmapSteps.find((s) => s.status === 'in_progress');
+    if (inProg) return inProg.id;
+    const firstPending = currentRoadmapSteps.find((s) => s.status === 'pending');
+    return firstPending ? firstPending.id : null;
+  }, [activeStepId, currentRoadmapSteps]);
+
+  // Toggle milestone status between pending and satisfied
+  const handleToggleStepStatus = async (stepId: string) => {
+    if (!selectedTransaction) return;
+
+    const currentStep = currentRoadmapSteps.find((s) => s.id === stepId);
+    if (!currentStep) return;
+
+    const isCurrentlyDone = currentStep.status === 'completed';
+    const newStatus: MilestoneStatus = isCurrentlyDone ? 'pending' : 'satisfied';
+    const nowIso = new Date().toISOString();
+    const todayStr = nowIso.split('T')[0];
+
+    // Optimistically update local dealsList state
+    setDealsList((prevList) =>
+      prevList.map((tx) => {
+        if (tx.id !== selectedTransaction.id) return tx;
+
+        const idx = tx.milestones.findIndex((m) => m.milestone_type === stepId);
+        let updatedMilestones = [...tx.milestones];
+
+        if (idx >= 0) {
+          updatedMilestones[idx] = {
+            ...updatedMilestones[idx],
+            status: newStatus,
+            actual_date: isCurrentlyDone ? null : todayStr,
+            updated_at: nowIso,
+          };
+        } else {
+          updatedMilestones.push({
+            id: `temp-${stepId}-${Date.now()}`,
+            transaction_id: tx.id,
+            milestone_type: stepId as MilestoneType,
+            target_date: null,
+            actual_date: isCurrentlyDone ? null : todayStr,
+            status: newStatus,
+            source: 'manual',
+            notes: null,
+            updated_at: nowIso,
+          });
+        }
+
+        return {
+          ...tx,
+          milestones: updatedMilestones,
+        };
+      })
+    );
+
+    // Persist to Supabase
+    try {
+      const existing = selectedTransaction.milestones.find(
+        (m) => m.milestone_type === stepId
+      );
+
+      if (existing && existing.id && !existing.id.startsWith('temp-')) {
+        await (supabase.from('milestones') as any)
+          .update({
+            status: newStatus,
+            actual_date: isCurrentlyDone ? null : todayStr,
+            updated_at: nowIso,
+          })
+          .eq('id', existing.id);
+      } else {
+        await (supabase.from('milestones') as any).insert({
+          transaction_id: selectedTransaction.id,
+          milestone_type: stepId,
+          status: newStatus,
+          source: 'manual',
+          actual_date: isCurrentlyDone ? null : todayStr,
+          updated_at: nowIso,
+        });
+      }
+    } catch (err) {
+      console.error('Error toggling milestone status:', err);
+    }
+  };
+
+  // Update milestone target or actual date
+  const handleStepDateChange = async (stepId: string, newDate: string) => {
+    if (!selectedTransaction) return;
+    const nowIso = new Date().toISOString();
+
+    setDealsList((prevList) =>
+      prevList.map((tx) => {
+        if (tx.id !== selectedTransaction.id) return tx;
+
+        const idx = tx.milestones.findIndex((m) => m.milestone_type === stepId);
+        let updatedMilestones = [...tx.milestones];
+
+        if (idx >= 0) {
+          updatedMilestones[idx] = {
+            ...updatedMilestones[idx],
+            target_date: newDate,
+            actual_date: newDate,
+            updated_at: nowIso,
+          };
+        } else {
+          updatedMilestones.push({
+            id: `temp-${stepId}-${Date.now()}`,
+            transaction_id: tx.id,
+            milestone_type: stepId as MilestoneType,
+            target_date: newDate,
+            actual_date: newDate,
+            status: 'pending',
+            source: 'manual',
+            notes: null,
+            updated_at: nowIso,
+          });
+        }
+
+        return {
+          ...tx,
+          milestones: updatedMilestones,
+        };
+      })
+    );
+
+    try {
+      const existing = selectedTransaction.milestones.find(
+        (m) => m.milestone_type === stepId
+      );
+
+      if (existing && existing.id && !existing.id.startsWith('temp-')) {
+        await (supabase.from('milestones') as any)
+          .update({
+            target_date: newDate,
+            actual_date: newDate,
+            updated_at: nowIso,
+          })
+          .eq('id', existing.id);
+      } else {
+        await (supabase.from('milestones') as any).insert({
+          transaction_id: selectedTransaction.id,
+          milestone_type: stepId,
+          status: 'pending',
+          source: 'manual',
+          target_date: newDate,
+          actual_date: newDate,
+          updated_at: nowIso,
+        });
+      }
+    } catch (err) {
+      console.error('Error updating milestone date:', err);
+    }
+  };
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/my-deals?tx=${selectedTransaction?.id}`;
@@ -724,10 +889,11 @@ export const MyDealsView: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredDeals.map((tx) => {
+                  const allConfigs = getAllMilestonesConfig(tx.side);
+                  const totalCount = allConfigs.length;
                   const completedCount = tx.milestones.filter(
                     (m) => m.status === 'satisfied' || m.status === 'complete'
                   ).length;
-                  const totalCount = tx.milestones.length || 11;
                   const pct = Math.round((completedCount / totalCount) * 100);
 
                   return (
@@ -1019,7 +1185,7 @@ export const MyDealsView: React.FC = () => {
                         : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                     }`}
                   >
-                    Under Contract Roadmap ({currentRoadmapSteps.length})
+                    Seller Escrow Roadmap ({currentRoadmapSteps.length})
                   </button>
                   <button
                     onClick={() => setActiveTab('listing_guide')}
@@ -1042,7 +1208,7 @@ export const MyDealsView: React.FC = () => {
                         : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                     }`}
                   >
-                    Buyer Roadmap ({currentRoadmapSteps.length})
+                    Buyer Escrow Roadmap ({currentRoadmapSteps.length})
                   </button>
                   <button
                     onClick={() => setActiveTab('buyer_guide')}
@@ -1082,8 +1248,9 @@ export const MyDealsView: React.FC = () => {
                   step={step}
                   isFirst={idx === 0}
                   isLast={idx === currentRoadmapSteps.length - 1}
-                  isActive={activeStepId === step.id}
-                  onToggleStatus={() => {}}
+                  isActive={highlightedStepId === step.id}
+                  onToggleStatus={handleToggleStepStatus}
+                  onDateChange={handleStepDateChange}
                 />
               ))}
             </div>
@@ -1092,7 +1259,7 @@ export const MyDealsView: React.FC = () => {
           {/* ─────────────────────────────────────────────────────────────
               KEY PARTIES & CONNECTED TEAM (MATCHING IMAGE 1 BOTTOM)
              ───────────────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-800/80">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-800/80">
             {/* TC Card */}
             <div className="bg-[#0b1320] border border-slate-800 rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -1201,35 +1368,6 @@ export const MyDealsView: React.FC = () => {
                 <span className="block text-center text-slate-400 py-1.5 truncate">
                   Representing {selectedTransaction.side === 'seller' ? 'Buyer' : 'Seller'}
                 </span>
-              </div>
-            </div>
-
-            {/* Recommended Services Card */}
-            <div className="bg-[#0b1320] border border-slate-800 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Preferred Partners
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                  Vetted
-                </span>
-              </div>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center justify-between text-slate-300">
-                  <span>Mortgage Lender:</span>
-                  <span className="font-semibold text-white">Flat Branch</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-300">
-                  <span>Title & Escrow:</span>
-                  <span className="font-semibold text-white">Security Title</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-300">
-                  <span>Home Inspection:</span>
-                  <span className="font-semibold text-white">ProTech Inspect</span>
-                </div>
-              </div>
-              <div className="pt-1 border-t border-slate-800 text-xs text-center text-amber-400 font-semibold">
-                Direct Coordination via TC
               </div>
             </div>
           </div>
