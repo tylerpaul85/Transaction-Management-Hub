@@ -20,6 +20,7 @@ interface AuthContextType {
   clearAuthError: () => void;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  devSignInAs?: (user: AuthUser) => void;
   // Convenience role checks
   role: AppRole | null;
   isAgent: boolean;
@@ -188,6 +189,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
   }, []);
 
+  const devSignInAs = useCallback((user: AuthUser) => {
+    setCurrentUser(user);
+    setIsLoading(false);
+  }, []);
+
   // ─── Derived role helpers ──────────────────────────────────────────
   const role = currentUser?.role ?? null;
   const isAgent = role === 'agent';
@@ -206,6 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearAuthError,
         signInWithGoogle,
         signOut,
+        devSignInAs,
         role,
         isAgent,
         isOps,

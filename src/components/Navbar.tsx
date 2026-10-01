@@ -9,6 +9,7 @@ import {
   Briefcase,
   Layers,
   Bug,
+  Compass,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -79,6 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
 
   // Build nav items based on role
   const navItems: { label: string; path: string; icon: React.ReactNode; show: boolean }[] = [
+    { label: 'Transaction Hub', path: '/hub', icon: <Compass className="h-3.5 w-3.5 text-sky-400" />, show: true },
     { label: 'Escrows', path: '/ops', icon: <Layers className="h-3.5 w-3.5" />, show: isOps },
     { label: 'My Deals', path: '/my-deals', icon: <Briefcase className="h-3.5 w-3.5" />, show: true },
     { label: 'Sync Debug', path: '/admin/sync-debug', icon: <Bug className="h-3.5 w-3.5" />, show: isAdmin },

@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { MyDealsView } from './routes/MyDealsView';
 import { OpsDashboard } from './routes/OpsDashboard';
 import { AdminSyncDebug } from './routes/AdminSyncDebug';
+import { TransactionHubView } from './routes/TransactionHubView';
 import { AdminTaskMappings } from './components/AdminTaskMappings';
 import { GoogleAuthGate } from './components/GoogleAuthGate';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
@@ -39,21 +40,12 @@ const AuthenticatedLayout: React.FC = () => {
 
   // Determine default landing route based on role
   const getDefaultRoute = (): string => {
-    if (!currentUser) return '/ops';
-    switch (currentUser.role) {
-      case 'agent':
-        return '/my-deals';
-      case 'tc':
-      case 'listing_coordinator':
-      case 'admin':
-      default:
-        return '/ops';
-    }
+    return '/hub';
   };
 
   const [currentPath, setCurrentPath] = useState<string>(() => {
     const path = window.location.pathname;
-    // If landing on root or login, redirect to role-appropriate route
+    // If landing on root or login, redirect to hub
     if (path === '/' || path === '/login') {
       const defaultRoute = getDefaultRoute();
       window.history.replaceState({}, '', defaultRoute);
@@ -82,7 +74,11 @@ const AuthenticatedLayout: React.FC = () => {
 
       {/* Main Routed Content */}
       <main className="flex-1 w-full pb-12">
-        {(currentPath === '/' || currentPath === '/ops') && (
+        {(currentPath === '/' || currentPath === '/hub' || currentPath.startsWith('/hub')) && (
+          <TransactionHubView onNavigate={handleNavigate} />
+        )}
+
+        {currentPath === '/ops' && (
           <RoleGuard allowedRoles={['tc', 'listing_coordinator', 'admin']} routeName="/ops" onNavigate={handleNavigate}>
             <OpsDashboard />
           </RoleGuard>

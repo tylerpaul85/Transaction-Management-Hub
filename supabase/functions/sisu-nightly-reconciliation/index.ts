@@ -259,9 +259,17 @@ serve(async (req: Request) => {
         const zip = r['Postal Code'] || '';
         const side = String(r['Transaction Type'] || r['type'] || 'buyer').toLowerCase().includes('sell') ? 'seller' : 'buyer';
         
-        let status = 'under_contract';
+        let status = 'Pending';
         const rawStat = String(r['Status'] || r['status'] || '').toLowerCase();
-        if (rawStat.includes('lost') || rawStat === 'lost') {
+        if (
+          rawStat.includes('lost') ||
+          rawStat === 'lost' ||
+          rawStat.includes('signed') ||
+          rawStat.includes('release') ||
+          rawStat.includes('cancel') ||
+          rawStat.includes('terminate') ||
+          rawStat.includes('fell through')
+        ) {
           if (sisuId) {
             await supabase.from('transactions').delete().eq('sisu_transaction_id', sisuId);
           }
@@ -553,15 +561,31 @@ serve(async (req: Request) => {
 
       const sisuUpdatedAt = new Date(sisuData.updated_at || new Date()).getTime();
 
-      // If marked as lost, take it off completely
+      const normStatus = (
+        status ||
+        fullObj.pipeline_status ||
+        sisuData.stage ||
+        sisuData.status ||
+        ''
+      ).toString().toLowerCase().trim();
+
+      // If marked as lost, signed (reverted from pending/mutual release), mutual release, cancelled, or terminated, take off completely
       const isLost =
-        (status && status.trim() === 'lost') ||
-        (fullObj.pipeline_status && String(fullObj.pipeline_status).toLowerCase().trim() === 'lost') ||
-        (sisuData.stage && String(sisuData.stage).toLowerCase().trim() === 'lost') ||
-        (sisuData.status && String(sisuData.status).toLowerCase().trim() === 'lost') ||
+        normStatus === 'lost' ||
+        normStatus.includes('lost') ||
         Boolean(sisuData.is_lost || fullObj.is_lost || sisuData.date_lost || fullObj.date_lost);
 
-      if (isLost) {
+      const isReleasedOrNonPending =
+        isLost ||
+        normStatus === 'signed' ||
+        normStatus.startsWith('signed') ||
+        normStatus.includes('signed') ||
+        normStatus.includes('release') ||
+        normStatus.includes('cancel') ||
+        normStatus.includes('terminate') ||
+        normStatus.includes('fell through');
+
+      if (isReleasedOrNonPending) {
         if (sisuTxId) {
           await supabase.from('transactions').delete().eq('sisu_transaction_id', sisuTxId);
         }
@@ -598,7 +622,9 @@ serve(async (req: Request) => {
         }
 
         if (status && status.trim() !== '') {
-          txUpdates.status = status.trim();
+          const sLower = status.toLowerCase();
+          const isPending = sLower.includes('contract') || sLower.includes('pending') || sLower.includes('escrow') || sLower.includes('closing') || sLower.includes('clear to close');
+          txUpdates.status = isPending ? 'Pending' : status.trim();
         }
 
         if (side) {
@@ -674,9 +700,22 @@ serve(async (req: Request) => {
           continue;
         }
 
+        const insertStatus = status || 'pending';
+        const normInsertStatus = insertStatus.toLowerCase();
+        const isPending =
+          normInsertStatus.includes('under contract') ||
+          normInsertStatus.includes('pending') ||
+          normInsertStatus.includes('escrow') ||
+          normInsertStatus.includes('closing') ||
+          normInsertStatus.includes('clear to close');
+
+        if (!isPending) {
+          console.log(`[Reconciliation] Skipping deal ${sisuTxId} because status '${insertStatus}' is not pending.`);
+          continue;
+        }
+
         const insertAddress = rawAddress.trim();
         const insertClientName = (rawClientName && typeof rawClientName === 'string' && rawClientName.trim()) || 'Unnamed Client';
-        const insertStatus = status || 'pending';
         const insertCity = (rawCity && typeof rawCity === 'string' && rawCity.trim()) || 'Waynesville';
         const insertState = (rawState && typeof rawState === 'string' && rawState.trim()) || 'MO';
         const insertSide = side || 'buyer';
@@ -692,12 +731,14 @@ serve(async (req: Request) => {
           ? '5580daa6-415d-4385-986a-69bc94421c0c'
           : 'f4436dcc-4d52-4a26-af80-05096b76067e';
 
+        const finalInsertStatus = isPending ? 'Pending' : insertStatus;
+
         const { data: newTx } = await supabase
           .from('transactions')
           .upsert(
             {
               sisu_transaction_id: sisuTxId,
-              status: insertStatus,
+              status: finalInsertStatus,
               property_address: insertAddress,
               city: insertCity,
               state: insertState,

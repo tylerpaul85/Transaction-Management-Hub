@@ -139,11 +139,27 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (error) throw error;
 
         if (data) {
-          const nonLost = data.filter((t: any) => {
+          const activeOnly = data.filter((t: any) => {
             const s = String(t.status || '').toLowerCase().trim();
-            return s !== 'lost' && !s.includes('lost');
+            if (
+              s === 'lost' ||
+              s.includes('lost') ||
+              s === 'signed' ||
+              s.includes('signed') ||
+              s.includes('release') ||
+              s.includes('cancel') ||
+              s.includes('terminate') ||
+              s.includes('fell through') ||
+              s.includes('archived') ||
+              s.includes('appt') ||
+              s.includes('pipeline') ||
+              s.includes('expired')
+            ) {
+              return false;
+            }
+            return true;
           });
-          const mapped: Transaction[] = nonLost.map((t: any, idx: number) => {
+          const mapped: Transaction[] = activeOnly.map((t: any, idx: number) => {
             const price = Number(t.price || t.list_price || 0);
             const leadAgent = t.side === 'seller' ? t.listing_agent : (t.selling_agent || t.listing_agent);
             const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';

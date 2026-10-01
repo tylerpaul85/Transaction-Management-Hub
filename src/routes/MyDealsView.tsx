@@ -24,6 +24,7 @@ import {
   Printer,
   Send,
   Loader2,
+  Compass,
 } from 'lucide-react';
 import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
 
@@ -68,11 +69,35 @@ export const MyDealsView: React.FC = () => {
         }
 
         if (data) {
-          const nonLost = data.filter((t: any) => {
+          const activeOnly = data.filter((t: any) => {
             const s = String(t.status || '').toLowerCase().trim();
-            return s !== 'lost' && !s.includes('lost');
+            if (
+              s === 'lost' ||
+              s.includes('lost') ||
+              s === 'closed' ||
+              s.startsWith('closed') ||
+              s === 'signed' ||
+              s.includes('signed') ||
+              s.includes('release') ||
+              s.includes('cancel') ||
+              s.includes('terminate') ||
+              s.includes('fell through') ||
+              s.includes('archived') ||
+              s.includes('appt') ||
+              s.includes('pipeline') ||
+              s.includes('expired')
+            ) {
+              return false;
+            }
+            return (
+              s.includes('under contract') ||
+              s.includes('pending') ||
+              s.includes('escrow') ||
+              s.includes('closing') ||
+              s.includes('clear to close')
+            );
           });
-          const mapped: OpsTransaction[] = nonLost.map((t: any) => {
+          const mapped: OpsTransaction[] = activeOnly.map((t: any) => {
             const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
             const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
             const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
@@ -83,7 +108,7 @@ export const MyDealsView: React.FC = () => {
             return {
               id: t.id,
               sisu_transaction_id: t.sisu_transaction_id || undefined,
-              status: t.status,
+              status: (t.status || '').toLowerCase().includes('contract') || (t.status || '').toLowerCase() === 'pending' ? 'Pending' : t.status,
               property_address: t.property_address,
               city: t.city || 'Waynesville',
               state: t.state || 'MO',
@@ -159,11 +184,38 @@ export const MyDealsView: React.FC = () => {
     }
   }, [currentUser, agentRoster]);
 
-  // Filter deals to selected agent profile or current logged-in agent
+  // Filter deals to selected agent profile or current logged-in agent (active pendings only)
   const myDeals = useMemo(() => {
     return dealsList.filter((t) => {
       const stat = String(t.status || '').toLowerCase().trim();
-      if (stat === 'lost' || stat.includes('lost')) return false;
+      if (
+        stat === 'lost' ||
+        stat.includes('lost') ||
+        stat === 'closed' ||
+        stat.startsWith('closed') ||
+        stat === 'signed' ||
+        stat.includes('signed') ||
+        stat.includes('release') ||
+        stat.includes('cancel') ||
+        stat.includes('terminate') ||
+        stat.includes('fell through') ||
+        stat.includes('archived') ||
+        stat.includes('appt') ||
+        stat.includes('pipeline') ||
+        stat.includes('expired')
+      ) {
+        return false;
+      }
+
+      if (
+        !stat.includes('under contract') &&
+        !stat.includes('pending') &&
+        !stat.includes('escrow') &&
+        !stat.includes('closing') &&
+        !stat.includes('clear to close')
+      ) {
+        return false;
+      }
 
       if (selectedAgentFilter !== 'All') {
         const isSelectedAgent = t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase();
@@ -444,6 +496,15 @@ export const MyDealsView: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <a
+                        href={`/hub?tx=${tx.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500 text-sky-400 hover:text-slate-950 border border-sky-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+                        title="Open in Transaction Hub"
+                      >
+                        <Compass className="h-3.5 w-3.5" />
+                        <span>View in Hub</span>
+                      </a>
                       <div className="p-2 rounded-xl bg-[#131826] border border-[#334155] text-[#94a3b8]">
                         {isExpanded ? (
                           <ChevronUp className="h-5 w-5 text-[#d97706]" />

@@ -118,11 +118,27 @@ export const OpsDashboard: React.FC = () => {
       }
 
       if (data) {
-        const nonLost = data.filter((t: any) => {
+        const activeOnly = data.filter((t: any) => {
           const s = String(t.status || '').toLowerCase().trim();
-          return s !== 'lost' && !s.includes('lost');
+          if (
+            s === 'lost' ||
+            s.includes('lost') ||
+            s === 'signed' ||
+            s.includes('signed') ||
+            s.includes('release') ||
+            s.includes('cancel') ||
+            s.includes('terminate') ||
+            s.includes('fell through') ||
+            s.includes('archived') ||
+            s.includes('appt') ||
+            s.includes('pipeline') ||
+            s.includes('expired')
+          ) {
+            return false;
+          }
+          return true;
         });
-        const mapped: OpsTransaction[] = nonLost.map((t: any) => {
+        const mapped: OpsTransaction[] = activeOnly.map((t: any) => {
           const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
           const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
           const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
@@ -133,7 +149,7 @@ export const OpsDashboard: React.FC = () => {
           return {
             id: t.id,
             sisu_transaction_id: t.sisu_transaction_id || undefined,
-            status: t.status,
+            status: (t.status || '').toLowerCase().includes('contract') || (t.status || '').toLowerCase() === 'pending' ? 'Pending' : t.status,
             property_address: t.property_address,
             city: t.city || 'Waynesville',
             state: t.state || 'MO',
@@ -258,7 +274,7 @@ export const OpsDashboard: React.FC = () => {
               obj.property_address = vals[0];
               obj.client_name = vals[1] || 'Client';
               obj.city = vals[2] || 'Waynesville';
-              obj.status = vals[3] || 'under_contract';
+              obj.status = vals[3] || 'Pending';
             }
             rows.push(obj);
           }
@@ -295,10 +311,8 @@ export const OpsDashboard: React.FC = () => {
           ? 'seller'
           : 'buyer';
 
-        let status = String(r.status || r.pipeline_status || r.stage || 'under_contract').toLowerCase();
-        if (status.includes('contract') || status.includes('pending') || status.includes('escrow')) {
-          status = 'under_contract';
-        } else if (status.includes('list') || status.includes('active')) {
+        let status = 'Pending';
+        if (String(r.status || r.pipeline_status || r.stage || '').toLowerCase().includes('list') || String(r.status || '').toLowerCase().includes('active')) {
           status = 'active';
         }
 
@@ -353,7 +367,7 @@ export const OpsDashboard: React.FC = () => {
           property_address: newEscrowAddress,
           city: newEscrowCity,
           side: newEscrowSide,
-          status: 'under_contract',
+          status: 'Pending',
           client_name: newEscrowClient || 'New Buyer Client',
           client_phone: newEscrowClientPhone || null,
           contract_date: newEscrowContractDate || new Date().toISOString().split('T')[0],
@@ -424,8 +438,18 @@ export const OpsDashboard: React.FC = () => {
     typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
   const handleSaveTransaction = async (updatedTx: OpsTransaction) => {
-    // If marked as lost, take it off completely from database and UI
-    if (updatedTx.status.toLowerCase() === 'lost' || updatedTx.status.toLowerCase().includes('lost')) {
+    // If marked as lost, signed (reverted from pending/mutual release), mutual release, cancelled, or terminated, take it off completely from database and UI
+    const s = updatedTx.status.toLowerCase().trim();
+    if (
+      s === 'lost' ||
+      s.includes('lost') ||
+      s === 'signed' ||
+      s.includes('signed') ||
+      s.includes('release') ||
+      s.includes('cancel') ||
+      s.includes('terminate') ||
+      s.includes('fell through')
+    ) {
       try {
         const { error: delErr } = await supabase
           .from('transactions')
@@ -433,7 +457,7 @@ export const OpsDashboard: React.FC = () => {
           .eq('id', updatedTx.id);
 
         if (delErr) {
-          console.error('Error deleting lost transaction from Supabase:', delErr);
+          console.error('Error deleting released/lost transaction from Supabase:', delErr);
           throw delErr;
         }
 
@@ -442,7 +466,7 @@ export const OpsDashboard: React.FC = () => {
         await loadLiveTransactions();
         return;
       } catch (err) {
-        console.error('Failed to remove lost transaction:', err);
+        console.error('Failed to remove transaction:', err);
         throw err;
       }
     }
@@ -548,13 +572,7 @@ export const OpsDashboard: React.FC = () => {
     return matchTx?.agent_email || '';
   }, [allAgentProfiles, transactions, agentFilter]);
 
-  const allStatusOptions = useMemo(() => {
-    const set = new Set<string>();
-    transactions.forEach((t) => { if (t.status) set.add(t.status); });
-    return Array.from(set).sort();
-  }, [transactions]);
-
-  // Active TC Escrows (Under Contract / Pending)
+  // Active TC Escrows (Under Contract / Pending only)
   const tcEscrows = useMemo(() => {
     return transactions.filter((t) => {
       const s = (t.status || '').toLowerCase().replace(/_/g, ' ').trim();
@@ -563,11 +581,16 @@ export const OpsDashboard: React.FC = () => {
         s.includes('lost') ||
         s === 'closed' ||
         s.startsWith('closed') ||
-        s.includes('terminated') ||
-        s.includes('cancelled') ||
+        s === 'signed' ||
+        s.includes('signed') ||
+        s.includes('release') ||
         s.includes('cancel') ||
+        s.includes('terminate') ||
         s.includes('fell through') ||
-        s.includes('archived')
+        s.includes('archived') ||
+        s.includes('appt') ||
+        s.includes('pipeline') ||
+        s.includes('expired')
       ) {
         return false;
       }
@@ -576,13 +599,17 @@ export const OpsDashboard: React.FC = () => {
         s.includes('pending') ||
         s.includes('escrow') ||
         s.includes('closing') ||
-        s.includes('clear to close') ||
-        s.includes('needed') ||
-        s.includes('offer') ||
-        Boolean(t.contract_date)
+        s.includes('clear to close')
       );
     });
   }, [transactions]);
+
+  // Status options derived strictly from active escrows
+  const allStatusOptions = useMemo(() => {
+    const set = new Set<string>();
+    tcEscrows.forEach((t) => { if (t.status) set.add(t.status); });
+    return Array.from(set).sort();
+  }, [tcEscrows]);
 
   // Dedicated Buyer and Seller Escrow Files
   const buyerEscrows = useMemo(() => {
@@ -1051,14 +1078,12 @@ export const OpsDashboard: React.FC = () => {
                         <div className="space-y-1">
                           <span
                             className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
-                              tx.status === 'under_contract'
+                              tx.side === 'seller'
                                 ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                                : tx.status === 'pending'
-                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                                 : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
                             }`}
                           >
-                            {tx.status.replace(/_/g, ' ').toUpperCase()} • {tx.side.toUpperCase()} REP
+                            PENDING • {tx.side.toUpperCase()} REP
                           </span>
                           <span className="text-[11px] text-[#94a3b8] font-mono-code block">
                             File ID: {tx.sisu_transaction_id || tx.id.substring(0, 8)}

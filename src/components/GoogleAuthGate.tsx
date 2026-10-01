@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { AlertTriangle, Lock, Loader2 } from 'lucide-react';
 
 export const GoogleAuthGate: React.FC = () => {
-  const { signInWithGoogle, isLoading, authError, clearAuthError } = useAuth();
+  const { signInWithGoogle, isLoading, authError, clearAuthError, devSignInAs } = useAuth();
   const workspaceDomain = import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com';
 
   return (
@@ -110,6 +110,52 @@ export const GoogleAuthGate: React.FC = () => {
             )}
           </button>
         </div>
+
+        {/* Development Quick-Access Bypass */}
+        {import.meta.env.DEV && (
+          <div className="pt-3 border-t border-slate-800 space-y-2 text-left">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#d97706] block">
+              Development Quick Access
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (devSignInAs) {
+                    devSignInAs({
+                      id: '89f19f53-d2e5-4b9f-a0a3-1cee85b7d03e',
+                      email: 'tyler.p@mattsmithrealestategroup.com',
+                      fullName: 'Tyler Paul',
+                      role: 'admin',
+                      active: true,
+                    });
+                  }
+                }}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-colors text-center"
+              >
+                Enter as Tyler (Admin)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (devSignInAs) {
+                    devSignInAs({
+                      id: 'dev-agent-shawn',
+                      email: 'shawn@mattsmithrealestategroup.com',
+                      fullName: 'Shawn McArthur',
+                      role: 'agent',
+                      active: true,
+                    });
+                  }
+                }}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-sky-300 border border-slate-700 transition-colors text-center"
+              >
+                Enter as Shawn (Agent)
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Footer info */}
         <p className="text-[11px] text-[#94a3b8]/70">

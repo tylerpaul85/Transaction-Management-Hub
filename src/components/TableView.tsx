@@ -10,6 +10,7 @@ import {
   DollarSign,
   User,
   ShieldAlert,
+  Compass,
 } from 'lucide-react';
 import { differenceInDays, parseISO } from 'date-fns';
 
@@ -237,6 +238,14 @@ export const TableView: React.FC = () => {
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
+                          <a
+                            href={`/hub?tx=${trx.id}`}
+                            title="Open in Transaction Hub"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500 text-sky-400 hover:text-slate-950 border border-sky-500/30 text-xs font-semibold transition-all min-h-[36px]"
+                          >
+                            <Compass className="h-3.5 w-3.5" />
+                            <span>Hub</span>
+                          </a>
                           <button
                             onClick={() => openCdaModal(trx)}
                             title="Generate Official CDA"

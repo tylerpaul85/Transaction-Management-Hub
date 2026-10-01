@@ -416,13 +416,10 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                       onChange={(e) => setStatus(e.target.value as any)}
                       className="w-full px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
                     >
-                      <option value="active">Active</option>
-                      <option value="pending">Pending</option>
-                      <option value="under_contract">Under Contract</option>
-                      <option value="pre_listing">Pre-Listing</option>
-                      <option value="coming_soon">Coming Soon</option>
+                      <option value="Pending">Pending</option>
                       <option value="closed">Closed</option>
-                      <option value="terminated">Terminated</option>
+                      <option value="mutual_release">Mutual Release (Remove File)</option>
+                      <option value="terminated">Terminated (Remove File)</option>
                       <option value="lost">Lost (Remove File)</option>
                     </select>
                   </div>

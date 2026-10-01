@@ -674,16 +674,33 @@ serve(async (req: Request) => {
       updatedVals.trans_amt ||
       null;
 
-    // If marked as lost, take it off completely
+    // If marked as lost, signed (reverted from pending/mutual release), mutual release, cancelled, or terminated, take off completely
+    const normStatus = (
+      rawStatus ||
+      fullObj.pipeline_status ||
+      sisuData.stage ||
+      sisuData.status ||
+      payload.status ||
+      ''
+    ).toString().toLowerCase().trim();
+
     const isLost =
-      (rawStatus && String(rawStatus).toLowerCase().trim() === 'lost') ||
-      (fullObj.pipeline_status && String(fullObj.pipeline_status).toLowerCase().trim() === 'lost') ||
-      (sisuData.stage && String(sisuData.stage).toLowerCase().trim() === 'lost') ||
-      (sisuData.status && String(sisuData.status).toLowerCase().trim() === 'lost') ||
+      normStatus === 'lost' ||
+      normStatus.includes('lost') ||
       Boolean(sisuData.is_lost || fullObj.is_lost || payload.is_lost || sisuData.date_lost || fullObj.date_lost || payload.date_lost);
 
-    if (isLost) {
-      console.log(`[Sisu Webhook] Transaction ${finalSisuId} is marked as LOST. Taking off completely.`);
+    const isReleasedOrNonPending =
+      isLost ||
+      normStatus === 'signed' ||
+      normStatus.startsWith('signed') ||
+      normStatus.includes('signed') ||
+      normStatus.includes('release') ||
+      normStatus.includes('cancel') ||
+      normStatus.includes('terminate') ||
+      normStatus.includes('fell through');
+
+    if (isReleasedOrNonPending) {
+      console.log(`[Sisu Webhook] Transaction ${finalSisuId} is marked as '${normStatus || 'released/lost'}'. Taking off completely.`);
       if (finalSisuId) {
         await supabase
           .from('transactions')
@@ -693,8 +710,8 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           success: true,
-          action: 'deleted_lost',
-          message: `Transaction ${finalSisuId} is marked as lost and was completely removed.`,
+          action: 'deleted_released',
+          message: `Transaction ${finalSisuId} is marked as '${normStatus || 'released'}' and was completely removed from the Hub.`,
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -842,18 +859,43 @@ serve(async (req: Request) => {
       const insertAddress = rawAddress.trim();
       const insertClientName = (rawClientName && typeof rawClientName === 'string' && rawClientName.trim()) || 'Unnamed Client';
       const insertStatus = (rawStatus && typeof rawStatus === 'string' && rawStatus.trim()) || 'pending';
+      const normInsertStatus = insertStatus.toLowerCase();
+      const isPending =
+        normInsertStatus.includes('under contract') ||
+        normInsertStatus.includes('pending') ||
+        normInsertStatus.includes('escrow') ||
+        normInsertStatus.includes('closing') ||
+        normInsertStatus.includes('clear to close');
+
+      if (!isPending) {
+        console.log(`[Sisu Webhook] Skipping insertion of transaction ${finalSisuId} because status '${insertStatus}' is not pending.`);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            action: 'skipped_non_pending',
+            message: `Transaction ${finalSisuId} status '${insertStatus}' is not pending. Escrow Hub only tracks active pendings.`,
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        );
+      }
+
       let insertCity = (rawCity && typeof rawCity === 'string' && rawCity.trim()) || 'Waynesville';
       if (insertCity === 'Chicago') insertCity = 'Waynesville';
       let insertState = (rawState && typeof rawState === 'string' && rawState.trim()) || 'MO';
       if (insertState === 'IL') insertState = 'MO';
       const insertSide = resolvedSide || 'buyer';
 
+      const finalInsertStatus = isPending ? 'Pending' : insertStatus;
+
       const { data: newTx, error: insertErr } = await supabase
         .from('transactions')
         .upsert(
           {
             sisu_transaction_id: finalSisuId,
-            status: insertStatus,
+            status: finalInsertStatus,
             property_address: insertAddress,
             city: insertCity,
             state: insertState,

@@ -176,10 +176,33 @@ serve(async (req: Request) => {
         continue;
       }
 
-      // Filter out any lost transactions
+      // Filter out any non-pending, lost, released, or signed transactions
       const agentTransactions = (agentTransactionsRaw || []).filter((tx: any) => {
         const s = String(tx.status || '').toLowerCase().trim();
-        return s !== 'lost' && !s.includes('lost');
+        if (
+          s === 'lost' ||
+          s.includes('lost') ||
+          s === 'closed' ||
+          s.startsWith('closed') ||
+          s === 'signed' ||
+          s.includes('signed') ||
+          s.includes('release') ||
+          s.includes('cancel') ||
+          s.includes('terminate') ||
+          s.includes('fell through') ||
+          s.includes('appt') ||
+          s.includes('pipeline') ||
+          s.includes('expired')
+        ) {
+          return false;
+        }
+        return (
+          s.includes('under contract') ||
+          s.includes('pending') ||
+          s.includes('escrow') ||
+          s.includes('closing') ||
+          s.includes('clear to close')
+        );
       });
 
       // Requirement: Skip agents with zero active transactions (don't send empty email)
