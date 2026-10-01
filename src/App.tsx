@@ -60,9 +60,16 @@ const AuthenticatedLayout: React.FC = () => {
     return path;
   });
 
+  const [visitedRoutes, setVisitedRoutes] = useState<Set<string>>(() => new Set([currentPath]));
+
   const handleNavigate = (path: string) => {
     setCurrentPath(path);
     window.history.pushState({}, '', path);
+    setVisitedRoutes((prev) => {
+      const next = new Set(prev);
+      next.add(path);
+      return next;
+    });
   };
 
   // Sync route on role load if currently on root
@@ -71,12 +78,23 @@ const AuthenticatedLayout: React.FC = () => {
       const target = getDefaultRoute();
       setCurrentPath(target);
       window.history.replaceState({}, '', target);
+      setVisitedRoutes((prev) => {
+        const next = new Set(prev);
+        next.add(target);
+        return next;
+      });
     }
   }, [currentUser]);
 
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentPath(window.location.pathname || getDefaultRoute());
+      const target = window.location.pathname || getDefaultRoute();
+      setCurrentPath(target);
+      setVisitedRoutes((prev) => {
+        const next = new Set(prev);
+        next.add(target);
+        return next;
+      });
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -87,26 +105,36 @@ const AuthenticatedLayout: React.FC = () => {
       {/* Main Navbar */}
       <Navbar onNavigate={handleNavigate} currentPath={currentPath} />
 
-      {/* Main Routed Content */}
+      {/* Main Routed Content with Keep-Alive View State Preservation */}
       <main className="flex-1 w-full pb-12">
-        {(currentPath === '/' || currentPath === '/hub' || currentPath.startsWith('/hub')) && (
-          <RoleGuard allowedRoles={['tc', 'listing_coordinator', 'admin']} routeName="/hub" onNavigate={handleNavigate}>
-            <TransactionHubView onNavigate={handleNavigate} />
-          </RoleGuard>
+        {/* Transaction Hub View */}
+        {(visitedRoutes.has('/hub') || visitedRoutes.has('/') || currentPath === '/' || currentPath.startsWith('/hub')) && (
+          <div style={{ display: (currentPath === '/' || currentPath === '/hub' || currentPath.startsWith('/hub')) ? 'block' : 'none' }}>
+            <RoleGuard allowedRoles={['tc', 'listing_coordinator', 'admin']} routeName="/hub" onNavigate={handleNavigate}>
+              <TransactionHubView onNavigate={handleNavigate} />
+            </RoleGuard>
+          </div>
         )}
 
-        {currentPath === '/ops' && (
-          <RoleGuard allowedRoles={['tc', 'listing_coordinator', 'admin']} routeName="/ops" onNavigate={handleNavigate}>
-            <OpsDashboard />
-          </RoleGuard>
+        {/* Operations Escrows Dashboard */}
+        {(visitedRoutes.has('/ops') || currentPath === '/ops') && (
+          <div style={{ display: currentPath === '/ops' ? 'block' : 'none' }}>
+            <RoleGuard allowedRoles={['tc', 'listing_coordinator', 'admin']} routeName="/ops" onNavigate={handleNavigate}>
+              <OpsDashboard />
+            </RoleGuard>
+          </div>
         )}
 
-        {currentPath === '/my-deals' && (
-          <RoleGuard allowedRoles={['agent', 'admin', 'tc', 'listing_coordinator']} routeName="/my-deals" onNavigate={handleNavigate}>
-            <MyDealsView />
-          </RoleGuard>
+        {/* Agent / Team My Deals View */}
+        {(visitedRoutes.has('/my-deals') || currentPath === '/my-deals') && (
+          <div style={{ display: currentPath === '/my-deals' ? 'block' : 'none' }}>
+            <RoleGuard allowedRoles={['agent', 'admin', 'tc', 'listing_coordinator']} routeName="/my-deals" onNavigate={handleNavigate}>
+              <MyDealsView />
+            </RoleGuard>
+          </div>
         )}
 
+        {/* Admin Task Mappings */}
         {currentPath === '/ops/task-mappings' && (
           <RoleGuard allowedRoles={['admin']} routeName="/ops/task-mappings" onNavigate={handleNavigate}>
             <div className="pt-4">
@@ -115,6 +143,7 @@ const AuthenticatedLayout: React.FC = () => {
           </RoleGuard>
         )}
 
+        {/* Admin Sync Debug */}
         {currentPath === '/admin/sync-debug' && (
           <RoleGuard allowedRoles={['admin']} routeName="/admin/sync-debug" onNavigate={handleNavigate}>
             <AdminSyncDebug />

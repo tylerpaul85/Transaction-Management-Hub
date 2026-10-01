@@ -52,18 +52,56 @@ export const OpsDashboard: React.FC = () => {
   const [syncStatusText, setSyncStatusText] = useState<string | null>(null);
 
   // Main Dashboard View Section: 'escrows' | 'users' | 'tasks' | 'roster'
-  const [activeSection, setActiveSection] = useState<'escrows' | 'users' | 'tasks' | 'roster'>('escrows');
+  const [activeSection, setActiveSection] = useState<'escrows' | 'users' | 'tasks' | 'roster'>(() => {
+    return (sessionStorage.getItem('ops_active_section') as any) || 'escrows';
+  });
   // Representation Tab: 'all' | 'buyer' | 'seller'
-  const [representationTab, setRepresentationTab] = useState<'all' | 'buyer' | 'seller'>('all');
+  const [representationTab, setRepresentationTab] = useState<'all' | 'buyer' | 'seller'>(() => {
+    return (sessionStorage.getItem('ops_rep_tab') as any) || 'all';
+  });
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [tcFilter, setTcFilter] = useState<string>('All');
-  const [agentFilter, setAgentFilter] = useState<string>('All');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [reviewOnlyFilter, setReviewOnlyFilter] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [statusFilter, setStatusFilter] = useState<string>(() => sessionStorage.getItem('ops_status_filter') || 'All');
+  const [tcFilter, setTcFilter] = useState<string>(() => sessionStorage.getItem('ops_tc_filter') || 'All');
+  const [agentFilter, setAgentFilter] = useState<string>(() => sessionStorage.getItem('ops_agent_filter') || 'All');
+  const [searchQuery, setSearchQuery] = useState<string>(() => sessionStorage.getItem('ops_search_query') || '');
+  const [reviewOnlyFilter, setReviewOnlyFilter] = useState<boolean>(() => sessionStorage.getItem('ops_review_only') === 'true');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    return (sessionStorage.getItem('ops_view_mode') as any) || 'cards';
+  });
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
+  useEffect(() => {
+    sessionStorage.setItem('ops_active_section', activeSection);
+  }, [activeSection]);
+
+  useEffect(() => {
+    sessionStorage.setItem('ops_rep_tab', representationTab);
+  }, [representationTab]);
+
+  useEffect(() => {
+    sessionStorage.setItem('ops_status_filter', statusFilter);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem('ops_tc_filter', tcFilter);
+  }, [tcFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem('ops_agent_filter', agentFilter);
+  }, [agentFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem('ops_search_query', searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    sessionStorage.setItem('ops_review_only', String(reviewOnlyFilter));
+  }, [reviewOnlyFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem('ops_view_mode', viewMode);
+  }, [viewMode]);
 
   // Quick Add Modals
   const [isAddEscrowModalOpen, setIsAddEscrowModalOpen] = useState(false);

@@ -47,8 +47,12 @@ export const MyDealsView: React.FC = () => {
   const { currentUser, isOps, isAdmin } = useAuth();
   const [dealsList, setDealsList] = useState<OpsTransaction[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sideFilter, setSideFilter] = useState<'all' | 'buyer' | 'seller'>('all');
-  const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
+  const [sideFilter, setSideFilter] = useState<'all' | 'buyer' | 'seller'>(() => {
+    return (sessionStorage.getItem('mydeals_side_filter') as any) || 'all';
+  });
+  const [selectedTxId, setSelectedTxId] = useState<string | null>(() => {
+    return sessionStorage.getItem('mydeals_selected_tx_id') || null;
+  });
 
   // Agent Roster & View As selection (for Admins / TCs)
   const [agentRoster, setAgentRoster] = useState<{
@@ -60,7 +64,25 @@ export const MyDealsView: React.FC = () => {
     category?: string | null;
     avatar_url?: string | null;
   }[]>([]);
-  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('All');
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>(() => {
+    return sessionStorage.getItem('mydeals_agent_filter') || 'All';
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('mydeals_side_filter', sideFilter);
+  }, [sideFilter]);
+
+  useEffect(() => {
+    if (selectedTxId) {
+      sessionStorage.setItem('mydeals_selected_tx_id', selectedTxId);
+    } else {
+      sessionStorage.removeItem('mydeals_selected_tx_id');
+    }
+  }, [selectedTxId]);
+
+  useEffect(() => {
+    sessionStorage.setItem('mydeals_agent_filter', selectedAgentFilter);
+  }, [selectedAgentFilter]);
 
   // Headshot Modal State
   const [isHeadshotModalOpen, setIsHeadshotModalOpen] = useState(false);

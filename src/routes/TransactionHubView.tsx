@@ -66,19 +66,39 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
   // All transactions (Reference items from screenshot merged with live Supabase deals)
   const [transactions, setTransactions] = useState<HubTransactionRecord[]>(REFERENCE_PORTAL_TRANSACTIONS);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(() => {
-    // Check URL search param first, then initialTransactionId; otherwise default to null (directory view)
+    // Check URL search param first, then initialTransactionId; otherwise check sessionStorage or default to null
     const urlParams = new URLSearchParams(window.location.search);
     const paramId = urlParams.get('tx') || urlParams.get('id');
-    return paramId || initialTransactionId || null;
+    return paramId || initialTransactionId || sessionStorage.getItem('hub_selected_tx_id') || null;
   });
+
+  useEffect(() => {
+    if (selectedTransactionId) {
+      sessionStorage.setItem('hub_selected_tx_id', selectedTransactionId);
+    } else {
+      sessionStorage.removeItem('hub_selected_tx_id');
+    }
+  }, [selectedTransactionId]);
 
   // Directory filter states
   const [contactSearchQuery, setContactSearchQuery] = useState('');
   const [tableSearchQuery, setTableSearchQuery] = useState('');
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('All');
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('All');
-  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('All');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>(() => sessionStorage.getItem('hub_status_filter') || 'All');
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>(() => sessionStorage.getItem('hub_type_filter') || 'All');
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>(() => sessionStorage.getItem('hub_agent_filter') || 'All');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    sessionStorage.setItem('hub_status_filter', selectedStatusFilter);
+  }, [selectedStatusFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem('hub_type_filter', selectedTypeFilter);
+  }, [selectedTypeFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem('hub_agent_filter', selectedAgentFilter);
+  }, [selectedAgentFilter]);
 
   // Hub Detail states
   const [activeTab, setActiveTab] = useState<RoadmapTabType>('new_listing');
@@ -118,8 +138,10 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
 
         if (data && data.length > 0) {
           const activeOnly = data.filter((t: any) => {
-            const s = String(t.status || '').toLowerCase().trim();
+            const s = String(t.status || '').toLowerCase().replace(/_/g, ' ').trim();
             if (
+              s === 'closed' ||
+              s.includes('closed') ||
               s === 'lost' ||
               s.includes('lost') ||
               s === 'signed' ||
@@ -131,11 +153,19 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
               s.includes('archived') ||
               s.includes('appt') ||
               s.includes('pipeline') ||
-              s.includes('expired')
+              s.includes('expired') ||
+              s.includes('showing') ||
+              s.includes('live listing')
             ) {
               return false;
             }
-            return true;
+            return (
+              s.includes('under contract') ||
+              s.includes('pending') ||
+              s.includes('escrow') ||
+              s.includes('closing') ||
+              s.includes('clear to close')
+            );
           });
 
           const liveMapped: HubTransactionRecord[] = activeOnly.map((t: any) => {
