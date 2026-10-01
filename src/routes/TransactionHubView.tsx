@@ -20,6 +20,7 @@ import { RoadmapStepCard } from '../components/hub/RoadmapStepCard';
 import { AddStepModal } from '../components/hub/AddStepModal';
 import { HubMessageModal } from '../components/hub/HubMessageModal';
 import { GuidesContent } from '../components/hub/GuidesContent';
+import { getStoredAvatar } from '../utils/avatarStorage';
 import {
   Search,
   Plus,
@@ -170,6 +171,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                 phone: agentPhone,
                 email: agentEmail,
                 initials: agentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+                avatarUrl: getStoredAvatar(leadAgent?.id, agentEmail) || undefined,
               },
               tc: {
                 role: 'TC',
@@ -178,6 +180,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                 phone: '(573) 261-3113',
                 email: tcEmail,
                 initials: tcName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+                avatarUrl: getStoredAvatar(t.assigned_tc?.id, tcEmail) || undefined,
               },
               status: (t.status === 'closed' || t.status === 'Closed')
                 ? 'Closed'

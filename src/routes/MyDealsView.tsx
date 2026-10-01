@@ -1,52 +1,97 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../integrations/supabase/client';
-import { OpsTransaction, OpsMilestone, ALL_MILESTONES_CONFIG, resolveTcForAgent } from '../types/ops';
+import { OpsTransaction, resolveTcForAgent } from '../types/ops';
 import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
+import { CircularProgressGauge } from '../components/hub/CircularProgressGauge';
+import { RoadmapStepCard } from '../components/hub/RoadmapStepCard';
+import { GuidesContent } from '../components/hub/GuidesContent';
+import { HubMessageModal } from '../components/hub/HubMessageModal';
+import { AgentHeadshotModal } from '../components/AgentHeadshotModal';
+import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
+import { getStoredAvatar } from '../utils/avatarStorage';
 import {
   Building,
   User,
   Calendar,
-  ChevronDown,
-  ChevronUp,
   Clock,
   Phone,
   Mail,
   ShieldCheck,
   Search,
-  Layers,
   Sparkles,
   Info,
   CheckCircle2,
-  Download,
-  FileSpreadsheet,
-  FileText,
   Printer,
   Send,
   Loader2,
   Compass,
+  Camera,
+  ArrowLeft,
+  Share2,
+  FileSpreadsheet,
+  Layers,
+  DollarSign,
+  ChevronRight,
+  ExternalLink,
+  MessageSquare,
+  FileText,
+  Briefcase,
+  AlertCircle,
+  Check,
 } from 'lucide-react';
-import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
+import { HubRoadmapStep, RoadmapTabType, StepStatus } from '../types/hub';
+import {
+  buildDefaultBuyerRoadmap,
+  buildDefaultUnderContractRoadmap,
+  DEFAULT_SERVICES,
+} from '../data/hubReferenceData';
 
 export const MyDealsView: React.FC = () => {
   const { currentUser, isOps, isAdmin } = useAuth();
   const [dealsList, setDealsList] = useState<OpsTransaction[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
+  const [sideFilter, setSideFilter] = useState<'all' | 'buyer' | 'seller'>('all');
+  const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
 
-  const [agentRoster, setAgentRoster] = useState<{ id: string; name: string; email: string }[]>([]);
+  // Agent Roster & View As selection (for Admins / TCs)
+  const [agentRoster, setAgentRoster] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    phone?: string | null;
+    role?: string | null;
+    category?: string | null;
+    avatar_url?: string | null;
+  }[]>([]);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('All');
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  // Headshot Modal State
+  const [isHeadshotModalOpen, setIsHeadshotModalOpen] = useState(false);
+  const [avatarRefreshKey, setAvatarRefreshKey] = useState(0);
+
+  // Email Digest Modal State
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailStatusText, setEmailStatusText] = useState<string | null>(null);
 
-  // Email Digest Modal state
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  // Roadmap & Detail View State
+  const [activeTab, setActiveTab] = useState<RoadmapTabType>('under_contract');
+  const [activeStepId, setActiveStepId] = useState<string | null>(null);
+  const [messagingRecipient, setMessagingRecipient] = useState<{
+    name: string;
+    role: string;
+    email?: string;
+    phone?: string;
+  } | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   // Load live agent transactions & agent roster from Supabase
   useEffect(() => {
     async function loadLiveAgentDeals() {
       try {
-        const { data: dbAgents } = await supabase.from('agents').select('id, name, email').order('name');
+        const { data: dbAgents } = await (supabase.from('agents') as any)
+          .select('id, name, email, phone, role, category')
+          .order('name');
         if (dbAgents) {
           setAgentRoster(dbAgents);
         }
@@ -55,8 +100,8 @@ export const MyDealsView: React.FC = () => {
           .from('transactions')
           .select(`
             *,
-            listing_agent:agents!transactions_listing_agent_id_fkey(name, email),
-            selling_agent:agents!transactions_selling_agent_id_fkey(name, email),
+            listing_agent:agents!transactions_listing_agent_id_fkey(id, name, email, phone),
+            selling_agent:agents!transactions_selling_agent_id_fkey(id, name, email, phone),
             assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
             milestones (*)
           `)
@@ -97,6 +142,7 @@ export const MyDealsView: React.FC = () => {
               s.includes('clear to close')
             );
           });
+
           const mapped: OpsTransaction[] = activeOnly.map((t: any) => {
             const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
             const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
@@ -108,7 +154,7 @@ export const MyDealsView: React.FC = () => {
             return {
               id: t.id,
               sisu_transaction_id: t.sisu_transaction_id || undefined,
-              status: (t.status || '').toLowerCase().includes('contract') || (t.status || '').toLowerCase() === 'pending' ? 'Pending' : t.status,
+              status: 'Pending',
               property_address: t.property_address,
               city: t.city || 'Waynesville',
               state: t.state || 'MO',
@@ -156,7 +202,7 @@ export const MyDealsView: React.FC = () => {
     loadLiveAgentDeals();
 
     const channel = supabase
-      .channel('realtime_agent_deals')
+      .channel('realtime_agent_deals_portal')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
         loadLiveAgentDeals();
       })
@@ -184,504 +230,1049 @@ export const MyDealsView: React.FC = () => {
     }
   }, [currentUser, agentRoster]);
 
-  // Filter deals to selected agent profile or current logged-in agent (active pendings only)
+  // Current viewed agent object
+  const currentAgentObj = useMemo(() => {
+    if (selectedAgentFilter !== 'All') {
+      return (
+        agentRoster.find((a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase()) || {
+          id: '',
+          name: selectedAgentFilter,
+          email: '',
+          phone: '(573) 261-3113',
+          role: 'Specialist Agent',
+          category: 'Sales Team',
+          avatar_url: null,
+        }
+      );
+    }
+    return {
+      id: currentUser?.id || '',
+      name: currentUser?.fullName || 'Matt Smith Team Agent',
+      email: currentUser?.email || 'agent@mattsmithrealestategroup.com',
+      phone: '(573) 261-3113',
+      role: isOps ? 'Operations Team' : 'Lead Specialist',
+      category: 'Matt Smith Real Estate Group',
+      avatar_url: null,
+    };
+  }, [selectedAgentFilter, agentRoster, currentUser, isOps]);
+
+  // Current headshot avatar
+  const currentAvatar = useMemo(() => {
+    return (
+      currentAgentObj.avatar_url ||
+      getStoredAvatar(currentAgentObj.id, currentAgentObj.email) ||
+      null
+    );
+  }, [currentAgentObj, avatarRefreshKey]);
+
+  // Filter deals to selected agent
   const myDeals = useMemo(() => {
     return dealsList.filter((t) => {
-      const stat = String(t.status || '').toLowerCase().trim();
-      if (
-        stat === 'lost' ||
-        stat.includes('lost') ||
-        stat === 'closed' ||
-        stat.startsWith('closed') ||
-        stat === 'signed' ||
-        stat.includes('signed') ||
-        stat.includes('release') ||
-        stat.includes('cancel') ||
-        stat.includes('terminate') ||
-        stat.includes('fell through') ||
-        stat.includes('archived') ||
-        stat.includes('appt') ||
-        stat.includes('pipeline') ||
-        stat.includes('expired')
-      ) {
-        return false;
-      }
-
-      if (
-        !stat.includes('under contract') &&
-        !stat.includes('pending') &&
-        !stat.includes('escrow') &&
-        !stat.includes('closing') &&
-        !stat.includes('clear to close')
-      ) {
-        return false;
-      }
-
       if (selectedAgentFilter !== 'All') {
         const isSelectedAgent = t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase();
         if (!isSelectedAgent) return false;
-      } else if (currentUser && currentUser.role === 'agent') {
-        const isMyDeal =
-          t.agent_name.toLowerCase() === currentUser.fullName.toLowerCase() ||
-          t.agent_email === currentUser.email;
-        if (!isMyDeal) return false;
       }
+      return true;
+    });
+  }, [dealsList, selectedAgentFilter]);
+
+  // Filtered by side and search
+  const filteredDeals = useMemo(() => {
+    return myDeals.filter((tx) => {
+      if (sideFilter === 'buyer' && tx.side.toLowerCase() !== 'buyer') return false;
+      if (sideFilter === 'seller' && tx.side.toLowerCase() !== 'seller') return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchAddr = t.property_address.toLowerCase().includes(q);
-        const matchClient = t.client_name.toLowerCase().includes(q);
-        const matchSisu = t.sisu_transaction_id && t.sisu_transaction_id.toLowerCase().includes(q);
-        if (!matchAddr && !matchClient && !matchSisu) return false;
+        const matchAddr = tx.property_address.toLowerCase().includes(q);
+        const matchClient = tx.client_name.toLowerCase().includes(q);
+        const matchCity = tx.city.toLowerCase().includes(q);
+        const matchSisu = tx.sisu_transaction_id && tx.sisu_transaction_id.toLowerCase().includes(q);
+        if (!matchAddr && !matchClient && !matchCity && !matchSisu) return false;
       }
-
       return true;
     });
-  }, [dealsList, currentUser, selectedAgentFilter, searchQuery]);
+  }, [myDeals, sideFilter, searchQuery]);
 
-  // CSV Export Functionality
-  const handleDownloadCSV = () => {
-    if (myDeals.length === 0) {
-      alert('No transactions available in current view to export.');
-      return;
+  // Selected Transaction for Roadmap View
+  const selectedTransaction = useMemo(() => {
+    if (!selectedTxId) return null;
+    return myDeals.find((t) => t.id === selectedTxId) || null;
+  }, [selectedTxId, myDeals]);
+
+  // Calculate stats for current agent
+  const agentStats = useMemo(() => {
+    const totalActive = myDeals.length;
+    const buyerCount = myDeals.filter((d) => d.side.toLowerCase() === 'buyer').length;
+    const sellerCount = myDeals.filter((d) => d.side.toLowerCase() === 'seller').length;
+
+    let totalMilestones = 0;
+    let completedMilestones = 0;
+
+    myDeals.forEach((d) => {
+      d.milestones.forEach((m) => {
+        totalMilestones++;
+        if (m.status === 'satisfied' || m.status === 'complete') {
+          completedMilestones++;
+        }
+      });
+    });
+
+    const completionRate =
+      totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 75;
+
+    return {
+      totalActive,
+      buyerCount,
+      sellerCount,
+      completionRate,
+      completedMilestones,
+      totalMilestones,
+    };
+  }, [myDeals]);
+
+  // Sync activeTab when selected transaction changes
+  useEffect(() => {
+    if (selectedTransaction) {
+      if (selectedTransaction.side.toLowerCase() === 'seller') {
+        setActiveTab('under_contract');
+      } else {
+        setActiveTab('buyer_roadmap');
+      }
     }
+  }, [selectedTransaction]);
 
+  // Roadmap Steps for selected transaction
+  const currentRoadmapSteps: HubRoadmapStep[] = useMemo(() => {
+    if (!selectedTransaction) return [];
+
+    const defaultSteps =
+      activeTab === 'buyer_roadmap'
+        ? buildDefaultBuyerRoadmap()
+        : buildDefaultUnderContractRoadmap();
+
+    // Map live Supabase milestone statuses if available
+    return defaultSteps.map((step) => {
+      const matchMilestone = selectedTransaction.milestones.find((m) => {
+        const mType = m.milestone_type.toLowerCase();
+        const sTitle = step.title.toLowerCase();
+        if (mType.includes('inspection') && sTitle.includes('inspection')) return true;
+        if (mType.includes('appraisal') && sTitle.includes('appraisal')) return true;
+        if (mType.includes('title') && sTitle.includes('title')) return true;
+        if (mType.includes('financing') && sTitle.includes('loan')) return true;
+        if (mType.includes('earnest') && sTitle.includes('earnest')) return true;
+        if (mType.includes('closing') && sTitle.includes('closing')) return true;
+        if (mType.includes('walk_through') && sTitle.includes('walk')) return true;
+        if (mType.includes('ctc') && (sTitle.includes('clear') || sTitle.includes('approval'))) return true;
+        return false;
+      });
+
+      if (matchMilestone) {
+        let stepStatus: StepStatus = 'pending';
+        if (matchMilestone.status === 'satisfied' || matchMilestone.status === 'complete') {
+          stepStatus = 'completed';
+        } else if (matchMilestone.status === 'in_progress' || matchMilestone.status === 'ordered') {
+          stepStatus = 'in_progress';
+        } else if (matchMilestone.status === 'waived') {
+          stepStatus = 'waived';
+        }
+
+        return {
+          ...step,
+          status: stepStatus,
+          date: matchMilestone.actual_date || matchMilestone.target_date || step.date,
+          updatedAt: matchMilestone.updated_at,
+        };
+      }
+
+      return step;
+    });
+  }, [selectedTransaction, activeTab]);
+
+  // Calculate completion percentage for currently selected transaction
+  const transactionProgress = useMemo(() => {
+    if (!selectedTransaction) return 0;
+    const completed = currentRoadmapSteps.filter((s) => s.status === 'completed').length;
+    return Math.round((completed / (currentRoadmapSteps.length || 1)) * 100);
+  }, [selectedTransaction, currentRoadmapSteps]);
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/my-deals?tx=${selectedTransaction?.id}`;
+    navigator.clipboard.writeText(url);
+    setCopyFeedback('Roadmap link copied to clipboard!');
+    setTimeout(() => setCopyFeedback(null), 3500);
+  };
+
+  const handleExportCSV = () => {
     const headers = [
+      'File ID',
       'Property Address',
       'City',
       'State',
-      'Side',
-      'Status',
       'Client Name',
-      'Client Phone',
-      'Lead Agent',
-      'Assigned TC',
+      'Representation',
+      'Status',
       'Contract Date',
-      'Target Closing Date',
-      'Sisu Transaction ID',
+      'Target Close Date',
+      'Assigned TC',
     ];
 
-    const rows = myDeals.map((t) => [
-      `"${(t.property_address || '').replace(/"/g, '""')}"`,
-      `"${(t.city || 'Waynesville').replace(/"/g, '""')}"`,
-      `"${(t.state || 'MO').replace(/"/g, '""')}"`,
-      `"${(t.side || '').replace(/"/g, '""')}"`,
-      `"${(t.status || '').replace(/"/g, '""')}"`,
-      `"${(t.client_name || '').replace(/"/g, '""')}"`,
-      `"${(t.client_phone || '').replace(/"/g, '""')}"`,
-      `"${(t.agent_name || '').replace(/"/g, '""')}"`,
-      `"${(t.tc_name || '').replace(/"/g, '""')}"`,
-      `"${(t.contract_date || '').replace(/"/g, '""')}"`,
-      `"${(t.target_closing_date || '').replace(/"/g, '""')}"`,
-      `"${(t.sisu_transaction_id || '').replace(/"/g, '""')}"`,
+    const rows = filteredDeals.map((t) => [
+      `"${t.sisu_transaction_id || t.id}"`,
+      `"${t.property_address}"`,
+      `"${t.city}"`,
+      `"${t.state}"`,
+      `"${t.client_name}"`,
+      `"${t.side.toUpperCase()} REP"`,
+      `"${t.status}"`,
+      `"${t.contract_date || ''}"`,
+      `"${t.target_closing_date || ''}"`,
+      `"${t.tc_name}"`,
     ]);
 
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
-    const fileName =
-      selectedAgentFilter === 'All'
-        ? `MSREG_All_Deals_${new Date().toISOString().split('T')[0]}.csv`
-        : `MSREG_Deals_${selectedAgentFilter.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.setAttribute('href', url);
-    link.setAttribute('download', fileName);
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `My_Deals_${selectedAgentFilter.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // PDF Print Functionality
-  const handleDownloadPDF = () => {
-    window.print();
-  };
-
-  // Trigger Weekly Update Email Dispatch Modal (Targeted or All)
-  const handleSendWeeklyUpdate = () => {
-    setIsEmailModalOpen(true);
-  };
-
-  const toggleExpand = (txId: string) => {
-    setExpandedTxId((prev) => (prev === txId ? null : txId));
-  };
-
-  if (!currentUser) return null;
+  const initials = currentAgentObj.name
+    ? currentAgentObj.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'MS';
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
-      {/* Admin Agent Profile Selector Dropdown & Action Controls */}
-      <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-5 shadow-xl space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-[#d97706]/15 border border-[#d97706]/30 text-[#d97706]">
-              <User className="h-6 w-6" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#d97706]">Agent Profile Selector</span>
-              <h2 className="text-base font-bold text-[#f8fafc]">
-                {selectedAgentFilter === 'All' ? 'All Team Agents' : selectedAgentFilter}
-              </h2>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <label className="text-xs text-[#94a3b8] font-medium hidden sm:inline">Select Agent Profile:</label>
-            <select
-              value={selectedAgentFilter}
-              onChange={(e) => setSelectedAgentFilter(e.target.value)}
-              className="bg-[#0f172a] border border-[#334155] text-[#f8fafc] text-xs font-semibold rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#d97706] cursor-pointer shadow-inner"
-            >
-              <option value="All">All Active Deals ({dealsList.length})</option>
-              {agentRoster.map((a) => {
-                const count = dealsList.filter((d) => d.agent_name.toLowerCase() === a.name.toLowerCase()).length;
-                return (
-                  <option key={a.id} value={a.name}>
-                    {a.name} ({count} deals)
-                  </option>
-                );
-              })}
-            </select>
-            {selectedAgentFilter !== 'All' && (
-              <button
-                onClick={() => setSelectedAgentFilter('All')}
-                className="px-3 py-2 bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold rounded-xl transition-all"
-              >
-                Reset
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Export & Email Action Toolbar */}
-        <div className="pt-3 border-t border-[#334155]/60 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleDownloadCSV}
-              className="px-3.5 py-2 rounded-xl bg-[#131826] hover:bg-[#1e293b] border border-[#334155] text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-2 transition-all min-h-[38px] shadow-sm"
-              title="Download CSV spreadsheet of current deals"
-            >
-              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
-              <span>Download CSV</span>
-            </button>
-
-            <button
-              onClick={handleDownloadPDF}
-              className="px-3.5 py-2 rounded-xl bg-[#131826] hover:bg-[#1e293b] border border-[#334155] text-xs font-bold text-sky-400 hover:text-sky-300 flex items-center gap-2 transition-all min-h-[38px] shadow-sm"
-              title="Download PDF report / print view"
-            >
-              <Printer className="h-4 w-4 text-sky-400" />
-              <span>Export PDF / Print</span>
-            </button>
-          </div>
-
-          {(isOps || isAdmin) && (
-            <button
-              onClick={handleSendWeeklyUpdate}
-              disabled={isSendingEmail}
-              className="px-4 py-2 rounded-xl bg-[#d97706]/15 hover:bg-[#d97706]/25 border border-[#d97706]/40 text-[#d97706] text-xs font-bold flex items-center gap-2 transition-all active:scale-[0.98] min-h-[38px] shadow-sm"
-            >
-              {isSendingEmail ? (
-                <Loader2 className="h-4 w-4 animate-spin text-[#d97706]" />
-              ) : (
-                <Send className="h-4 w-4 text-[#d97706]" />
-              )}
-              <span>
-                {selectedAgentFilter === 'All'
-                  ? 'Send Weekly Update to ALL Agents'
-                  : `Send Weekly Update to ${selectedAgentFilter}`}
+    <div className="min-h-screen bg-[#080d17] text-[#f8fafc] font-sans pb-16">
+      {/* ─────────────────────────────────────────────────────────────────
+          VIEW A: AGENT DIRECTORY & PIPELINE DASHBOARD (WHEN NO TX CLICKED)
+         ───────────────────────────────────────────────────────────────── */}
+      {!selectedTransaction ? (
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          {/* Top Brand Header Strip */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+            <div className="space-y-1">
+              <span className="text-xs font-bold tracking-widest text-[#d97706] uppercase">
+                Matt Smith Real Estate Group
               </span>
-            </button>
-          )}
-        </div>
-
-        {emailStatusText && (
-          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-semibold text-amber-300 flex items-center gap-2 animate-fade-in">
-            <CheckCircle2 className="h-4 w-4 text-amber-400 flex-shrink-0" />
-            <span>{emailStatusText}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Mobile-Friendly Header */}
-      <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-5 sm:p-6 shadow-xl space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="font-editorial text-xl sm:text-2xl font-bold text-[#f8fafc]">
-                {selectedAgentFilter !== 'All' ? `${selectedAgentFilter}'s Deals` : 'My Deals'}
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+                <span>AGENT DEAL PORTAL</span>
+                <span className="text-sky-400 font-mono text-xl sm:text-2xl">2.0</span>
               </h1>
-              <p className="text-xs text-[#94a3b8]">
-                {selectedAgentFilter !== 'All' ? selectedAgentFilter : currentUser.fullName} • Live Agent Portal
-              </p>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="flex flex-wrap items-center gap-3">
+              {(isOps || isAdmin) && (
+                <button
+                  onClick={() => setIsEmailModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-[#d97706]/15 hover:bg-[#d97706]/25 border border-[#d97706]/40 text-[#d97706] text-xs font-bold flex items-center gap-2 transition-all active:scale-[0.98] shadow-sm cursor-pointer"
+                >
+                  <Send className="h-4 w-4 text-[#d97706]" />
+                  <span>
+                    {selectedAgentFilter === 'All'
+                      ? 'Email Weekly Digest (All Agents)'
+                      : `Email Digest to ${selectedAgentFilter}`}
+                  </span>
+                </button>
+              )}
+
+              <button
+                onClick={handleExportCSV}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <span>Export CSV</span>
+              </button>
             </div>
           </div>
 
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-            {myDeals.length} Active {myDeals.length === 1 ? 'Deal' : 'Deals'}
-          </span>
-        </div>
+          {emailStatusText && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs font-semibold text-amber-300 flex items-center gap-2 animate-fade-in">
+              <CheckCircle2 className="h-4 w-4 text-amber-400 flex-shrink-0" />
+              <span>{emailStatusText}</span>
+            </div>
+          )}
 
-        {/* Read-Only Notice Box */}
-        <div className="p-3 bg-[#131826]/70 rounded-xl border border-[#334155] text-xs text-[#94a3b8] flex items-start gap-2">
-          <Info className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-          <span>
-            This is the live, mobile-ready escrow tracker for <strong>{selectedAgentFilter !== 'All' ? selectedAgentFilter : currentUser.fullName}</strong>. Milestone updates are managed directly by your assigned TC.
-          </span>
-        </div>
-      </div>
+          {/* ─────────────────────────────────────────────────────────────
+              AGENT COMMAND CENTER HERO (MATCHING CLIENT PORTAL 2.0 STYLE)
+             ───────────────────────────────────────────────────────────── */}
+          <div className="bg-[#0b1320] border border-slate-800/90 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+            {/* Subtle background glow */}
+            <div className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-bl from-sky-500/5 via-amber-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-      {/* Quick Search */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Quick search property address or client..."
-          className="w-full pl-10 pr-4 py-2.5 bg-[#1e293b] border border-[#334155] rounded-2xl text-base text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-[#d97706] shadow-sm"
-        />
-      </div>
-
-      {/* Transaction Cards List */}
-      <div className="space-y-4">
-        {myDeals.length === 0 ? (
-          <div className="p-12 text-center bg-[#1e293b] rounded-3xl border border-[#334155] text-[#94a3b8] space-y-2">
-            <Building className="h-8 w-8 mx-auto text-[#94a3b8]/40" />
-            <p className="font-semibold text-[#f8fafc]">No active deals found</p>
-            <p className="text-xs max-w-sm mx-auto">
-              There are currently no active transactions linked to{' '}
-              <strong className="text-[#f8fafc]">{selectedAgentFilter !== 'All' ? selectedAgentFilter : currentUser.fullName}</strong>. Use the Agent Profile Selector at the top to preview any team agent's profile.
-            </p>
-          </div>
-        ) : (
-          myDeals.map((tx) => {
-            const isExpanded = expandedTxId === tx.id;
-
-            return (
-              <div
-                key={tx.id}
-                className="bg-[#1e293b] border border-[#334155] hover:border-[#d97706]/40 rounded-3xl shadow-lg transition-all overflow-hidden"
-              >
-                {/* Collapsed / Summary Header (Touch Target >= 44px) */}
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              {/* Left Column: Agent Profile Card with Clickable Headshot */}
+              <div className="lg:col-span-5 flex items-center gap-5">
+                {/* Agent Photo with Camera Trigger */}
                 <div
-                  onClick={() => toggleExpand(tx.id)}
-                  className="p-5 sm:p-6 cursor-pointer select-none space-y-3.5 hover:bg-[#131826]/40 transition-colors"
+                  onClick={() => setIsHeadshotModalOpen(true)}
+                  className="relative group cursor-pointer flex-shrink-0"
+                  title="Click to update headshot"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase border ${
-                            tx.side === 'buyer'
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                              : 'bg-[#d97706]/15 text-[#d97706] border-[#d97706]/30'
-                          }`}
-                        >
-                          {tx.side} Representation
-                        </span>
-                        <span className="text-xs font-mono-code text-[#94a3b8]">
-                          {tx.sisu_transaction_id || 'MSREG File'}
-                        </span>
+                  <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-2 border-amber-500/40 bg-slate-900 shadow-xl flex items-center justify-center transition-all group-hover:border-amber-400">
+                    {currentAvatar ? (
+                      <img
+                        src={currentAvatar}
+                        alt={currentAgentObj.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center bg-slate-800 text-amber-400 font-bold text-2xl font-mono">
+                        {initials}
                       </div>
-
-                      <h2 className="font-editorial text-lg sm:text-xl font-bold text-[#f8fafc] leading-tight">
-                        {tx.property_address}
-                      </h2>
-                      <p className="text-xs text-[#94a3b8]">
-                        Client: <strong className="text-[#f8fafc]">{tx.client_name}</strong>
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`/hub?tx=${tx.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500 text-sky-400 hover:text-slate-950 border border-sky-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
-                        title="Open in Transaction Hub"
-                      >
-                        <Compass className="h-3.5 w-3.5" />
-                        <span>View in Hub</span>
-                      </a>
-                      <div className="p-2 rounded-xl bg-[#131826] border border-[#334155] text-[#94a3b8]">
-                        {isExpanded ? (
-                          <ChevronUp className="h-5 w-5 text-[#d97706]" />
-                        ) : (
-                          <ChevronDown className="h-5 w-5" />
-                        )}
-                      </div>
-                    </div>
+                    )}
                   </div>
-
-                  {/* Summary Dates & Milestone Dots */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[#334155]/60">
-                    <div className="flex items-center gap-4 text-xs font-mono-code">
-                      <div>
-                        <span className="text-[#94a3b8] block text-[10px] uppercase">Contract</span>
-                        <span className="text-[#f8fafc] font-semibold">
-                          {tx.contract_date || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[#94a3b8] block text-[10px] uppercase">
-                          Target Close
-                        </span>
-                        <span className="text-[#d97706] font-bold">
-                          {tx.target_closing_date || '—'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Milestone Progress Dots */}
-                    <div className="self-start sm:self-center">
-                      <MilestoneDotSequence milestones={tx.milestones} side={tx.side} />
-                    </div>
+                  {/* Camera overlay */}
+                  <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-amber-300">
+                    <Camera className="h-5 w-5" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Edit Photo</span>
                   </div>
                 </div>
 
-                {/* Expanded Details Accordion */}
-                {isExpanded && (
-                  <div className="p-5 sm:p-6 bg-[#131826]/90 border-t border-[#334155] space-y-5 animate-in fade-in duration-200">
-                    {/* TC & Contact Info Pill */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-[#1e293b] rounded-2xl border border-[#334155] text-xs">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] block mb-1">
-                          Assigned Transaction Coordinator
-                        </span>
-                        <div className="flex items-center justify-between">
-                          <strong className="text-sky-400 font-semibold">{tx.tc_name}</strong>
-                          <span className="text-[#94a3b8]">{tx.tc_email}</span>
-                        </div>
-                      </div>
+                {/* Agent Bio & Details */}
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-xl sm:text-2xl font-bold text-white truncate">
+                      {currentAgentObj.name}
+                    </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                      Verified Agent
+                    </span>
+                  </div>
 
-                      {tx.other_party_agent && (
-                        <div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] block mb-1">
-                            Co-Op Agent (Other Party)
-                          </span>
-                          <div className="flex items-center justify-between">
-                            <strong className="text-[#f8fafc]">{tx.other_party_agent}</strong>
-                            {tx.other_party_phone && (
-                              <span className="text-[#94a3b8] font-mono-code">
-                                {tx.other_party_phone}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                  <p className="text-xs text-slate-400 flex items-center gap-2">
+                    <Briefcase className="h-3.5 w-3.5 text-slate-500" />
+                    <span>{currentAgentObj.role || 'Sales Specialist'}</span>
+                  </p>
 
-                    {/* Milestones Detailed Checklist */}
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-editorial text-sm font-bold text-[#f8fafc] flex items-center gap-1.5">
-                          <Clock className="h-4 w-4 text-[#d97706]" />
-                          <span>Full Escrow Milestone Checklist</span>
-                        </h3>
-                        <span className="text-[11px] text-[#94a3b8]">
-                          Read-only • Live with TC & Sisu
-                        </span>
-                      </div>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 pt-0.5">
+                    {currentAgentObj.phone && (
+                      <a
+                        href={`tel:${currentAgentObj.phone.replace(/[^0-9]/g, '')}`}
+                        className="hover:text-amber-400 flex items-center gap-1 transition-colors"
+                      >
+                        <Phone className="h-3.5 w-3.5 text-slate-500" />
+                        <span>{currentAgentObj.phone}</span>
+                      </a>
+                    )}
+                    {currentAgentObj.email && (
+                      <a
+                        href={`mailto:${currentAgentObj.email}`}
+                        className="hover:text-sky-400 flex items-center gap-1 transition-colors"
+                      >
+                        <Mail className="h-3.5 w-3.5 text-slate-500" />
+                        <span className="truncate max-w-[200px]">{currentAgentObj.email}</span>
+                      </a>
+                    )}
+                  </div>
 
-                      <div className="space-y-2">
-                        {tx.milestones
-                          .filter((m) => ALL_MILESTONES_CONFIG.some((c) => c.type === m.milestone_type))
-                          .map((m) => {
-                            const config = ALL_MILESTONES_CONFIG.find((c) => c.type === m.milestone_type)!;
+                  <button
+                    onClick={() => setIsHeadshotModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 text-xs text-amber-400/90 hover:text-amber-300 pt-1 font-semibold cursor-pointer"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                    <span>Upload / Change Headshot</span>
+                  </button>
+                </div>
+              </div>
 
-                            const isNa = m.status === 'na' || m.status === 'waived';
-                            const isComplete = m.status === 'satisfied' || m.status === 'complete';
-                            const isInProgress = m.status === 'in_progress' || m.status === 'notice_sent' || m.status === 'ordered';
+              {/* Center Column: Pipeline Stats */}
+              <div className="lg:col-span-4 grid grid-cols-3 gap-3 border-y lg:border-y-0 lg:border-x border-slate-800 py-4 lg:py-0 lg:px-6">
+                <div className="text-center">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-white block">
+                    {agentStats.totalActive}
+                  </span>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold">Active Deals</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-sky-400 block">
+                    {agentStats.buyerCount}
+                  </span>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold">Buyer Rep</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-amber-400 block">
+                    {agentStats.sellerCount}
+                  </span>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold">Seller Rep</span>
+                </div>
+              </div>
 
-                            return (
-                              <div
-                                key={m.milestone_type}
-                                className={`p-3.5 bg-[#1e293b] border border-[#334155] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-opacity ${
-                                  isNa ? 'opacity-50' : ''
-                                }`}
-                              >
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-2">
-                                    <span className={`font-bold text-sm ${isNa ? 'text-slate-400 line-through' : 'text-[#f8fafc]'}`}>
-                                      {config.label}
-                                    </span>
-                                    <span
-                                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                                        isComplete
-                                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                                          : isInProgress
-                                          ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
-                                          : isNa
-                                          ? 'bg-slate-800 text-slate-400 border-slate-700'
-                                          : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                                      }`}
-                                    >
-                                      {isComplete ? 'Complete' : isInProgress ? 'In Progress' : isNa ? 'N/A' : 'Pending'}
-                                    </span>
-                                  </div>
-                                {m.notes && (
-                                  <p className="text-xs text-[#94a3b8] italic">{m.notes}</p>
-                                )}
-                              </div>
-
-                              {/* Dates & Source Badge */}
-                              <div className="flex flex-wrap items-center gap-3 text-xs self-start sm:self-center">
-                                <div className="font-mono-code text-[11px]">
-                                  {m.target_date && (
-                                    <span className="text-[#94a3b8] mr-2">
-                                      Target: <strong className="text-[#f8fafc]">{m.target_date}</strong>
-                                    </span>
-                                  )}
-                                  {m.actual_date && (
-                                    <span className="text-emerald-400">
-                                      Actual: <strong>{m.actual_date}</strong>
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Source Provenance Badge */}
-                                <span
-                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                                    m.source === 'sisu'
-                                      ? 'bg-slate-700/60 text-slate-300 border-slate-600'
-                                      : 'bg-sky-500/15 text-sky-400 border-sky-500/30'
-                                  }`}
-                                >
-                                  {m.source === 'sisu' ? 'Synced from Sisu' : 'Manually entered'}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+              {/* Right Column: TC View As Switcher (for Admins / TCs) */}
+              <div className="lg:col-span-3 space-y-2">
+                {(isOps || isAdmin) ? (
+                  <div className="bg-[#0e1726] border border-slate-800 rounded-2xl p-3.5 space-y-2">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Switch Agent Portal View
+                    </label>
+                    <select
+                      value={selectedAgentFilter}
+                      onChange={(e) => setSelectedAgentFilter(e.target.value)}
+                      className="w-full bg-[#131826] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-medium focus:outline-none focus:border-amber-500 cursor-pointer"
+                    >
+                      <option value="All">All Team Escrows ({dealsList.length})</option>
+                      {agentRoster.map((agent) => (
+                        <option key={agent.id} value={agent.name}>
+                          {agent.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-slate-500 block">
+                      Previewing portal exactly as the agent sees it.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="bg-[#0e1726] border border-slate-800 rounded-2xl p-4 space-y-1 text-center">
+                    <span className="text-xs text-slate-400 block">Overall Milestone Velocity</span>
+                    <span className="text-2xl font-black text-emerald-400">{agentStats.completionRate}%</span>
+                    <span className="text-[10px] text-slate-500 block">
+                      {agentStats.completedMilestones} of {agentStats.totalMilestones} milestones satisfied
+                    </span>
                   </div>
                 )}
               </div>
-            );
-          })
-        )}
-      </div>
+            </div>
+          </div>
 
-      {/* Interactive Email Digest Preview & Send Modal */}
+          {/* ─────────────────────────────────────────────────────────────
+              DIRECTORY SEARCH & FILTER CONTROLS (MATCHING IMAGE 2)
+             ───────────────────────────────────────────────────────────── */}
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              {/* Rounded-full Pill Search Bar */}
+              <div className="relative flex-1 max-w-xl">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search address, client name, city, or Sisu ID..."
+                  className="w-full pl-12 pr-10 py-3 bg-[#0e1726] border border-slate-700/80 rounded-full text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-lg shadow-black/40"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Side Filter Tabs */}
+              <div className="flex items-center gap-1.5 bg-[#0e1726] p-1 rounded-2xl border border-slate-800">
+                <button
+                  onClick={() => setSideFilter('all')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    sideFilter === 'all'
+                      ? 'bg-amber-500 text-[#0f172a] shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  All Escrows ({myDeals.length})
+                </button>
+                <button
+                  onClick={() => setSideFilter('buyer')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    sideFilter === 'buyer'
+                      ? 'bg-sky-500 text-slate-950 shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Buyer Rep ({agentStats.buyerCount})
+                </button>
+                <button
+                  onClick={() => setSideFilter('seller')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    sideFilter === 'seller'
+                      ? 'bg-amber-500 text-[#0f172a] shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Seller Rep ({agentStats.sellerCount})
+                </button>
+              </div>
+            </div>
+
+            {/* ─────────────────────────────────────────────────────────────
+                ACTIVE DEALS LIST / TABLE (MATCHING CLIENT PORTAL 2.0)
+               ───────────────────────────────────────────────────────────── */}
+            {filteredDeals.length === 0 ? (
+              <div className="bg-[#0b1320] border border-slate-800 rounded-3xl p-12 text-center space-y-3">
+                <Compass className="h-10 w-10 mx-auto text-slate-600" />
+                <h3 className="text-lg font-bold text-white">No Active Escrow Files Match</h3>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  No active pending transactions were found matching your current search or side filter.
+                </p>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-sky-400 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Clear Search
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredDeals.map((tx) => {
+                  const completedCount = tx.milestones.filter(
+                    (m) => m.status === 'satisfied' || m.status === 'complete'
+                  ).length;
+                  const totalCount = tx.milestones.length || 11;
+                  const pct = Math.round((completedCount / totalCount) * 100);
+
+                  return (
+                    <div
+                      key={tx.id}
+                      onClick={() => setSelectedTxId(tx.id)}
+                      className="bg-[#0b1320] border border-slate-800 hover:border-sky-500/60 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all cursor-pointer group flex flex-col justify-between space-y-5 relative overflow-hidden"
+                    >
+                      {/* Top Header Strip */}
+                      <div className="flex items-start justify-between gap-3 border-b border-slate-800/80 pb-3">
+                        <div className="space-y-1">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+                              tx.side.toLowerCase() === 'seller'
+                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                            }`}
+                          >
+                            PENDING • {tx.side.toUpperCase()} REP
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-mono block">
+                            File ID: {tx.sisu_transaction_id || tx.id.substring(0, 8)}
+                          </span>
+                        </div>
+
+                        {/* Completion Gauge Mini */}
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-xs font-extrabold text-emerald-300 font-mono">
+                            {pct}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Main Address Headline */}
+                      <div className="space-y-1.5">
+                        <h3 className="text-lg font-bold text-white group-hover:text-sky-400 transition-colors line-clamp-2">
+                          {tx.property_address}
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                          {tx.city}, {tx.state} • Client:{' '}
+                          <strong className="text-slate-200">{tx.client_name}</strong>
+                        </p>
+                      </div>
+
+                      {/* Milestone Progress Dot Sequence */}
+                      <div className="space-y-1 pt-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                          Milestone Track
+                        </span>
+                        <MilestoneDotSequence milestones={tx.milestones} side={tx.side} />
+                      </div>
+
+                      {/* Key Dates & Assigned TC */}
+                      <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-800/80 pt-3">
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">Target Closing</span>
+                          <span className="font-semibold text-white font-mono">
+                            {tx.target_closing_date || 'TBD'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">Assigned TC</span>
+                          <span className="font-semibold text-sky-300 truncate block">
+                            {tx.tc_name}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Open Roadmap CTA Button */}
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          className="w-full py-2.5 rounded-xl bg-slate-900 group-hover:bg-sky-500 text-slate-300 group-hover:text-slate-950 text-xs font-bold transition-all border border-slate-800 group-hover:border-sky-500 flex items-center justify-center gap-1.5 shadow-sm"
+                        >
+                          <Compass className="h-3.5 w-3.5" />
+                          <span>Open Interactive Roadmap</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* ─────────────────────────────────────────────────────────────────
+           VIEW B: FULL CLIENT PORTAL 2.0 ROADMAP & TEAM VIEW (MATCHING IMAGE 1)
+           When a transaction is clicked
+           ───────────────────────────────────────────────────────────────── */
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Top Return Navigation & Switcher */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+            <button
+              onClick={() => setSelectedTxId(null)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-sm cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to My Deals Directory</span>
+            </button>
+
+            {/* Quick Switcher dropdown & Actions */}
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 hidden sm:inline">Switch Deal:</span>
+                <select
+                  value={selectedTransaction.id}
+                  onChange={(e) => setSelectedTxId(e.target.value)}
+                  className="bg-[#0e1726] border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-sky-500 cursor-pointer shadow-sm"
+                >
+                  {myDeals.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.property_address} ({t.client_name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={handleCopyLink}
+                className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-sky-300 transition-colors cursor-pointer"
+                title="Copy shareable link"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
+
+              <button
+                onClick={() => window.print()}
+                className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-sky-300 transition-colors cursor-pointer"
+                title="Print Roadmap"
+              >
+                <Printer className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {copyFeedback && (
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs font-semibold text-emerald-300 flex items-center gap-2 animate-in fade-in duration-200">
+              <Check className="h-4 w-4 text-emerald-400" />
+              <span>{copyFeedback}</span>
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              TOP HERO SECTION: AGENT CARD, PROGRESS GAUGE, TRANSACTION INFO
+              (EXACT LAYOUT MATCHING CLIENT PORTAL 2.0 IMAGE 1)
+             ───────────────────────────────────────────────────────────── */}
+          <div className="bg-[#0b1320] border border-slate-800/90 rounded-3xl p-5 sm:p-7 shadow-2xl relative overflow-hidden">
+            {/* Subtle background glow */}
+            <div className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-bl from-sky-500/5 via-emerald-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              {/* Left Column: Agent Profile Card (Cols 1-5) */}
+              <div className="md:col-span-5 flex items-center gap-4">
+                {/* Agent Photo */}
+                <div
+                  onClick={() => setIsHeadshotModalOpen(true)}
+                  className="relative flex-shrink-0 cursor-pointer group"
+                  title="Click to change headshot"
+                >
+                  <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full overflow-hidden border-2 border-slate-700 bg-slate-800 shadow-xl group-hover:border-amber-400 transition-colors">
+                    {currentAvatar ? (
+                      <img
+                        src={currentAvatar}
+                        alt={selectedTransaction.agent_name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center bg-slate-800 text-sky-400 font-bold text-lg font-mono">
+                        {initials}
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-300">
+                    <Camera className="h-4 w-4" />
+                  </div>
+                </div>
+
+                {/* Agent Meta & Quick Actions */}
+                <div className="space-y-1.5 min-w-0">
+                  <div className="space-y-0.5">
+                    <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase block">
+                      LEAD AGENT
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-bold text-white truncate">
+                      {selectedTransaction.agent_name}
+                    </h2>
+                    <span className="text-xs text-slate-400 block truncate">
+                      MATT SMITH REAL ESTATE GROUP
+                    </span>
+                  </div>
+
+                  {/* Contact Buttons */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() =>
+                        setMessagingRecipient({
+                          name: selectedTransaction.tc_name,
+                          role: 'Transaction Coordinator',
+                          email: selectedTransaction.tc_email,
+                          phone: '(573) 261-3113',
+                        })
+                      }
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors shadow-sm cursor-pointer"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      <span>Message TC</span>
+                    </button>
+                    {selectedTransaction.tc_email && (
+                      <a
+                        href={`mailto:${selectedTransaction.tc_email}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors border border-slate-700/80"
+                      >
+                        <Mail className="h-3.5 w-3.5 text-slate-400" />
+                        <span>Email TC</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Center Column: Circular Progress Gauge (Cols 6-8) */}
+              <div className="md:col-span-3 flex justify-center py-2 md:py-0 border-y md:border-y-0 md:border-x border-slate-800/80">
+                <CircularProgressGauge
+                  percentage={transactionProgress}
+                  size={120}
+                  strokeWidth={9}
+                />
+              </div>
+
+              {/* Right Column: Transaction & Property Card (Cols 9-12) */}
+              <div className="md:col-span-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={`inline-block px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      selectedTransaction.side.toLowerCase() === 'seller'
+                        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                        : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
+                    }`}
+                  >
+                    PENDING • {selectedTransaction.side.toUpperCase()} REP
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    File: {selectedTransaction.sisu_transaction_id || selectedTransaction.id.slice(0, 8)}
+                  </span>
+                </div>
+
+                <div className="space-y-0.5">
+                  <h3 className="text-base sm:text-lg font-bold text-white line-clamp-1">
+                    {selectedTransaction.property_address}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {selectedTransaction.city}, {selectedTransaction.state} {selectedTransaction.zip}
+                  </p>
+                </div>
+
+                <div className="pt-1 flex items-center justify-between border-t border-slate-800 text-xs">
+                  <div>
+                    <span className="text-slate-500 text-[10px] block">Target Closing</span>
+                    <span className="font-semibold text-white font-mono">
+                      {selectedTransaction.target_closing_date || 'TBD'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[10px] block">Assigned TC</span>
+                    <span className="font-semibold text-sky-300">
+                      {selectedTransaction.tc_name}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+              ROADMAP TABS NAVIGATION (MATCHING CLIENT PORTAL 2.0)
+             ───────────────────────────────────────────────────────────── */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedTransaction.side.toLowerCase() === 'seller' ? (
+                <>
+                  <button
+                    onClick={() => setActiveTab('under_contract')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'under_contract'
+                        ? 'bg-amber-500 text-[#0f172a] shadow-lg shadow-amber-500/20'
+                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    Under Contract Roadmap ({currentRoadmapSteps.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('listing_guide')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'listing_guide'
+                        ? 'bg-sky-500 text-slate-950 shadow-lg shadow-sky-500/20'
+                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    Seller Guide & FAQs
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setActiveTab('buyer_roadmap')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'buyer_roadmap'
+                        ? 'bg-sky-500 text-slate-950 shadow-lg shadow-sky-500/20'
+                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    Buyer Roadmap ({currentRoadmapSteps.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('buyer_guide')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'buyer_guide'
+                        ? 'bg-sky-500 text-slate-950 shadow-lg shadow-sky-500/20'
+                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    Buyer Guide & FAQs
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">
+                {currentRoadmapSteps.filter((s) => s.status === 'completed').length} of{' '}
+                {currentRoadmapSteps.length} Steps Completed
+              </span>
+            </div>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+              MAIN CONTENT: STEP CARDS OR GUIDES
+             ───────────────────────────────────────────────────────────── */}
+          {activeTab.includes('guide') ? (
+            <GuidesContent
+              guideType={activeTab === 'listing_guide' ? 'listing_guide' : 'buyer_guide'}
+              propertyAddress={selectedTransaction.property_address}
+            />
+          ) : (
+            <div className="space-y-3">
+              {currentRoadmapSteps.map((step, idx) => (
+                <RoadmapStepCard
+                  key={step.id}
+                  step={step}
+                  isFirst={idx === 0}
+                  isLast={idx === currentRoadmapSteps.length - 1}
+                  isActive={activeStepId === step.id}
+                  onToggleStatus={() => {}}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              KEY PARTIES & CONNECTED TEAM (MATCHING IMAGE 1 BOTTOM)
+             ───────────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-800/80">
+            {/* TC Card */}
+            <div className="bg-[#0b1320] border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Transaction Coordinator
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                  Operations
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 flex items-center justify-center font-bold text-xs font-mono">
+                  {selectedTransaction.tc_name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-white text-sm truncate">{selectedTransaction.tc_name}</h4>
+                  <span className="text-[11px] text-slate-400 block truncate">Matt Smith Real Estate Group</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1 border-t border-slate-800 text-xs">
+                {selectedTransaction.tc_email && (
+                  <a
+                    href={`mailto:${selectedTransaction.tc_email}`}
+                    className="flex-1 py-1.5 text-center bg-slate-900 hover:bg-slate-800 rounded-xl text-sky-300 font-semibold transition-colors border border-slate-800"
+                  >
+                    Email TC
+                  </a>
+                )}
+                <button
+                  onClick={() =>
+                    setMessagingRecipient({
+                      name: selectedTransaction.tc_name,
+                      role: 'Transaction Coordinator',
+                      email: selectedTransaction.tc_email,
+                      phone: '(573) 261-3113',
+                    })
+                  }
+                  className="flex-1 py-1.5 text-center bg-sky-500 hover:bg-sky-400 rounded-xl text-slate-950 font-bold transition-colors cursor-pointer"
+                >
+                  Message
+                </button>
+              </div>
+            </div>
+
+            {/* Client Card */}
+            <div className="bg-[#0b1320] border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Client ({selectedTransaction.side.toUpperCase()})
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  Active
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center justify-center font-bold text-xs font-mono">
+                  {selectedTransaction.client_name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-white text-sm truncate">{selectedTransaction.client_name}</h4>
+                  <span className="text-[11px] text-slate-400 block font-mono">
+                    {selectedTransaction.client_phone || 'Phone on file'}
+                  </span>
+                </div>
+              </div>
+              <div className="pt-1 border-t border-slate-800 text-xs">
+                {selectedTransaction.client_phone ? (
+                  <a
+                    href={`tel:${selectedTransaction.client_phone.replace(/[^0-9]/g, '')}`}
+                    className="block w-full py-1.5 text-center bg-slate-900 hover:bg-slate-800 rounded-xl text-emerald-300 font-semibold transition-colors border border-slate-800"
+                  >
+                    Call Client
+                  </a>
+                ) : (
+                  <span className="block text-center text-slate-500 py-1.5">No direct cell</span>
+                )}
+              </div>
+            </div>
+
+            {/* Co-op Agent Card */}
+            <div className="bg-[#0b1320] border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Co-op Agent
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                  Other Side
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center justify-center font-bold text-xs font-mono">
+                  {selectedTransaction.other_party_agent
+                    ? selectedTransaction.other_party_agent.split(' ').map((n) => n[0]).join('').slice(0, 2)
+                    : 'CO'}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-white text-sm truncate">
+                    {selectedTransaction.other_party_agent || 'Co-op Agent Pending'}
+                  </h4>
+                  <span className="text-[11px] text-slate-400 block truncate">
+                    {selectedTransaction.other_party_name || 'Cross Brokerage'}
+                  </span>
+                </div>
+              </div>
+              <div className="pt-1 border-t border-slate-800 text-xs">
+                <span className="block text-center text-slate-400 py-1.5 truncate">
+                  Representing {selectedTransaction.side === 'seller' ? 'Buyer' : 'Seller'}
+                </span>
+              </div>
+            </div>
+
+            {/* Recommended Services Card */}
+            <div className="bg-[#0b1320] border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Preferred Partners
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                  Vetted
+                </span>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center justify-between text-slate-300">
+                  <span>Mortgage Lender:</span>
+                  <span className="font-semibold text-white">Flat Branch</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-300">
+                  <span>Title & Escrow:</span>
+                  <span className="font-semibold text-white">Security Title</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-300">
+                  <span>Home Inspection:</span>
+                  <span className="font-semibold text-white">ProTech Inspect</span>
+                </div>
+              </div>
+              <div className="pt-1 border-t border-slate-800 text-xs text-center text-amber-400 font-semibold">
+                Direct Coordination via TC
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────
+          MODALS
+         ───────────────────────────────────────────────────────────────── */}
+      {/* Headshot Upload / Change Modal */}
+      {isHeadshotModalOpen && (
+        <AgentHeadshotModal
+          isOpen={isHeadshotModalOpen}
+          onClose={() => setIsHeadshotModalOpen(false)}
+          agentName={currentAgentObj.name}
+          agentEmail={currentAgentObj.email}
+          agentId={currentAgentObj.id}
+          currentAvatarUrl={currentAvatar}
+          onAvatarUpdated={() => {
+            setAvatarRefreshKey((k) => k + 1);
+            setEmailStatusText('Agent headshot updated successfully!');
+            setTimeout(() => setEmailStatusText(null), 4000);
+          }}
+        />
+      )}
+
+      {/* Weekly Digest Email Modal (TC/Admin) */}
       {isEmailModalOpen && (
         <AgentDigestEmailModal
           agentName={selectedAgentFilter}
-          agentEmail={
-            selectedAgentFilter === 'All'
-              ? ''
-              : agentRoster.find((a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase())?.email ||
-                'agent@mattsmithrealestategroup.com'
-          }
-          transactions={
-            selectedAgentFilter === 'All'
-              ? dealsList
-              : dealsList.filter((d) => d.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase())
-          }
+          agentEmail={currentAgentObj.email}
+          transactions={myDeals}
           allAgentProfiles={agentRoster}
           onClose={() => setIsEmailModalOpen(false)}
+        />
+      )}
+
+      {/* Direct Messaging Modal */}
+      {messagingRecipient && (
+        <HubMessageModal
+          recipient={messagingRecipient}
+          propertyAddress={selectedTransaction?.property_address || 'Current Transaction'}
+          onClose={() => setMessagingRecipient(null)}
         />
       )}
     </div>

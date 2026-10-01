@@ -51,6 +51,7 @@ export interface Database {
           role: AppRole;
           agent_id: string | null;
           ops_user_id: string | null;
+          avatar_url?: string | null;
           active: boolean;
           created_at: string;
           updated_at: string;
@@ -63,6 +64,7 @@ export interface Database {
           role?: AppRole;
           agent_id?: string | null;
           ops_user_id?: string | null;
+          avatar_url?: string | null;
           active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -75,6 +77,7 @@ export interface Database {
           role?: AppRole;
           agent_id?: string | null;
           ops_user_id?: string | null;
+          avatar_url?: string | null;
           active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -89,6 +92,7 @@ export interface Database {
           phone: string | null;
           role: string | null;
           category: string | null;
+          avatar_url?: string | null;
           sisu_agent_id: string | null;
           active: boolean;
           created_at: string;
@@ -102,6 +106,7 @@ export interface Database {
           phone?: string | null;
           role?: string | null;
           category?: string | null;
+          avatar_url?: string | null;
           sisu_agent_id?: string | null;
           active?: boolean;
           created_at?: string;
@@ -115,6 +120,7 @@ export interface Database {
           phone?: string | null;
           role?: string | null;
           category?: string | null;
+          avatar_url?: string | null;
           sisu_agent_id?: string | null;
           active?: boolean;
           created_at?: string;

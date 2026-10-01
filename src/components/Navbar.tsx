@@ -11,6 +11,7 @@ import {
   Bug,
   Compass,
 } from 'lucide-react';
+import { getStoredAvatar } from '../utils/avatarStorage';
 
 interface NavbarProps {
   onNavigate: (path: string) => void;
@@ -27,6 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
   const { currentUser, signOut, isOps, isAdmin } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const userAvatar = currentUser ? getStoredAvatar(currentUser.id, currentUser.email) : null;
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -162,9 +164,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
                   className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-[#1e293b] transition-all border border-transparent hover:border-[#334155]"
                 >
                   {/* Avatar */}
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#d97706] to-[#b45309] flex items-center justify-center text-[#0f172a] font-bold text-xs shadow-md">
-                    {getInitials(currentUser.fullName)}
-                  </div>
+                  {userAvatar ? (
+                    <img
+                      src={userAvatar}
+                      alt={currentUser.fullName}
+                      className="h-9 w-9 rounded-full object-cover border border-amber-500/50 shadow-md"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#d97706] to-[#b45309] flex items-center justify-center text-[#0f172a] font-bold text-xs shadow-md">
+                      {getInitials(currentUser.fullName)}
+                    </div>
+                  )}
                   <div className="hidden md:block text-left">
                     <p className="text-sm font-semibold text-[#f8fafc] leading-tight">{currentUser.fullName}</p>
                     <p className="text-[10px] text-[#94a3b8]">{currentUser.email}</p>

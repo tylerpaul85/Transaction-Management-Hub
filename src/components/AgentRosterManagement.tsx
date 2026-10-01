@@ -21,8 +21,11 @@ import {
   Briefcase,
   X,
   Loader2,
+  Camera,
 } from 'lucide-react';
 import { syncGoogleRosterToSupabase, GOOGLE_ROSTER_SHEET_URL } from '../utils/googleRosterSync';
+import { AgentHeadshotModal } from './AgentHeadshotModal';
+import { getStoredAvatar } from '../utils/avatarStorage';
 
 export interface AgentRecord {
   id: string;
@@ -32,6 +35,7 @@ export interface AgentRecord {
   phone: string | null;
   role: string | null;
   category: string | null;
+  avatar_url?: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -56,6 +60,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingAgent, setEditingAgent] = useState<AgentRecord | null>(null);
+  const [headshotAgent, setHeadshotAgent] = useState<AgentRecord | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -515,6 +520,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
               <tbody className="divide-y divide-[#334155]">
                 {filteredAgents.map((agent) => {
                   const dealCount = dealCounts[agent.id] || 0;
+                  const avatar = agent.avatar_url || getStoredAvatar(agent.id, agent.email);
                   const initials = agent.name
                     .split(' ')
                     .map((n) => n[0])
@@ -524,11 +530,28 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
 
                   return (
                     <tr key={agent.id} className="hover:bg-[#1e293b]/60 transition-colors group">
-                      {/* Name & Initials */}
+                      {/* Name & Avatar / Headshot */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/30 to-[#d97706]/40 border border-[#d97706]/50 flex items-center justify-center font-bold text-xs text-[#f8fafc]">
-                            {initials}
+                          <div
+                            onClick={() => setHeadshotAgent(agent)}
+                            className="relative cursor-pointer group/avatar flex-shrink-0"
+                            title="Click to upload/change headshot"
+                          >
+                            {avatar ? (
+                              <img
+                                src={avatar}
+                                alt={agent.name}
+                                className="w-9 h-9 rounded-full object-cover border-2 border-amber-500/40 shadow-sm"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500/30 to-[#d97706]/40 border border-[#d97706]/50 flex items-center justify-center font-bold text-xs text-[#f8fafc]">
+                                {initials}
+                              </div>
+                            )}
+                            <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
+                              <Camera className="h-3.5 w-3.5 text-amber-300" />
+                            </div>
                           </div>
                           <div>
                             <span className="font-bold text-[#f8fafc] block">{agent.name}</span>
@@ -618,6 +641,13 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                       {/* Actions */}
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setHeadshotAgent(agent)}
+                            className="p-1.5 rounded-lg hover:bg-[#131826] text-[#94a3b8] hover:text-amber-400 border border-transparent hover:border-[#334155] transition-all cursor-pointer"
+                            title="Upload / Change Headshot"
+                          >
+                            <Camera className="h-3.5 w-3.5" />
+                          </button>
                           <button
                             onClick={() => handleOpenEditModal(agent)}
                             className="p-1.5 rounded-lg hover:bg-[#131826] text-[#94a3b8] hover:text-[#f8fafc] border border-transparent hover:border-[#334155] transition-all cursor-pointer"
@@ -794,6 +824,26 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
             </div>
           </div>
         </div>
+      )}
+
+      {/* Headshot Upload Modal */}
+      {headshotAgent && (
+        <AgentHeadshotModal
+          isOpen={Boolean(headshotAgent)}
+          onClose={() => setHeadshotAgent(null)}
+          agentName={headshotAgent.name}
+          agentEmail={headshotAgent.email}
+          agentId={headshotAgent.id}
+          currentAvatarUrl={headshotAgent.avatar_url || getStoredAvatar(headshotAgent.id, headshotAgent.email)}
+          onAvatarUpdated={(newAvatarUrl) => {
+            setAgents((prev) =>
+              prev.map((a) =>
+                a.id === headshotAgent.id ? { ...a, avatar_url: newAvatarUrl } : a
+              )
+            );
+            showToast(`Headshot for ${headshotAgent.name} updated successfully!`);
+          }}
+        />
       )}
     </div>
   );
