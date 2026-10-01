@@ -39,32 +39,71 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  * Returns null if the user is not found or is inactive (access denied).
  */
 async function hydrateUserFromProfile(email: string): Promise<AuthUser | null> {
+  const cleanEmail = email.toLowerCase().trim();
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('email', email.toLowerCase())
+    .eq('email', cleanEmail)
     .maybeSingle();
 
   if (error) {
     console.error('[AuthContext] Error querying profiles:', error);
-    return null;
   }
 
   const p = profile as unknown as DbProfile | null;
 
-  if (!p || p.active === false) {
-    return null;
+  if (p && p.active !== false) {
+    return {
+      id: p.id,
+      email: p.email,
+      fullName: p.name || p.full_name || p.email.split('@')[0],
+      role: p.role,
+      agent_id: p.agent_id,
+      ops_user_id: p.ops_user_id,
+      active: p.active,
+    };
   }
 
-  return {
-    id: p.id,
-    email: p.email,
-    fullName: p.name || p.full_name || p.email.split('@')[0],
-    role: p.role,
-    agent_id: p.agent_id,
-    ops_user_id: p.ops_user_id,
-    active: p.active,
-  };
+  // If not found in profiles, check if this email belongs to an active team agent in the roster
+  try {
+    const { data: agent } = await (supabase.from('agents') as any)
+      .select('*')
+      .eq('email', cleanEmail)
+      .eq('active', true)
+      .maybeSingle();
+
+    if (agent) {
+      // Auto-create/upsert profile record for the invited agent
+      try {
+        await (supabase.from('profiles') as any).upsert(
+          {
+            email: cleanEmail,
+            name: agent.name,
+            role: 'agent',
+            agent_id: agent.id,
+            active: true,
+          },
+          { onConflict: 'email' }
+        );
+      } catch (upsertErr) {
+        console.warn('[AuthContext] Could not auto-insert profile for agent:', upsertErr);
+      }
+
+      return {
+        id: agent.id,
+        email: cleanEmail,
+        fullName: agent.name,
+        role: 'agent',
+        agent_id: agent.id,
+        ops_user_id: null,
+        active: true,
+      };
+    }
+  } catch (agentErr) {
+    console.warn('[AuthContext] Error checking agents roster during hydration:', agentErr);
+  }
+
+  return null;
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

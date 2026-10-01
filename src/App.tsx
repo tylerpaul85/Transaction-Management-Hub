@@ -40,12 +40,18 @@ const AuthenticatedLayout: React.FC = () => {
 
   // Determine default landing route based on role
   const getDefaultRoute = (): string => {
+    if (currentUser?.role === 'agent') {
+      return '/my-deals';
+    }
+    if (currentUser?.role === 'tc' || currentUser?.role === 'listing_coordinator') {
+      return '/ops';
+    }
     return '/hub';
   };
 
   const [currentPath, setCurrentPath] = useState<string>(() => {
     const path = window.location.pathname;
-    // If landing on root or login, redirect to hub
+    // If landing on root or login, redirect to appropriate role home
     if (path === '/' || path === '/login') {
       const defaultRoute = getDefaultRoute();
       window.history.replaceState({}, '', defaultRoute);
@@ -59,13 +65,22 @@ const AuthenticatedLayout: React.FC = () => {
     window.history.pushState({}, '', path);
   };
 
+  // Sync route on role load if currently on root
+  useEffect(() => {
+    if (currentUser && (currentPath === '/' || currentPath === '/login')) {
+      const target = getDefaultRoute();
+      setCurrentPath(target);
+      window.history.replaceState({}, '', target);
+    }
+  }, [currentUser]);
+
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentPath(window.location.pathname || '/ops');
+      setCurrentPath(window.location.pathname || getDefaultRoute());
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [currentUser]);
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-[#f8fafc] flex flex-col selection:bg-[#d97706]/30 selection:text-[#f8fafc]">
@@ -75,7 +90,9 @@ const AuthenticatedLayout: React.FC = () => {
       {/* Main Routed Content */}
       <main className="flex-1 w-full pb-12">
         {(currentPath === '/' || currentPath === '/hub' || currentPath.startsWith('/hub')) && (
-          <TransactionHubView onNavigate={handleNavigate} />
+          <RoleGuard allowedRoles={['tc', 'listing_coordinator', 'admin']} routeName="/hub" onNavigate={handleNavigate}>
+            <TransactionHubView onNavigate={handleNavigate} />
+          </RoleGuard>
         )}
 
         {currentPath === '/ops' && (

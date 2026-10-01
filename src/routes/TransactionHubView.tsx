@@ -66,10 +66,10 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
   // All transactions (Reference items from screenshot merged with live Supabase deals)
   const [transactions, setTransactions] = useState<HubTransactionRecord[]>(REFERENCE_PORTAL_TRANSACTIONS);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(() => {
-    // Check URL search param first, then initialTransactionId, default to '4725501' (Lin Wang reference)
+    // Check URL search param first, then initialTransactionId; otherwise default to null (directory view)
     const urlParams = new URLSearchParams(window.location.search);
     const paramId = urlParams.get('tx') || urlParams.get('id');
-    return paramId || initialTransactionId || '4725501';
+    return paramId || initialTransactionId || null;
   });
 
   // Directory filter states

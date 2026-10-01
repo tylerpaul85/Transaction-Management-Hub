@@ -214,29 +214,36 @@ export const MyDealsView: React.FC = () => {
 
   // Auto-select logged in user's agent profile if available
   useEffect(() => {
-    if (currentUser && selectedAgentFilter === 'All' && agentRoster.length > 0) {
-      const match = agentRoster.find(
-        (a) =>
-          a.name.toLowerCase() === currentUser.fullName?.toLowerCase() ||
-          (currentUser.email && a.email.toLowerCase() === currentUser.email.toLowerCase())
-      );
-      if (match) {
-        setSelectedAgentFilter(match.name);
+    if (currentUser) {
+      if (!isOps && !isAdmin) {
+        // Regular Agent: always strictly locked to their own agent identity
+        const match = agentRoster.find(
+          (a) =>
+            (currentUser.email && a.email?.toLowerCase() === currentUser.email.toLowerCase()) ||
+            a.name.toLowerCase() === currentUser.fullName?.toLowerCase()
+        );
+        if (match) {
+          setSelectedAgentFilter(match.name);
+        } else if (currentUser.fullName) {
+          setSelectedAgentFilter(currentUser.fullName);
+        }
+      } else if (selectedAgentFilter === 'All' && agentRoster.length > 0) {
+        // Ops / Admin can initially view All or select any agent
       }
     }
-  }, [currentUser, agentRoster]);
+  }, [currentUser, agentRoster, isOps, isAdmin]);
 
   // Current viewed agent object
   const currentAgentObj = useMemo(() => {
     if (selectedAgentFilter !== 'All') {
       return (
         agentRoster.find((a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase()) || {
-          id: '',
+          id: currentUser?.agent_id || currentUser?.id || '',
           name: selectedAgentFilter,
-          email: '',
+          email: currentUser?.email || '',
           phone: '(573) 261-3113',
-          role: 'Specialist Agent',
-          category: 'Sales Team',
+          role: 'Sales Specialist',
+          category: 'Matt Smith Real Estate Group',
           avatar_url: null,
         }
       );
@@ -264,13 +271,27 @@ export const MyDealsView: React.FC = () => {
   // Filter deals to selected agent
   const myDeals = useMemo(() => {
     return dealsList.filter((t) => {
-      if (selectedAgentFilter !== 'All') {
-        const isSelectedAgent = t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase();
-        if (!isSelectedAgent) return false;
+      // If user is Admin or Ops (TC / LC), they can view 'All' or filter to any agent
+      if (isOps || isAdmin) {
+        if (selectedAgentFilter !== 'All') {
+          return t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase();
+        }
+        return true;
       }
-      return true;
+
+      // If user is an Agent, STRICTLY restrict to only their assigned transactions
+      const userEmail = (currentUser?.email || '').toLowerCase().trim();
+      const userName = (currentUser?.fullName || '').toLowerCase().trim();
+      const userAgentId = currentUser?.agent_id;
+
+      const matchEmail = Boolean(t.agent_email && t.agent_email.toLowerCase().trim() === userEmail);
+      const matchName = Boolean(t.agent_name && t.agent_name.toLowerCase().trim() === userName);
+      const matchSelected = Boolean(selectedAgentFilter !== 'All' && t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase());
+      const matchId = Boolean(userAgentId && (t.listing_agent_id === userAgentId || t.selling_agent_id === userAgentId));
+
+      return matchEmail || matchName || matchSelected || matchId;
     });
-  }, [dealsList, selectedAgentFilter]);
+  }, [dealsList, selectedAgentFilter, currentUser, isOps, isAdmin]);
 
   // Filtered by side and search
   const filteredDeals = useMemo(() => {
