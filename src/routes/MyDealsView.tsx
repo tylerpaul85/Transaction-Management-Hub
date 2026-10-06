@@ -7,7 +7,6 @@ import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
 import { CircularProgressGauge } from '../components/hub/CircularProgressGauge';
 import { RoadmapStepCard } from '../components/hub/RoadmapStepCard';
 import { GuidesContent } from '../components/hub/GuidesContent';
-import { HubMessageModal } from '../components/hub/HubMessageModal';
 import { AgentHeadshotModal } from '../components/AgentHeadshotModal';
 import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
 import { getStoredAvatar } from '../utils/avatarStorage';
@@ -35,7 +34,6 @@ import {
   DollarSign,
   ChevronRight,
   ExternalLink,
-  MessageSquare,
   FileText,
   Briefcase,
   AlertCircle,
@@ -95,12 +93,6 @@ export const MyDealsView: React.FC = () => {
   // Roadmap & Detail View State
   const [activeTab, setActiveTab] = useState<RoadmapTabType>('under_contract');
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
-  const [messagingRecipient, setMessagingRecipient] = useState<{
-    name: string;
-    role: string;
-    email?: string;
-    phone?: string;
-  } | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   // Load live agent transactions & agent roster from Supabase
@@ -308,12 +300,11 @@ export const MyDealsView: React.FC = () => {
 
       const matchEmail = Boolean(t.agent_email && t.agent_email.toLowerCase().trim() === userEmail);
       const matchName = Boolean(t.agent_name && t.agent_name.toLowerCase().trim() === userName);
-      const matchSelected = Boolean(selectedAgentFilter !== 'All' && t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase());
       const matchId = Boolean(userAgentId && (t.listing_agent_id === userAgentId || t.selling_agent_id === userAgentId));
 
-      return matchEmail || matchName || matchSelected || matchId;
+      return matchEmail || matchName || matchId;
     });
-  }, [dealsList, selectedAgentFilter, currentUser, isOps, isAdmin]);
+  }, [dealsList, currentUser, isOps, isAdmin]);
 
   // Filtered by side and search
   const filteredDeals = useMemo(() => {
@@ -1133,20 +1124,6 @@ export const MyDealsView: React.FC = () => {
 
                   {/* Contact Buttons */}
                   <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={() =>
-                        setMessagingRecipient({
-                          name: selectedTransaction.tc_name,
-                          role: 'Transaction Coordinator',
-                          email: selectedTransaction.tc_email,
-                          phone: '(573) 261-3113',
-                        })
-                      }
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors shadow-sm cursor-pointer"
-                    >
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      <span>Message TC</span>
-                    </button>
                     {selectedTransaction.tc_email && (
                       <a
                         href={`mailto:${selectedTransaction.tc_email}`}
@@ -1331,19 +1308,6 @@ export const MyDealsView: React.FC = () => {
                     Email TC
                   </a>
                 )}
-                <button
-                  onClick={() =>
-                    setMessagingRecipient({
-                      name: selectedTransaction.tc_name,
-                      role: 'Transaction Coordinator',
-                      email: selectedTransaction.tc_email,
-                      phone: '(573) 261-3113',
-                    })
-                  }
-                  className="flex-1 py-1.5 text-center bg-sky-500 hover:bg-sky-400 rounded-xl text-slate-950 font-bold transition-colors cursor-pointer"
-                >
-                  Message
-                </button>
               </div>
             </div>
 
@@ -1445,15 +1409,6 @@ export const MyDealsView: React.FC = () => {
           transactions={myDeals}
           allAgentProfiles={agentRoster}
           onClose={() => setIsEmailModalOpen(false)}
-        />
-      )}
-
-      {/* Direct Messaging Modal */}
-      {messagingRecipient && (
-        <HubMessageModal
-          recipient={messagingRecipient}
-          propertyAddress={selectedTransaction?.property_address || 'Current Transaction'}
-          onClose={() => setMessagingRecipient(null)}
         />
       )}
     </div>

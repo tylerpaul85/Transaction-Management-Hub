@@ -18,7 +18,6 @@ import {
 import { CircularProgressGauge } from '../components/hub/CircularProgressGauge';
 import { RoadmapStepCard } from '../components/hub/RoadmapStepCard';
 import { AddStepModal } from '../components/hub/AddStepModal';
-import { HubMessageModal } from '../components/hub/HubMessageModal';
 import { GuidesContent } from '../components/hub/GuidesContent';
 import { getStoredAvatar } from '../utils/avatarStorage';
 import {
@@ -30,7 +29,6 @@ import {
   Calendar,
   Phone,
   Mail,
-  MessageSquare,
   Building,
   User,
   ShieldCheck,
@@ -107,12 +105,6 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
 
   // Modals state
   const [isAddStepOpen, setIsAddStepOpen] = useState(false);
-  const [messagingRecipient, setMessagingRecipient] = useState<{
-    name: string;
-    role: string;
-    email?: string;
-    phone?: string;
-  } | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   // Load live Supabase transactions and merge
@@ -939,24 +931,6 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                       </a>
                     )}
                   </div>
-
-                  {/* Message Button */}
-                  <div className="pt-1.5">
-                    <button
-                      onClick={() =>
-                        setMessagingRecipient({
-                          name: selectedTransaction.agent.name,
-                          role: 'Lead Agent',
-                          email: selectedTransaction.agent.email,
-                          phone: selectedTransaction.agent.phone,
-                        })
-                      }
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-sky-400 hover:text-white border border-slate-700 transition-colors cursor-pointer shadow-sm"
-                    >
-                      <MessageSquare className="h-3 w-3" />
-                      <span>Message</span>
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -1245,47 +1219,33 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                       Agent
                     </span>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-full overflow-hidden bg-slate-800 border border-slate-700 flex-shrink-0">
-                          {selectedTransaction.agent.avatarUrl ? (
-                            <img
-                              src={selectedTransaction.agent.avatarUrl}
-                              alt=""
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <span className="h-full w-full flex items-center justify-center font-bold text-[10px] text-sky-400">
-                              {selectedTransaction.agent.initials || 'AG'}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-bold text-white text-xs leading-tight">
-                            {selectedTransaction.agent.name}
-                          </p>
-                          {selectedTransaction.agent.phone && (
-                            <p className="font-mono-code text-[11px] text-slate-400">
-                              {selectedTransaction.agent.phone}
-                            </p>
-                          )}
-                        </div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-full overflow-hidden bg-slate-800 border border-slate-700 flex-shrink-0">
+                        {selectedTransaction.agent.avatarUrl ? (
+                          <img
+                            src={selectedTransaction.agent.avatarUrl}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="h-full w-full flex items-center justify-center font-bold text-[10px] text-sky-400">
+                            {selectedTransaction.agent.initials || 'AG'}
+                          </span>
+                        )}
                       </div>
-
-                      <button
-                        onClick={() =>
-                          setMessagingRecipient({
-                            name: selectedTransaction.agent.name,
-                            role: 'Agent',
-                            email: selectedTransaction.agent.email,
-                            phone: selectedTransaction.agent.phone,
-                          })
-                        }
-                        className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-sky-400 border border-slate-700 flex items-center gap-1 transition-colors"
-                      >
-                        <MessageSquare className="h-3 w-3" />
-                        <span>Message</span>
-                      </button>
+                      <div>
+                        <p className="font-bold text-white text-xs leading-tight">
+                          {selectedTransaction.agent.name}
+                        </p>
+                        {selectedTransaction.agent.phone && (
+                          <a
+                            href={`tel:${selectedTransaction.agent.phone}`}
+                            className="font-mono-code text-[11px] text-slate-400 hover:text-sky-300 transition-colors block"
+                          >
+                            {selectedTransaction.agent.phone}
+                          </a>
+                        )}
+                      </div>
                     </div>
 
                     {selectedTransaction.agent.email && (
@@ -1304,47 +1264,33 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                         TC
                       </span>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-full overflow-hidden bg-slate-800 border border-slate-700 flex-shrink-0">
-                            {selectedTransaction.tc.avatarUrl ? (
-                              <img
-                                src={selectedTransaction.tc.avatarUrl}
-                                alt=""
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <span className="h-full w-full flex items-center justify-center font-bold text-[10px] text-emerald-400">
-                                {selectedTransaction.tc.initials || 'TC'}
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-bold text-white text-xs leading-tight">
-                              {selectedTransaction.tc.name}
-                            </p>
-                            {selectedTransaction.tc.phone && (
-                              <p className="font-mono-code text-[11px] text-slate-400">
-                                {selectedTransaction.tc.phone}
-                              </p>
-                            )}
-                          </div>
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-full overflow-hidden bg-slate-800 border border-slate-700 flex-shrink-0">
+                          {selectedTransaction.tc.avatarUrl ? (
+                            <img
+                              src={selectedTransaction.tc.avatarUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="h-full w-full flex items-center justify-center font-bold text-[10px] text-emerald-400">
+                              {selectedTransaction.tc.initials || 'TC'}
+                            </span>
+                          )}
                         </div>
-
-                        <button
-                          onClick={() =>
-                            setMessagingRecipient({
-                              name: selectedTransaction.tc!.name,
-                              role: 'TC',
-                              email: selectedTransaction.tc!.email,
-                              phone: selectedTransaction.tc!.phone,
-                            })
-                          }
-                          className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-sky-400 border border-slate-700 flex items-center gap-1 transition-colors"
-                        >
-                          <MessageSquare className="h-3 w-3" />
-                          <span>Message</span>
-                        </button>
+                        <div>
+                          <p className="font-bold text-white text-xs leading-tight">
+                            {selectedTransaction.tc.name}
+                          </p>
+                          {selectedTransaction.tc.phone && (
+                            <a
+                              href={`tel:${selectedTransaction.tc.phone}`}
+                              className="font-mono-code text-[11px] text-slate-400 hover:text-emerald-300 transition-colors block"
+                            >
+                              {selectedTransaction.tc.phone}
+                            </a>
+                          )}
+                        </div>
                       </div>
 
                       {selectedTransaction.tc.email && (
@@ -1359,65 +1305,13 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                   )}
                 </div>
               </div>
-
-              {/* Card 3: Services (Image 1 Right Bottom) */}
-              <div className="bg-[#0b1320] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                <div className="border-b border-slate-800 pb-3">
-                  <h3 className="font-bold text-base text-white">Services</h3>
-                </div>
-
-                <div className="space-y-4">
-                  {selectedTransaction.services.map((svc) => (
-                    <div key={svc.category} className="space-y-1 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          {svc.category}
-                        </span>
-                        {svc.statusBadge && (
-                          <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                            {svc.statusBadge}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-start gap-2.5 pt-0.5">
-                        <div className="h-7 w-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-[9px] text-sky-400 flex-shrink-0">
-                          {svc.initials || svc.category.slice(0, 2)}
-                        </div>
-
-                        <div className="space-y-0.5 flex-1">
-                          <p className="font-semibold text-white leading-tight">
-                            {svc.companyName} – {svc.contactName}
-                          </p>
-                          {svc.phone && (
-                            <a
-                              href={`tel:${svc.phone}`}
-                              className="font-mono-code text-[11px] text-slate-400 hover:text-sky-300 block"
-                            >
-                              {svc.phone}
-                            </a>
-                          )}
-                          {svc.email && (
-                            <a
-                              href={`mailto:${svc.email}`}
-                              className="text-[11px] text-sky-400 hover:underline block truncate"
-                            >
-                              {svc.email}
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          MODALS: Add Step Modal & Hub Message Modal
+          MODALS: Add Step Modal
          ───────────────────────────────────────────────────────────────── */}
       {isAddStepOpen && (
         <AddStepModal
@@ -1431,14 +1325,6 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
           }
           onClose={() => setIsAddStepOpen(false)}
           onAdd={handleAddCustomStep}
-        />
-      )}
-
-      {messagingRecipient && selectedTransaction && (
-        <HubMessageModal
-          recipient={messagingRecipient}
-          propertyAddress={selectedTransaction.addressLine1}
-          onClose={() => setMessagingRecipient(null)}
         />
       )}
     </div>
