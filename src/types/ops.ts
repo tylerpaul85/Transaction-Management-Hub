@@ -46,6 +46,7 @@ export interface OpsTransaction {
   other_party_name: string | null;
   other_party_agent: string | null;
   other_party_phone?: string | null;
+  other_party_email?: string | null;
   other_party_brokerage?: string | null;
   
   // Relationships

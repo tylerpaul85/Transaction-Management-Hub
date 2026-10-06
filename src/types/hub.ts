@@ -65,4 +65,13 @@ export interface HubTransactionRecord {
   activeRoadmapTab: RoadmapTabType;
   roadmaps: Record<RoadmapTabType, HubRoadmapStep[]>;
   services: HubServicePartner[];
+  coopAgent?: HubCoopAgent | null;
+}
+
+export interface HubCoopAgent {
+  name: string;
+  email?: string;
+  phone?: string;
+  brokerage?: string;
+  sideRepresented?: string;
 }

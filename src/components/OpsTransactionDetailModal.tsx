@@ -110,6 +110,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
   const [otherPartyName, setOtherPartyName] = useState(transaction.other_party_name || '');
   const [otherPartyAgent, setOtherPartyAgent] = useState(transaction.other_party_agent || '');
   const [otherPartyPhone, setOtherPartyPhone] = useState(transaction.other_party_phone || '');
+  const [otherPartyEmail, setOtherPartyEmail] = useState(transaction.other_party_email || '');
   const [otherPartyBrokerage, setOtherPartyBrokerage] = useState(
     transaction.other_party_brokerage || ''
   );
@@ -221,6 +222,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
       other_party_name: otherPartyName || null,
       other_party_agent: otherPartyAgent || null,
       other_party_phone: otherPartyPhone || null,
+      other_party_email: otherPartyEmail || null,
       other_party_brokerage: otherPartyBrokerage || null,
       flagged_for_review: flaggedForReview,
       reviewed_at: flaggedForReview ? new Date().toISOString() : null,
@@ -824,6 +826,19 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                     value={otherPartyPhone}
                     onChange={(e) => setOtherPartyPhone(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] font-mono-code focus:outline-none focus:border-[#d97706]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#94a3b8] mb-1.5">
+                    Other Party's Agent Email
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. agent@coopbrokerage.com"
+                    value={otherPartyEmail}
+                    onChange={(e) => setOtherPartyEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
                   />
                 </div>
 

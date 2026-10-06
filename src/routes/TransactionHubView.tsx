@@ -236,6 +236,13 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                 buyer_guide: [],
               },
               services: DEFAULT_SERVICES,
+              coopAgent: t.other_party_agent ? {
+                name: t.other_party_agent,
+                email: t.other_party_email || undefined,
+                phone: t.other_party_phone || undefined,
+                brokerage: t.other_party_brokerage || t.other_party_name || undefined,
+                sideRepresented: isSeller ? 'Buyer' : 'Seller',
+              } : undefined,
             };
           });
 
@@ -1299,6 +1306,57 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                           className="text-[11px] text-sky-400 hover:underline block pt-0.5 truncate pl-10"
                         >
                           {selectedTransaction.tc.email}
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Cooperating Agent (Other Side) */}
+                  {selectedTransaction.coopAgent && (
+                    <div className="space-y-1 text-xs pt-3 border-t border-slate-800/80">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Co-op Agent
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                          {selectedTransaction.coopAgent.sideRepresented || 'Other Side'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-full overflow-hidden bg-purple-500/20 border border-purple-500/40 flex items-center justify-center font-bold text-[10px] text-purple-300 flex-shrink-0">
+                          {selectedTransaction.coopAgent.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-white text-xs leading-tight truncate">
+                            {selectedTransaction.coopAgent.name}
+                          </p>
+                          {selectedTransaction.coopAgent.brokerage && (
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {selectedTransaction.coopAgent.brokerage}
+                            </p>
+                          )}
+                          {selectedTransaction.coopAgent.phone && (
+                            <a
+                              href={`tel:${selectedTransaction.coopAgent.phone}`}
+                              className="font-mono-code text-[11px] text-slate-400 hover:text-purple-300 transition-colors block pt-0.5"
+                            >
+                              {selectedTransaction.coopAgent.phone}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {selectedTransaction.coopAgent.email && (
+                        <a
+                          href={`mailto:${selectedTransaction.coopAgent.email}`}
+                          className="text-[11px] text-purple-400 hover:underline block pt-0.5 truncate pl-10"
+                        >
+                          {selectedTransaction.coopAgent.email}
                         </a>
                       )}
                     </div>

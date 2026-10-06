@@ -58,6 +58,27 @@ function parseSisuDate(val: any): string | null {
   return null;
 }
 
+function findFirstMatchingValue(sources: any[], matchers: string[]): string | null {
+  for (const src of sources) {
+    if (!src || typeof src !== 'object') continue;
+    for (const key of Object.keys(src)) {
+      const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      for (const matcher of matchers) {
+        if (cleanKey === matcher || cleanKey.includes(matcher)) {
+          const val = src[key];
+          if (val !== null && val !== undefined) {
+            const strVal = String(val).trim();
+            if (strVal && strVal !== 'null' && strVal !== 'undefined') {
+              return strVal;
+            }
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function extractTasksFromPayload(payload: any, sisuData: any, dataObj: any, fullObj: any): any[] | null {
   const candidates = [
     payload?.tasks,
@@ -609,22 +630,82 @@ serve(async (req: Request) => {
       null;
 
     const otherPartyName = sisuData.other_party?.name || sisuData.other_party_name || null;
+
+    const coopSources = [
+      fullObj.custom,
+      fullObj.custom_fields,
+      sisuData.custom,
+      sisuData.custom_fields,
+      updatedVals.custom,
+      updatedVals.custom_fields,
+      payload.custom,
+      payload.custom_fields,
+      fullObj,
+      updatedVals,
+      sisuData,
+      payload,
+      sisuData.other_party,
+    ];
+
     const otherPartyAgent =
+      findFirstMatchingValue(coopSources, [
+        'cooperatingagentname',
+        'coopagentname',
+        'cooperatingagent',
+        'coopagent',
+        'otherpartyagentname',
+        'otherpartyagent',
+      ]) ||
       fullObj.coop_agent_name ||
       updatedVals.coop_agent_name ||
       sisuData.other_party?.agent ||
       sisuData.other_party?.agent_name ||
       sisuData.other_party_agent ||
       null;
+
     const otherPartyPhone =
+      findFirstMatchingValue(coopSources, [
+        'cooperatingagentphone',
+        'coopagentphone',
+        'cooperatingphone',
+        'coopphone',
+        'cooperatingagentcell',
+        'cooperatingagentmobile',
+        'otherpartyagentphone',
+        'otherpartyphone',
+      ]) ||
       fullObj.coop_agent_phone ||
       updatedVals.coop_agent_phone ||
+      sisuData.other_party?.phone ||
       sisuData.other_party_phone ||
       null;
+
     const otherPartyEmail =
+      findFirstMatchingValue(coopSources, [
+        'cooperatingagentemail',
+        'coopagentemail',
+        'cooperatingemail',
+        'coopemail',
+        'otherpartyagentemail',
+        'otherpartyemail',
+      ]) ||
       fullObj.coop_agent_email ||
       updatedVals.coop_agent_email ||
+      sisuData.other_party?.email ||
       sisuData.other_party_email ||
+      null;
+
+    const otherPartyBrokerage =
+      findFirstMatchingValue(coopSources, [
+        'cooperatingagentbrokerage',
+        'cooperatingbrokerage',
+        'coopbrokerage',
+        'cooperatingcompany',
+        'coopcompany',
+        'otherpartybrokerage',
+      ]) ||
+      sisuData.other_party?.brokerage ||
+      sisuData.other_party_brokerage ||
       null;
 
     const lenderName =
@@ -793,6 +874,9 @@ serve(async (req: Request) => {
       if (otherPartyEmail && typeof otherPartyEmail === 'string' && otherPartyEmail.trim() !== '') {
         txUpdates.other_party_email = otherPartyEmail.trim();
       }
+      if (otherPartyBrokerage && typeof otherPartyBrokerage === 'string' && otherPartyBrokerage.trim() !== '') {
+        txUpdates.other_party_brokerage = otherPartyBrokerage.trim();
+      }
       if (lenderName && typeof lenderName === 'string' && lenderName.trim() !== '') {
         txUpdates.lender_name = lenderName.trim();
       }
@@ -908,6 +992,7 @@ serve(async (req: Request) => {
             other_party_agent: (otherPartyAgent && typeof otherPartyAgent === 'string' && otherPartyAgent.trim()) || null,
             other_party_phone: (otherPartyPhone && typeof otherPartyPhone === 'string' && otherPartyPhone.trim()) || null,
             other_party_email: (otherPartyEmail && typeof otherPartyEmail === 'string' && otherPartyEmail.trim()) || null,
+            other_party_brokerage: (otherPartyBrokerage && typeof otherPartyBrokerage === 'string' && otherPartyBrokerage.trim()) || null,
             lender_name: (lenderName && typeof lenderName === 'string' && lenderName.trim()) || null,
             lender_email: (lenderEmail && typeof lenderEmail === 'string' && lenderEmail.trim()) || null,
             lender_phone: (lenderPhone && typeof lenderPhone === 'string' && lenderPhone.trim()) || null,

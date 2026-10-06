@@ -58,6 +58,27 @@ function parseSisuDate(val: any): string | null {
   return null;
 }
 
+function findFirstMatchingValue(sources: any[], matchers: string[]): string | null {
+  for (const src of sources) {
+    if (!src || typeof src !== 'object') continue;
+    for (const key of Object.keys(src)) {
+      const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      for (const matcher of matchers) {
+        if (cleanKey === matcher || cleanKey.includes(matcher)) {
+          const val = src[key];
+          if (val !== null && val !== undefined) {
+            const strVal = String(val).trim();
+            if (strVal && strVal !== 'null' && strVal !== 'undefined') {
+              return strVal;
+            }
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function extractTasksFromSisuData(sisuData: any): any[] | null {
   const candidates = [
     sisuData?.tasks,
@@ -303,6 +324,31 @@ serve(async (req: Request) => {
           assignedTcId = '5580daa6-415d-4385-986a-69bc94421c0c'; // Katie Harold
         }
 
+        const coopAgentName =
+          r['Cooperating Agent Name'] ||
+          r['Co-op Agent Name'] ||
+          r['Coop Agent Name'] ||
+          r['Cooperating Agent'] ||
+          null;
+        const coopAgentEmail =
+          r['Cooperating Agent Email'] ||
+          r['Co-op Agent Email'] ||
+          r['Coop Agent Email'] ||
+          r['Cooperating Email'] ||
+          null;
+        const coopAgentPhone =
+          r['Cooperating Agent Phone'] ||
+          r['Co-op Agent Phone'] ||
+          r['Coop Agent Phone'] ||
+          r['Cooperating Phone'] ||
+          null;
+        const coopBrokerage =
+          r['Cooperating Brokerage'] ||
+          r['Cooperating Agent Brokerage'] ||
+          r['Co-op Brokerage'] ||
+          r['Coop Brokerage'] ||
+          null;
+
         return {
           sisu_transaction_id: sisuId,
           property_address: addr,
@@ -313,7 +359,10 @@ serve(async (req: Request) => {
           client_name: clientName,
           client_phone: clientPhone,
           contract_date: contractDate,
-          other_party_agent: r['Cooperating Agent Name'] || null,
+          other_party_agent: coopAgentName,
+          other_party_phone: coopAgentPhone,
+          other_party_email: coopAgentEmail,
+          other_party_brokerage: coopBrokerage,
           assigned_tc_id: assignedTcId,
         };
       });
@@ -530,15 +579,74 @@ serve(async (req: Request) => {
       const fullObj = sisuData.object_data?.full_object || {};
 
       const clientPhone = sisuData.client?.phone || sisuData.client_phone || fullObj.mobile_phone || null;
+      const coopSources = [
+        fullObj.custom,
+        fullObj.custom_fields,
+        sisuData.custom,
+        sisuData.custom_fields,
+        fullObj,
+        sisuData,
+        sisuData.other_party,
+      ];
+
       const otherPartyName = sisuData.other_party?.name || sisuData.other_party_name || null;
       const otherPartyAgent =
+        findFirstMatchingValue(coopSources, [
+          'cooperatingagentname',
+          'coopagentname',
+          'cooperatingagent',
+          'coopagent',
+          'otherpartyagentname',
+          'otherpartyagent',
+        ]) ||
         fullObj.coop_agent_name ||
         sisuData.other_party?.agent ||
         sisuData.other_party?.agent_name ||
         sisuData.other_party_agent ||
         null;
-      const otherPartyPhone = fullObj.coop_agent_phone || sisuData.other_party_phone || null;
-      const otherPartyEmail = fullObj.coop_agent_email || sisuData.other_party_email || null;
+
+      const otherPartyPhone =
+        findFirstMatchingValue(coopSources, [
+          'cooperatingagentphone',
+          'coopagentphone',
+          'cooperatingphone',
+          'coopphone',
+          'cooperatingagentcell',
+          'cooperatingagentmobile',
+          'otherpartyagentphone',
+          'otherpartyphone',
+        ]) ||
+        fullObj.coop_agent_phone ||
+        sisuData.other_party?.phone ||
+        sisuData.other_party_phone ||
+        null;
+
+      const otherPartyEmail =
+        findFirstMatchingValue(coopSources, [
+          'cooperatingagentemail',
+          'coopagentemail',
+          'cooperatingemail',
+          'coopemail',
+          'otherpartyagentemail',
+          'otherpartyemail',
+        ]) ||
+        fullObj.coop_agent_email ||
+        sisuData.other_party?.email ||
+        sisuData.other_party_email ||
+        null;
+
+      const otherPartyBrokerage =
+        findFirstMatchingValue(coopSources, [
+          'cooperatingagentbrokerage',
+          'cooperatingbrokerage',
+          'coopbrokerage',
+          'cooperatingcompany',
+          'coopcompany',
+          'otherpartybrokerage',
+        ]) ||
+        sisuData.other_party?.brokerage ||
+        sisuData.other_party_brokerage ||
+        null;
 
       const lenderName = fullObj.mortgage_officer_name || sisuData.mortgage_officer_name || null;
       const lenderEmail = fullObj.mortgage_officer_email || sisuData.mortgage_officer_email || null;
@@ -652,6 +760,9 @@ serve(async (req: Request) => {
         if (otherPartyEmail && typeof otherPartyEmail === 'string' && otherPartyEmail.trim() !== '') {
           txUpdates.other_party_email = otherPartyEmail.trim();
         }
+        if (otherPartyBrokerage && typeof otherPartyBrokerage === 'string' && otherPartyBrokerage.trim() !== '') {
+          txUpdates.other_party_brokerage = otherPartyBrokerage.trim();
+        }
         if (lenderName && typeof lenderName === 'string' && lenderName.trim() !== '') {
           txUpdates.lender_name = lenderName.trim();
         }
@@ -749,6 +860,7 @@ serve(async (req: Request) => {
               other_party_agent: otherPartyAgent || null,
               other_party_phone: otherPartyPhone || null,
               other_party_email: otherPartyEmail || null,
+              other_party_brokerage: otherPartyBrokerage || null,
               lender_name: lenderName || null,
               lender_email: lenderEmail || null,
               lender_phone: lenderPhone || null,

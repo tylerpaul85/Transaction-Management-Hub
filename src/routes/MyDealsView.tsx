@@ -174,8 +174,9 @@ export const MyDealsView: React.FC = () => {
               client_phone: t.client_phone || undefined,
               other_party_name: t.other_party_name || undefined,
               other_party_agent: t.other_party_agent || undefined,
-              other_party_phone: undefined,
-              other_party_brokerage: undefined,
+              other_party_phone: t.other_party_phone || undefined,
+              other_party_email: t.other_party_email || undefined,
+              other_party_brokerage: t.other_party_brokerage || undefined,
               listing_agent_id: t.listing_agent_id,
               selling_agent_id: t.selling_agent_id,
               assigned_tc_id: t.assigned_tc_id,
@@ -1353,7 +1354,7 @@ export const MyDealsView: React.FC = () => {
                   Co-op Agent
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                  Other Side
+                  Other Side ({selectedTransaction.side === 'seller' ? 'Buyer' : 'Seller'})
                 </span>
               </div>
               <div className="flex items-center gap-3">
@@ -1362,20 +1363,39 @@ export const MyDealsView: React.FC = () => {
                     ? selectedTransaction.other_party_agent.split(' ').map((n) => n[0]).join('').slice(0, 2)
                     : 'CO'}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h4 className="font-bold text-white text-sm truncate">
                     {selectedTransaction.other_party_agent || 'Co-op Agent Pending'}
                   </h4>
                   <span className="text-[11px] text-slate-400 block truncate">
-                    {selectedTransaction.other_party_name || 'Cross Brokerage'}
+                    {selectedTransaction.other_party_brokerage || selectedTransaction.other_party_name || 'Cross Brokerage'}
                   </span>
                 </div>
               </div>
-              <div className="pt-1 border-t border-slate-800 text-xs">
-                <span className="block text-center text-slate-400 py-1.5 truncate">
-                  Representing {selectedTransaction.side === 'seller' ? 'Buyer' : 'Seller'}
-                </span>
-              </div>
+
+              {/* Contact Info (Phone & Email auto-pulled from Forms) */}
+              {(selectedTransaction.other_party_phone || selectedTransaction.other_party_email) && (
+                <div className="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
+                  {selectedTransaction.other_party_phone && (
+                    <a
+                      href={`tel:${selectedTransaction.other_party_phone}`}
+                      className="flex items-center gap-2 text-slate-300 hover:text-purple-400 transition-colors font-mono-code text-[11px]"
+                    >
+                      <Phone className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+                      <span>{selectedTransaction.other_party_phone}</span>
+                    </a>
+                  )}
+                  {selectedTransaction.other_party_email && (
+                    <a
+                      href={`mailto:${selectedTransaction.other_party_email}`}
+                      className="flex items-center gap-2 text-slate-300 hover:text-purple-400 transition-colors text-[11px] truncate"
+                    >
+                      <Mail className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+                      <span className="truncate">{selectedTransaction.other_party_email}</span>
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
