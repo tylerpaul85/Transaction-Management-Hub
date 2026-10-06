@@ -83,17 +83,17 @@ export function getMilestoneOrder(side?: 'buyer' | 'seller' | 'dual' | string): 
     {
       type: 'inspection_notice_sent',
       label: isSeller ? 'Inspection Notice Received? - Listing' : 'Inspection Notice Sent? - Buyer',
-      shortLabel: isSeller ? 'Notice Received' : 'Notice Sent',
+      shortLabel: isSeller ? 'Inspection Notice Received' : 'Inspection Notice Sent',
     },
     { type: 'inspection_10day', label: 'Inspection Satisfied', shortLabel: 'Inspection Satisfied' },
     { type: 'appraisal_received', label: 'Appraisal Received', shortLabel: 'Appraisal Received' },
     { type: 'financing_contingency', label: 'Financing / Loan Commitment', shortLabel: 'Financing / Loan' },
     { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', shortLabel: 'Appraisal Satisfied' },
     { type: 'title', label: 'Title Commitment & Clearance', shortLabel: 'Title Clearance' },
-    { type: 'cds_obtained', label: 'CDs Obtained', shortLabel: 'CDs Obtained' },
+    { type: 'cds_obtained', label: 'CD Sent for Review', shortLabel: 'CD Sent for Review' },
     { type: 'ctc', label: 'Clear-to-Close (CTC)', shortLabel: 'Clear to Close' },
     { type: 'closing_scheduled', label: 'Closing Scheduled', shortLabel: 'Closing Scheduled' },
-    { type: 'walk_through', label: 'Final Walkthrough', shortLabel: 'Walkthrough' },
+    { type: 'walk_through', label: 'Walkthrough Complete', shortLabel: 'Walkthrough Complete' },
   ];
 }
 
@@ -114,7 +114,7 @@ export function getAllMilestonesConfig(side?: 'buyer' | 'seller' | 'dual' | stri
     {
       type: 'inspection_notice_sent',
       label: isSeller ? 'Inspection Notice Received? - Listing' : 'Inspection Notice Sent? - Buyer',
-      shortLabel: isSeller ? 'Notice Received' : 'Notice Sent',
+      shortLabel: isSeller ? 'Inspection Notice Received' : 'Inspection Notice Sent',
       description: isSeller ? 'Inspection report and repair amendment notice received from buyer agent' : 'Inspection report and amendment notice delivered to listing agent',
       isSubItem: true,
       parentGroup: 'inspection',
@@ -124,10 +124,10 @@ export function getAllMilestonesConfig(side?: 'buyer' | 'seller' | 'dual' | stri
     { type: 'financing_contingency', label: 'Financing / Loan Commitment', shortLabel: 'Financing / Loan', description: 'Mortgage lender approval condition deadline' },
     { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', shortLabel: 'Appraisal Satisfied', description: 'Appraisal valuation condition met', isSubItem: true, parentGroup: 'appraisal' },
     { type: 'title', label: 'Title Commitment & Clearance', shortLabel: 'Title Clearance', description: 'Preliminary title Schedule B review and clearance' },
-    { type: 'cds_obtained', label: 'CDs Obtained', shortLabel: 'CDs Obtained', description: 'Closing Disclosures obtained and acknowledged' },
+    { type: 'cds_obtained', label: 'CD Sent for Review', shortLabel: 'CD Sent for Review', description: 'Closing disclosure sent for review and acknowledgment' },
     { type: 'ctc', label: 'Clear-to-Close (CTC)', shortLabel: 'Clear to Close', description: 'Final underwriter loan clearance' },
     { type: 'closing_scheduled', label: 'Closing Scheduled', shortLabel: 'Closing Scheduled', description: 'Settlement time and location confirmed with title and clients' },
-    { type: 'walk_through', label: 'Final Walkthrough', shortLabel: 'Walkthrough', description: 'Pre-closing property inspection' },
+    { type: 'walk_through', label: 'Walkthrough Complete', shortLabel: 'Walkthrough Complete', description: 'Pre-closing property inspection complete' },
     { type: 'insurance_binder', label: 'Insurance Binder Obtained', shortLabel: 'Insurance Binder', description: 'Homeowners insurance binder delivered to lender/title' },
   ];
 }

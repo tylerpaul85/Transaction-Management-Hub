@@ -70,10 +70,10 @@ export function getMilestoneLabels(side?: 'buyer' | 'seller'): Record<string, st
     appraisal_satisfied: 'Appraisal Satisfied',
     insurance_binder: 'Insurance Binder Obtained',
     title: 'Title Commitment & Clearance',
-    cds_obtained: 'Closing Disclosures (CDs) Obtained',
+    cds_obtained: 'CD Sent for Review',
     ctc: 'Clear-to-Close (CTC)',
     closing_scheduled: 'Closing Scheduled',
-    walk_through: 'Final Walkthrough',
+    walk_through: 'Walkthrough Complete',
   };
 }
 
@@ -86,7 +86,7 @@ export function getMilestoneOrderSequence(side?: 'buyer' | 'seller') {
     { key: 'inspection_ordered', shortLabel: 'Inspection Ordered', label: 'Inspection Ordered' },
     {
       key: 'inspection_notice_sent',
-      shortLabel: isSeller ? 'Notice Received' : 'Notice Sent',
+      shortLabel: isSeller ? 'Inspection Notice Received' : 'Inspection Notice Sent',
       label: isSeller ? 'Inspection Notice Received? - Listing' : 'Inspection Notice Sent? - Buyer',
     },
     { key: 'inspection_10day', shortLabel: 'Inspection Satisfied', label: 'Inspection Satisfied' },
@@ -94,10 +94,10 @@ export function getMilestoneOrderSequence(side?: 'buyer' | 'seller') {
     { key: 'financing_contingency', shortLabel: 'Financing', label: 'Financing / Loan Commitment' },
     { key: 'appraisal_satisfied', shortLabel: 'Appraisal Satisfied', label: 'Appraisal Satisfied' },
     { key: 'title', shortLabel: 'Title', label: 'Title Commitment & Clearance' },
-    { key: 'cds_obtained', shortLabel: 'CDs Obtained', label: 'Closing Disclosures Obtained' },
+    { key: 'cds_obtained', shortLabel: 'CD Sent for Review', label: 'CD Sent for Review' },
     { key: 'ctc', shortLabel: 'Clear to Close', label: 'Clear to Close' },
     { key: 'closing_scheduled', shortLabel: 'Closing Scheduled', label: 'Closing Scheduled' },
-    { key: 'walk_through', shortLabel: 'Walkthrough', label: 'Final Walkthrough' },
+    { key: 'walk_through', shortLabel: 'Walkthrough Complete', label: 'Walkthrough Complete' },
   ];
 }
 
@@ -285,12 +285,8 @@ export function renderAgentDigestEmail(params: DigestEmailParams): {
 
   const subject =
     totalOverdueCount > 0
-      ? `🚨 Action Required: ${totalOverdueCount} Overdue Item${
-          totalOverdueCount === 1 ? '' : 's'
-        } — ${frequencyName} Digest for ${agentName}`
-      : `📋 Your ${frequencyName} Active Escrow Digest (${totalDeals} Deal${
-          totalDeals === 1 ? '' : 's'
-        }) — MSREG Hub`;
+      ? `🚨 Action Required: Transaction Management Hub - ${frequencyName} Update (${totalOverdueCount} Overdue)`
+      : `Transaction Management Hub - ${frequencyName} Update`;
 
   // Render HTML Transaction Rows
   const transactionRowsHtml = transactions

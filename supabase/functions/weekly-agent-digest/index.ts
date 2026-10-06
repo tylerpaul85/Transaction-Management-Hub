@@ -373,9 +373,9 @@ serve(async (req: Request) => {
                 body: JSON.stringify({
                   from: fromAddress,
                   to: [agent.email],
-                  subject: emailContent.subject,
-                  html: emailContent.html,
-                  text: emailContent.text,
+                  subject: finalSubject,
+                  html: finalHtml,
+                  text: finalText,
                 }),
               });
             }

@@ -728,7 +728,12 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                         title_commitment_s_38_clearance: 'Title Commitment & Clearance',
                         'financing_/_loan_commitment_-_internal_use': 'Financing / Loan Commitment',
                         'clear-to-close_(ctc)': 'Clear to Close',
-                        final_walkthrough: 'Final Walkthrough',
+                        final_walkthrough: 'Walkthrough Complete',
+                        walk_through: 'Walkthrough Complete',
+                        walkthrough: 'Walkthrough Complete',
+                        cds_obtained: 'CD Sent for Review',
+                        'cds_obtained_-_internal': 'CD Sent for Review',
+                        inspection_notice_sent: 'Inspection Notice Sent',
                         appraisal_received: 'Appraisal Received',
                         appraisal_satisfied: 'Appraisal Satisfied',
                       };

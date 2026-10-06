@@ -71,6 +71,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
   // Multi-agent selection & search state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAgentNames, setSelectedAgentNames] = useState<Set<string>>(new Set());
+  const [customSubject, setCustomSubject] = useState<string>('');
 
   // Cloud dispatch states
   const [isSending, setIsSending] = useState(false);
@@ -224,6 +225,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
   const handlePreviewAgent = (agent: AgentGroupInfo) => {
     setActiveAgentName(agent.name);
     setRecipientEmail(agent.email);
+    setCustomSubject('');
     setSendResult(null);
     setViewMode('single');
   };
@@ -312,6 +314,8 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
     frequencyName: 'Weekly',
   });
 
+  const effectiveSubject = customSubject || subject;
+
   // Send single agent email
   const handleSendSingleAgentEmail = async () => {
     setIsSending(true);
@@ -322,7 +326,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
         body: {
           agent_name: activeAgentName,
           agent_email: recipientEmail,
-          subject: subject,
+          subject: effectiveSubject,
           html: html,
           text: text,
           target_transaction_ids: singleAgentDigestItems.map((t) => t.id),
@@ -419,7 +423,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
   const handleOpenMailClient = () => {
     const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(
-      subject
+      effectiveSubject
     )}&body=${encodeURIComponent(text)}`;
     window.open(mailtoUrl, '_blank');
   };
@@ -682,9 +686,9 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    readOnly
-                    value={subject}
-                    className="w-full px-4 py-2.5 bg-[#131826]/70 border border-[#334155] rounded-xl text-xs font-semibold text-[#94a3b8]"
+                    value={customSubject || subject}
+                    onChange={(e) => setCustomSubject(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
                   />
                 </div>
               </div>
