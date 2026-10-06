@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   Clock,
   Building,
+  Globe,
 } from 'lucide-react';
 
 interface AgentDigestEmailModalProps {
@@ -72,6 +73,24 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAgentNames, setSelectedAgentNames] = useState<Set<string>>(new Set());
   const [customSubject, setCustomSubject] = useState<string>('');
+
+  // Dynamic Hub Base URL for email buttons (defaults to current window origin or VITE_APP_URL, with local storage memory)
+  const detectedOrigin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+  const initialHubUrl =
+    localStorage.getItem('msreg_hub_base_url') ||
+    (import.meta as any).env?.VITE_APP_URL ||
+    (detectedOrigin && !detectedOrigin.includes('localhost') ? detectedOrigin : '') ||
+    detectedOrigin ||
+    'https://hub.msreg.com';
+
+  const [hubBaseUrl, setHubBaseUrl] = useState<string>(initialHubUrl);
+
+  const handleUpdateHubUrl = (val: string) => {
+    setHubBaseUrl(val);
+    try {
+      localStorage.setItem('msreg_hub_base_url', val);
+    } catch {}
+  };
 
   // Cloud dispatch states
   const [isSending, setIsSending] = useState(false);
@@ -312,6 +331,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
     agentEmail: recipientEmail,
     transactions: singleAgentDigestItems,
     frequencyName: 'Weekly',
+    appBaseUrl: hubBaseUrl,
   });
 
   const effectiveSubject = customSubject || subject;
@@ -329,6 +349,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
           subject: effectiveSubject,
           html: html,
           text: text,
+          app_base_url: hubBaseUrl,
           target_transaction_ids: singleAgentDigestItems.map((t) => t.id),
         },
       });
@@ -380,6 +401,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
       const { data, error } = await supabase.functions.invoke('weekly-agent-digest', {
         body: {
           target_agents: agentsToSend,
+          app_base_url: hubBaseUrl,
         },
       });
 
@@ -552,6 +574,36 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                 </div>
               </div>
 
+              {/* Hub Link Destination Setting */}
+              <div className="p-3 bg-[#131826] rounded-xl border border-[#334155] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-[#d97706] flex-shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-[#f8fafc] block">Hub Portal Destination Link</span>
+                    <span className="text-[10px] text-[#94a3b8]">Where the "Open In Hub" button in emails sends agents</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-1 max-w-md">
+                  <input
+                    type="url"
+                    value={hubBaseUrl}
+                    onChange={(e) => handleUpdateHubUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  />
+                  {detectedOrigin && hubBaseUrl !== detectedOrigin && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateHubUrl(detectedOrigin)}
+                      className="text-[10px] text-sky-400 hover:underline flex-shrink-0 whitespace-nowrap"
+                      title="Reset to current website address"
+                    >
+                      Use current URL
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Controls bar: Search + Select All */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -667,8 +719,8 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
           ) : (
             /* VIEW MODE: SINGLE AGENT PREVIEW */
             <div className="space-y-5">
-              {/* Target Email and Subject Inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Target Email, Subject, and Hub Link Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1.5">
                     Recipient Email Address
@@ -677,7 +729,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                     type="email"
                     value={recipientEmail}
                     onChange={(e) => setRecipientEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-sm font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-4 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
                   />
                 </div>
                 <div>
@@ -688,6 +740,30 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                     type="text"
                     value={customSubject || subject}
                     onChange={(e) => setCustomSubject(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-[#94a3b8] uppercase">
+                      Hub Link (Portal URL)
+                    </label>
+                    {detectedOrigin && hubBaseUrl !== detectedOrigin && (
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateHubUrl(detectedOrigin)}
+                        className="text-[10px] text-sky-400 hover:underline"
+                        title="Reset to current website address"
+                      >
+                        Use current URL
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    value={hubBaseUrl}
+                    onChange={(e) => handleUpdateHubUrl(e.target.value)}
+                    placeholder="https://..."
                     className="w-full px-4 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
                   />
                 </div>

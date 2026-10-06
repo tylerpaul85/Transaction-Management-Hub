@@ -271,7 +271,10 @@ export function renderAgentDigestEmail(params: DigestEmailParams): {
     agentName,
     agentEmail = 'agent@mattsmithrealestategroup.com',
     transactions,
-    appBaseUrl = 'https://hub.msreg.com',
+    appBaseUrl =
+      (typeof window !== 'undefined' && window.location?.origin) ||
+      (import.meta as any).env?.VITE_APP_URL ||
+      'https://hub.msreg.com',
     frequencyName = 'Weekly',
     title = `${frequencyName} Agent Transaction Digest`,
     subtitle = `Here is your active escrow checklist and milestone status report.`,

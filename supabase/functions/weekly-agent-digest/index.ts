@@ -59,7 +59,7 @@ serve(async (req: Request) => {
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY') || body?.resend_api_key || '';
     const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || body?.from_email || 'MSREG Operations <operations@msreginternal.com>';
-    const appBaseUrl = Deno.env.get('APP_BASE_URL') || body?.app_base_url || 'https://hub.msreg.com';
+    const appBaseUrl = body?.app_base_url || Deno.env.get('APP_BASE_URL') || 'https://hub.msreg.com';
 
     // 1. Fetch active agents (or single targeted agent, or explicit list)
     let activeAgents: Array<{ id: string; name: string; email: string; phone?: string; active?: boolean; target_transaction_ids?: string[] }> = [];
