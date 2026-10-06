@@ -106,7 +106,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
     fetchRosters();
   }, []);
 
-  // Other Agent Info (always manual)
+  // Other Agent Info (auto-pulled from forms / editable)
   const [otherPartyName, setOtherPartyName] = useState(transaction.other_party_name || '');
   const [otherPartyAgent, setOtherPartyAgent] = useState(transaction.other_party_agent || '');
   const [otherPartyPhone, setOtherPartyPhone] = useState(transaction.other_party_phone || '');
@@ -364,9 +364,6 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
               }`}
             >
               <span>2. Other Agent & Brokerage Info</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                Manual Only
-              </span>
             </button>
           </div>
         </div>
@@ -789,16 +786,12 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
               <div className="border-b border-[#334155] pb-3">
                 <div className="flex items-center gap-2">
                   <h3 className="font-editorial text-lg font-bold text-[#f8fafc]">
-                    Add Other Party & Co-Op Agent Information
+                    Other Party & Co-Op Agent Information
                   </h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                    Always source = 'manual'
-                  </span>
                 </div>
                 <p className="text-xs text-[#94a3b8] mt-1 leading-relaxed">
-                  These fields hold co-op agent contact numbers and brokerage details that Sisu
-                  doesn't carry. They are strictly preserved as manual data and will never be
-                  overwritten by Sisu synchronization jobs.
+                  Co-op agent and brokerage contact details are auto-pulled from intake forms and Sisu,
+                  and can also be reviewed or updated directly below.
                 </p>
               </div>
 

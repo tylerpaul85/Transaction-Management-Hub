@@ -42,7 +42,7 @@ export interface OpsTransaction {
   mls_status?: 'draft' | 'active' | 'pending' | 'closed';
   open_house_date?: string | null;
 
-  // Other Agent Info (always source='manual')
+  // Other Agent Info (auto-pulled from forms / editable)
   other_party_name: string | null;
   other_party_agent: string | null;
   other_party_phone?: string | null;
