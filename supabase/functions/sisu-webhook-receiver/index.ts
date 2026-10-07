@@ -513,9 +513,9 @@ serve(async (req: Request) => {
     );
 
     if (tcAgentId === '53175') {
-      assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e'; // Ashley Charette
+      assignedTcId = '4dbc2470-7089-4c1a-8e1d-db9fb1d31a42'; // Ashley Charette (canonical ops_user)
     } else if (tcAgentId === '26136' || tcAgentId === '31410') {
-      assignedTcId = '5580daa6-415d-4385-986a-69bc94421c0c'; // Katie Harold
+      assignedTcId = '4e85c640-675c-443f-8284-628f89552ac5'; // Katie Harold (canonical ops_user)
     } else if (tcEmail) {
       let { data: matchedTc } = await supabase
         .from('ops_users')
@@ -566,11 +566,11 @@ serve(async (req: Request) => {
       ];
 
       if (ASHLEY_AGENTS.some((a) => checkAgentName.includes(a))) {
-        assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e';
+        assignedTcId = '4dbc2470-7089-4c1a-8e1d-db9fb1d31a42';
       } else if (KATIE_AGENTS.some((a) => checkAgentName.includes(a))) {
-        assignedTcId = '5580daa6-415d-4385-986a-69bc94421c0c';
+        assignedTcId = '4e85c640-675c-443f-8284-628f89552ac5';
       } else {
-        assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e'; // default to Ashley
+        assignedTcId = '4dbc2470-7089-4c1a-8e1d-db9fb1d31a42'; // default to Ashley
       }
     }
 

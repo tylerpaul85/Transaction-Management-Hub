@@ -357,7 +357,7 @@ serve(async (req: Request) => {
         }
       }
 
-      let assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e'; // default Ashley Charette
+      let assignedTcId = '4dbc2470-7089-4c1a-8e1d-db9fb1d31a42'; // default Ashley Charette (canonical ops_user)
       const KATIE_AGENTS = [
         'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
         'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
@@ -365,7 +365,7 @@ serve(async (req: Request) => {
         'sebastian rush', 'shawn mcarthur', 'shawn witzemann'
       ];
       if (KATIE_AGENTS.some((a) => agentRawName.includes(a))) {
-        assignedTcId = '5580daa6-415d-4385-986a-69bc94421c0c'; // Katie Harold
+        assignedTcId = '4e85c640-675c-443f-8284-628f89552ac5'; // Katie Harold (canonical ops_user)
       }
 
       const coopAgentName =

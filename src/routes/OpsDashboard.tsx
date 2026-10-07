@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../integrations/supabase/client';
-import { OpsTransaction, OpsMilestone, ALL_MILESTONES_CONFIG, resolveTcForAgent } from '../types/ops';
+import { OpsTransaction, OpsMilestone, ALL_MILESTONES_CONFIG, resolveTcForAgent, normalizeTcEmailFromAllowlist } from '../types/ops';
 import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
 import { OpsTransactionDetailModal } from '../components/OpsTransactionDetailModal';
 import { AdminUserManagement } from '../components/AdminUserManagement';
@@ -194,7 +194,7 @@ export const OpsDashboard: React.FC = () => {
           const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
           const fallbackTc = resolveTcForAgent(agentName);
           const tcName = t.assigned_tc?.name || (t.tc_name && t.tc_name !== 'Unassigned TC' ? t.tc_name : fallbackTc.tc_name);
-          const tcEmail = t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email;
+          const tcEmail = normalizeTcEmailFromAllowlist(t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email);
 
           return {
             id: t.id,

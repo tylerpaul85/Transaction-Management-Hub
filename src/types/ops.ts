@@ -240,15 +240,36 @@ export function resolveTcForAgent(agentName: string | null | undefined): { tc_na
   if (KATIE_AGENTS.some((a) => check.includes(a))) {
     return {
       tc_name: 'Katie Harold',
-      tc_email: 'katie.harold@mattsmithrealestategroup.com',
-      tc_id: '5580daa6-415d-4385-986a-69bc94421c0c',
+      tc_email: 'kathryn@mattsmithrealestategroup.com',
+      tc_id: '4e85c640-675c-443f-8284-628f89552ac5',
     };
   }
 
   return {
     tc_name: 'Ashley Charette',
-    tc_email: 'ashley.charette@mattsmithrealestategroup.com',
-    tc_id: 'f4436dcc-4d52-4a26-af80-05096b76067e',
+    tc_email: 'ashley@mattsmithrealestategroup.com',
+    tc_id: '4dbc2470-7089-4c1a-8e1d-db9fb1d31a42',
   };
+}
+
+/**
+ * Normalizes any TC name or email against the active user allowlist (profiles table).
+ */
+export function normalizeTcEmailFromAllowlist(tcNameOrEmail?: string | null): string {
+  if (!tcNameOrEmail) return 'ashley@mattsmithrealestategroup.com';
+  const val = tcNameOrEmail.toLowerCase().trim();
+  if (val.includes('ashley')) {
+    return 'ashley@mattsmithrealestategroup.com';
+  }
+  if (val.includes('katie') || val.includes('kathryn')) {
+    return 'kathryn@mattsmithrealestategroup.com';
+  }
+  if (val.includes('zack')) {
+    return 'zack@mattsmithrealestategroup.com';
+  }
+  if (val.includes('susan')) {
+    return 'susan@mattsmithrealestategroup.com';
+  }
+  return tcNameOrEmail;
 }
 

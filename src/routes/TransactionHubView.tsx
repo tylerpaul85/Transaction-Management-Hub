@@ -8,6 +8,7 @@ import {
   StepStatus,
   HubTeamMember,
 } from '../types/hub';
+import { resolveTcForAgent, normalizeTcEmailFromAllowlist } from '../types/ops';
 import {
   REFERENCE_PORTAL_TRANSACTIONS,
   DEFAULT_SERVICES,
@@ -178,8 +179,9 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
             const agentName = leadAgent?.name || t.agent_name || 'Shawn McArthur';
             const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
             const agentPhone = leadAgent?.phone || '(573) 261-6820';
-            const tcName = t.assigned_tc?.name || t.tc_name || 'Katie Harold';
-            const tcEmail = t.assigned_tc?.email || t.tc_email || 'katie@mattsmithrealestategroup.com';
+            const fallbackTc = resolveTcForAgent(agentName);
+            const tcName = t.assigned_tc?.name || (t.tc_name && t.tc_name !== 'Unassigned TC' ? t.tc_name : fallbackTc.tc_name);
+            const tcEmail = normalizeTcEmailFromAllowlist(t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email);
 
             const names = (t.client_name || 'Client Name').trim().split(' ');
             const firstName = names[0] || 'Client';
@@ -369,8 +371,13 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
 
     const stepId = activeApprovalModalStep.id;
     const nowIso = new Date().toISOString();
-    const assignedTcName = selectedTransaction.tc?.name || 'Katie Harold';
-    const assignedTcEmail = selectedTransaction.tc?.email || 'katie@mattsmithrealestategroup.com';
+    const fallbackTc = resolveTcForAgent(selectedTransaction.agent?.name);
+    const assignedTcName = selectedTransaction.tc?.name && selectedTransaction.tc.name !== 'Unassigned TC'
+      ? selectedTransaction.tc.name
+      : fallbackTc.tc_name;
+    const assignedTcEmail = normalizeTcEmailFromAllowlist(
+      selectedTransaction.tc?.email || fallbackTc.tc_email
+    );
 
     const approvalData: TaskApprovalData = {
       approvalStatus: 'pending_tc_approval',
@@ -1671,8 +1678,17 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
           stepNumber={activeApprovalModalStep.order}
           propertyAddress={selectedTransaction.addressLine1}
           clientName={selectedTransaction.clientFullName}
-          assignedTcName={selectedTransaction.tc?.name || 'Katie Harold'}
-          assignedTcEmail={selectedTransaction.tc?.email || 'katie@mattsmithrealestategroup.com'}
+          assignedTcName={
+            selectedTransaction.tc?.name && selectedTransaction.tc.name !== 'Unassigned TC'
+              ? selectedTransaction.tc.name
+              : resolveTcForAgent(selectedTransaction.agent?.name).tc_name
+          }
+          assignedTcEmail={
+            normalizeTcEmailFromAllowlist(
+              selectedTransaction.tc?.email ||
+              resolveTcForAgent(selectedTransaction.agent?.name).tc_email
+            )
+          }
           currentDate={activeApprovalModalStep.date}
           existingApprovalData={activeApprovalModalStep.approvalData}
           isOpsOrTc={isOpsOrTc}

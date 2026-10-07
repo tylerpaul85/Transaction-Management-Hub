@@ -54,8 +54,7 @@ $$;
 
 -- 4. Tighten Transactions SELECT Policy
 -- Ops/Admins can view all transactions.
--- Agents can ONLY view transactions where they are the listing agent, selling agent,
--- or where the transaction's agent_email matches their authenticated email.
+-- Agents can ONLY view transactions where they are the listing agent or selling agent.
 DROP POLICY IF EXISTS "Transactions SELECT policy" ON public.transactions;
 CREATE POLICY "Transactions SELECT policy"
 ON public.transactions
@@ -69,10 +68,6 @@ USING (
         listing_agent_id = public.get_auth_agent_id()
         OR selling_agent_id = public.get_auth_agent_id()
       )
-    )
-    OR (
-      agent_email IS NOT NULL 
-      AND LOWER(agent_email) = LOWER(auth.jwt() ->> 'email')
     )
 );
 
@@ -88,8 +83,9 @@ USING (
         SELECT 1 FROM public.transactions t
         WHERE t.id = milestones.transaction_id
           AND (
-            (public.get_auth_agent_id() IS NOT NULL AND (t.listing_agent_id = public.get_auth_agent_id() OR t.selling_agent_id = public.get_auth_agent_id()))
-            OR (t.agent_email IS NOT NULL AND LOWER(t.agent_email) = LOWER(auth.jwt() ->> 'email'))
+            public.get_auth_agent_id() IS NOT NULL 
+            AND (t.listing_agent_id = public.get_auth_agent_id() OR t.selling_agent_id = public.get_auth_agent_id())
           )
     )
 );
+

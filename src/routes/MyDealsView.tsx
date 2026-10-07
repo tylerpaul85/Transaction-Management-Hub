@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../integrations/supabase/client';
-import { OpsTransaction, resolveTcForAgent, getAllMilestonesConfig } from '../types/ops';
+import { OpsTransaction, resolveTcForAgent, getAllMilestonesConfig, normalizeTcEmailFromAllowlist } from '../types/ops';
 import { MilestoneType, MilestoneStatus } from '../types/database.types';
 import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
 import { CircularProgressGauge } from '../components/hub/CircularProgressGauge';
@@ -200,7 +200,7 @@ export const MyDealsView: React.FC = () => {
             const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
             const fallbackTc = resolveTcForAgent(agentName);
             const tcName = t.assigned_tc?.name || (t.tc_name && t.tc_name !== 'Unassigned TC' ? t.tc_name : fallbackTc.tc_name);
-            const tcEmail = t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email;
+            const tcEmail = normalizeTcEmailFromAllowlist(t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email);
 
             const isClosed = String(t.status).toLowerCase().trim() === 'closed' || Boolean(t.custom_fields?.closed_date);
 
@@ -549,7 +549,9 @@ export const MyDealsView: React.FC = () => {
       selectedTransaction.tc_name && selectedTransaction.tc_name !== 'Unassigned TC'
         ? selectedTransaction.tc_name
         : tcInfo.tc_name;
-    const assignedTcEmail = selectedTransaction.tc_email || tcInfo.tc_email;
+    const assignedTcEmail = normalizeTcEmailFromAllowlist(
+      selectedTransaction.tc_email || tcInfo.tc_email
+    );
 
     const approvalData: TaskApprovalData = {
       approvalStatus: 'pending_tc_approval',
@@ -1855,8 +1857,10 @@ export const MyDealsView: React.FC = () => {
               : resolveTcForAgent(selectedTransaction.agent_name).tc_name
           }
           assignedTcEmail={
-            selectedTransaction.tc_email ||
-            resolveTcForAgent(selectedTransaction.agent_name).tc_email
+            normalizeTcEmailFromAllowlist(
+              selectedTransaction.tc_email ||
+              resolveTcForAgent(selectedTransaction.agent_name).tc_email
+            )
           }
           currentDate={activeApprovalModalStep.date}
           existingApprovalData={activeApprovalModalStep.approvalData}

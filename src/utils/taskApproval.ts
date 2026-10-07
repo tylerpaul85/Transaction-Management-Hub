@@ -1,4 +1,5 @@
 import { supabase } from '../integrations/supabase/client';
+import { normalizeTcEmailFromAllowlist } from '../types/ops';
 
 export interface TaskApprovalData {
   approvalStatus: 'pending_tc_approval' | 'approved' | 'changes_requested';
@@ -192,38 +193,43 @@ export async function notifyTcOfTaskSubmission(params: {
     }
 
     const targetTxIds = resolvedTxId ? [resolvedTxId] : undefined;
+    const effectiveTcEmail = normalizeTcEmailFromAllowlist(tcEmail || tcName);
 
-    // Collect recipient emails (including alias if Katie Harold)
+    // Collect recipient emails (matching user allowlist profiles)
     const targetRecipients: Array<{ name: string; email: string; target_transaction_ids?: string[] }> = [
       {
         name: tcName,
-        email: tcEmail,
+        email: effectiveTcEmail,
         target_transaction_ids: targetTxIds,
       },
     ];
 
-    // If Katie Harold, ensure both katie@ and katie.harold@ are notified
-    if (tcEmail.toLowerCase().includes('katie') && !tcEmail.toLowerCase().includes('katie.harold')) {
-      targetRecipients.push({
-        name: tcName,
-        email: 'katie.harold@mattsmithrealestategroup.com',
-        target_transaction_ids: targetTxIds,
-      });
-    } else if (tcEmail.toLowerCase().includes('katie.harold')) {
+    // If Katie Harold, also ensure delivery to both kathryn@ and katie@ aliases
+    if (effectiveTcEmail.toLowerCase().includes('kathryn') || effectiveTcEmail.toLowerCase().includes('katie') || tcName.toLowerCase().includes('katie')) {
       targetRecipients.push({
         name: tcName,
         email: 'katie@mattsmithrealestategroup.com',
         target_transaction_ids: targetTxIds,
       });
+      targetRecipients.push({
+        name: tcName,
+        email: 'kathryn@mattsmithrealestategroup.com',
+        target_transaction_ids: targetTxIds,
+      });
     }
+
+    // Deduplicate recipients
+    const uniqueRecipients = Array.from(
+      new Map(targetRecipients.map((r) => [r.email.toLowerCase(), r])).values()
+    );
 
     const { data, error } = await supabase.functions.invoke('weekly-agent-digest', {
       body: {
         agent_name: tcName,
-        agent_email: tcEmail,
+        agent_email: effectiveTcEmail,
         subject,
         html,
-        target_agents: targetRecipients,
+        target_agents: uniqueRecipients,
         target_transaction_ids: targetTxIds,
       },
     });
