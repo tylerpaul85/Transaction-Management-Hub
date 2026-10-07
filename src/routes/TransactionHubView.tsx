@@ -441,19 +441,32 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
     }
 
     if (assignedTcEmail) {
-      notifyTcOfTaskSubmission({
-        tcName: assignedTcName,
-        tcEmail: assignedTcEmail,
-        agentName: currentUser?.fullName || selectedTransaction.agent.name || 'Agent',
-        agentEmail: currentUser?.email || selectedTransaction.agent.email,
-        propertyAddress: selectedTransaction.addressLine1,
-        taskTitle: activeApprovalModalStep.title,
-        details: data.details,
-        completionDate: data.completionDate,
-      }).catch((err) => console.warn('Could not dispatch TC notification:', err));
+      try {
+        const notifyResult = await notifyTcOfTaskSubmission({
+          tcName: assignedTcName,
+          tcEmail: assignedTcEmail,
+          agentName: currentUser?.fullName || selectedTransaction.agent.name || 'Agent',
+          agentEmail: currentUser?.email || selectedTransaction.agent.email,
+          propertyAddress: selectedTransaction.addressLine1,
+          taskTitle: activeApprovalModalStep.title,
+          details: data.details,
+          completionDate: data.completionDate,
+          transactionId: selectedTransaction.id,
+        });
+
+        if (notifyResult?.success) {
+          setActionSuccessMessage(`Submitted! Notification email delivered to ${assignedTcName} (${assignedTcEmail}).`);
+        } else {
+          setActionSuccessMessage(`Submitted! Awaiting ${assignedTcName}'s final approval.`);
+        }
+      } catch (err) {
+        console.warn('Could not dispatch TC notification:', err);
+        setActionSuccessMessage(`Submitted! Awaiting ${assignedTcName}'s final approval.`);
+      }
+    } else {
+      setActionSuccessMessage(`Submitted! Awaiting ${assignedTcName}'s final approval.`);
     }
 
-    setActionSuccessMessage(`Submitted! Sent to ${assignedTcName} for final verification.`);
     setTimeout(() => setActionSuccessMessage(null), 5000);
   };
 
