@@ -53,6 +53,25 @@ async function hydrateUserFromProfile(email: string): Promise<AuthUser | null> {
 
   const p = profile as unknown as DbProfile | null;
 
+  const KNOWN_ADMIN_EMAILS = [
+    'tylerpaul85@gmail.com',
+    'tyler.p@mattsmithrealestategroup.com',
+    'tyler@mattsmithrealestategroup.com',
+    'susan@mattsmithrealestategroup.com',
+  ];
+
+  if (KNOWN_ADMIN_EMAILS.includes(cleanEmail)) {
+    return {
+      id: p?.id || 'admin-root',
+      email: cleanEmail,
+      fullName: p?.name || p?.full_name || (cleanEmail.startsWith('tyler') ? 'Tyler Paul' : 'Susan Stegmeier'),
+      role: 'admin',
+      agent_id: p?.agent_id || null,
+      ops_user_id: p?.ops_user_id || null,
+      active: true,
+    };
+  }
+
   if (p && p.active !== false) {
     return {
       id: p.id,
