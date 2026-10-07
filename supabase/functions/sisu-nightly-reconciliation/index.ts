@@ -310,7 +310,22 @@ serve(async (req: Request) => {
         rawStat.includes('fell through')
       ) {
         if (sisuId) {
-          await supabase.from('transactions').delete().eq('sisu_transaction_id', sisuId);
+          const { data: currentTx } = await supabase
+            .from('transactions')
+            .select('id, status')
+            .eq('sisu_transaction_id', sisuId)
+            .maybeSingle();
+
+          if (currentTx) {
+            await supabase
+              .from('transactions')
+              .update({
+                status: 'cancelled',
+                stage_before_cancelled: currentTx.status !== 'cancelled' ? currentTx.status : undefined,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', currentTx.id);
+          }
         }
         continue;
       }

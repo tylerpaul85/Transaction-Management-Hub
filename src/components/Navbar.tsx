@@ -10,6 +10,8 @@ import {
   Layers,
   Bug,
   Compass,
+  TrendingDown,
+  MapPin,
 } from 'lucide-react';
 import { getStoredAvatar } from '../utils/avatarStorage';
 
@@ -25,7 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
     setIsNewModalOpen,
   } = useTransactions();
 
-  const { currentUser, signOut, isOps, isAdmin } = useAuth();
+  const { currentUser, signOut, isOps, isAdmin, canAccessDashboard } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const userAvatar = currentUser ? getStoredAvatar(currentUser.id, currentUser.email) : null;
@@ -85,6 +87,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
     { label: 'Transaction Hub', path: '/hub', icon: <Compass className="h-3.5 w-3.5 text-sky-400" />, show: isOps || isAdmin },
     { label: 'Escrows', path: '/ops', icon: <Layers className="h-3.5 w-3.5" />, show: isOps },
     { label: 'My Deals', path: '/my-deals', icon: <Briefcase className="h-3.5 w-3.5" />, show: true },
+    {
+      label: 'Fall-Through',
+      path: '/admin/fall-through',
+      icon: <TrendingDown className="h-3.5 w-3.5 text-rose-400" />,
+      show: Boolean(canAccessDashboard?.('fall_through')),
+    },
+    {
+      label: 'Market Comparison',
+      path: '/admin/market-comparison',
+      icon: <MapPin className="h-3.5 w-3.5 text-emerald-400" />,
+      show: Boolean(canAccessDashboard?.('market_comparison')),
+    },
     { label: 'Sync Debug', path: '/admin/sync-debug', icon: <Bug className="h-3.5 w-3.5" />, show: isAdmin },
   ];
 

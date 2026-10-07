@@ -28,6 +28,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isTc: boolean;
   isListingCoordinator: boolean;
+  canAccessDashboard: (dashboardKey: 'fall_through' | 'market_comparison') => boolean;
 }
 
 const GOOGLE_WORKSPACE_DOMAIN = import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com';
@@ -241,6 +242,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isTc = role === 'tc';
   const isListingCoordinator = role === 'listing_coordinator';
 
+  const canAccessDashboard = useCallback(
+    (dashboardKey: 'fall_through' | 'market_comparison') => {
+      // Extensible role permissions check: currently Admin-Only, easily opened to other roles
+      if (isAdmin) return true;
+      return false;
+    },
+    [isAdmin]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -258,6 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isTc,
         isListingCoordinator,
+        canAccessDashboard,
       }}
     >
       {children}

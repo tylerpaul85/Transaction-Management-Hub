@@ -7,6 +7,8 @@ import { MyDealsView } from './routes/MyDealsView';
 import { OpsDashboard } from './routes/OpsDashboard';
 import { AdminSyncDebug } from './routes/AdminSyncDebug';
 import { TransactionHubView } from './routes/TransactionHubView';
+import { FallThroughDashboard } from './routes/FallThroughDashboard';
+import { MarketComparisonDashboard } from './routes/MarketComparisonDashboard';
 import { AdminTaskMappings } from './components/AdminTaskMappings';
 import { GoogleAuthGate } from './components/GoogleAuthGate';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
@@ -148,6 +150,24 @@ const AuthenticatedLayout: React.FC = () => {
           <RoleGuard allowedRoles={['admin']} routeName="/admin/sync-debug" onNavigate={handleNavigate}>
             <AdminSyncDebug />
           </RoleGuard>
+        )}
+
+        {/* Admin Fall-Through Analysis */}
+        {(visitedRoutes.has('/admin/fall-through') || currentPath === '/admin/fall-through') && (
+          <div style={{ display: currentPath === '/admin/fall-through' ? 'block' : 'none' }}>
+            <RoleGuard allowedRoles={['admin']} routeName="/admin/fall-through" onNavigate={handleNavigate}>
+              <FallThroughDashboard />
+            </RoleGuard>
+          </div>
+        )}
+
+        {/* Admin Market Comparison */}
+        {(visitedRoutes.has('/admin/market-comparison') || currentPath === '/admin/market-comparison') && (
+          <div style={{ display: currentPath === '/admin/market-comparison' ? 'block' : 'none' }}>
+            <RoleGuard allowedRoles={['admin']} routeName="/admin/market-comparison" onNavigate={handleNavigate}>
+              <MarketComparisonDashboard />
+            </RoleGuard>
+          </div>
         )}
       </main>
 
