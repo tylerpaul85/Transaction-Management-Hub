@@ -151,7 +151,7 @@ export const MyDealsView: React.FC = () => {
 
         if (data) {
           const validDeals = data.filter((t: any) => {
-            const s = String(t.status || '').toLowerCase().trim();
+            const s = String(t.status || '').toLowerCase().replace(/_/g, ' ').trim();
             if (
               s === 'lost' ||
               s.includes('lost') ||
@@ -164,11 +164,25 @@ export const MyDealsView: React.FC = () => {
               s.includes('archived') ||
               s.includes('appt') ||
               s.includes('pipeline') ||
-              s.includes('expired')
+              s.includes('expired') ||
+              s.includes('showing') ||
+              s.includes('live listing') ||
+              s.includes('listing') ||
+              s.includes('1st time')
             ) {
               return false;
             }
-            return true;
+
+            // Deal must be either closed (for financial analytics) OR pending / under contract (for active escrow files)
+            const isClosed = s === 'closed' || s.includes('closed') || Boolean(t.custom_fields?.closed_date);
+            const isPending =
+              s.includes('under contract') ||
+              s.includes('pending') ||
+              s.includes('escrow') ||
+              s.includes('closing') ||
+              s.includes('clear to close');
+
+            return isClosed || isPending;
           });
 
           const allMapped: OpsTransaction[] = validDeals.map((t: any) => {
@@ -179,7 +193,7 @@ export const MyDealsView: React.FC = () => {
             const tcName = t.assigned_tc?.name || (t.tc_name && t.tc_name !== 'Unassigned TC' ? t.tc_name : fallbackTc.tc_name);
             const tcEmail = t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email;
 
-            const isClosed = String(t.status).toLowerCase().trim() === 'closed' || Boolean(t.closed_date);
+            const isClosed = String(t.status).toLowerCase().trim() === 'closed' || Boolean(t.custom_fields?.closed_date);
 
             return {
               id: t.id,

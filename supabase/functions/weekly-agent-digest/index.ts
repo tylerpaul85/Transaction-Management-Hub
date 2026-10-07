@@ -217,7 +217,9 @@ serve(async (req: Request) => {
           s.includes('expired') ||
           s.includes('archive') ||
           s.includes('showing') ||
-          s.includes('live listing')
+          s.includes('live listing') ||
+          s.includes('listing') ||
+          s.includes('1st time')
         ) {
           return false;
         }

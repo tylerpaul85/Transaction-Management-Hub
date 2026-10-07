@@ -141,7 +141,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
         if (data) {
           const activeOnly = data.filter((t: any) => {
-            const s = String(t.status || '').toLowerCase().trim();
+            const s = String(t.status || '').toLowerCase().replace(/_/g, ' ').trim();
             if (
               s === 'lost' ||
               s.includes('lost') ||
@@ -156,11 +156,21 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
               s.includes('pipeline') ||
               s.includes('expired') ||
               s === 'closed' ||
-              s.includes('closed')
+              s.includes('closed') ||
+              s.includes('showing') ||
+              s.includes('live listing') ||
+              s.includes('listing') ||
+              s.includes('1st time')
             ) {
               return false;
             }
-            return true;
+            return (
+              s.includes('under contract') ||
+              s.includes('pending') ||
+              s.includes('escrow') ||
+              s.includes('closing') ||
+              s.includes('clear to close')
+            );
           });
           const mapped: Transaction[] = activeOnly.map((t: any, idx: number) => {
             const price = Number(t.price || t.list_price || 0);
