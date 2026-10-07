@@ -319,12 +319,33 @@ export const AdminSyncDebug: React.FC = () => {
         return;
       }
 
-      const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, '').toLowerCase());
+      // Robust CSV parser supporting quotes, commas, and empty fields
+      const parseCsvLine = (line: string): string[] => {
+        const row: string[] = [];
+        let inQuotes = false;
+        let current = '';
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            row.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        row.push(current.trim());
+        return row;
+      };
+
+      const rawHeaders = parseCsvLine(lines[0]);
+      const headers = rawHeaders.map((h) => h.replace(/^"|"$/g, '').toLowerCase().trim());
 
       const getVal = (rowParts: string[], colNames: string[]) => {
         for (const name of colNames) {
-          const idx = headers.findIndex((h) => h.includes(name));
-          if (idx !== -1 && rowParts[idx]) {
+          const idx = headers.findIndex((h) => h === name || h.includes(name));
+          if (idx !== -1 && rowParts[idx] !== undefined) {
             return rowParts[idx].trim().replace(/^"|"$/g, '');
           }
         }
@@ -334,8 +355,8 @@ export const AdminSyncDebug: React.FC = () => {
       let importedCount = 0;
 
       for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-        const cleanRow = row.map((cell) => cell.trim().replace(/^"|"$/g, ''));
+        const cleanRow = parseCsvLine(lines[i]);
+        if (cleanRow.length === 0) continue;
 
         const clientFirstName = getVal(cleanRow, ['first_name', 'first name', 'client_first']);
         const clientLastName = getVal(cleanRow, ['last_name', 'last name', 'client_last']);
@@ -343,18 +364,19 @@ export const AdminSyncDebug: React.FC = () => {
 
         const rawSisuId = getVal(cleanRow, ['client_id', 'id', 'sisu_id', 'transaction_id']);
         const sisuId = rawSisuId ? rawSisuId.replace(/^SISU-/, '').trim() : `CSV-${Date.now()}-${i}`;
-        const address = getVal(cleanRow, ['address_1', 'address', 'property_address']) || '';
+        const address = getVal(cleanRow, ['address line 1', 'address_1', 'address', 'property_address']) || '';
         if (!address.trim() || address.trim().toLowerCase() === 'tbd' || address.trim().toLowerCase() === 'pending address') {
           continue;
         }
         const city = getVal(cleanRow, ['city']) || 'Waynesville';
         const state = getVal(cleanRow, ['state']) || 'MO';
-        const sideVal = getVal(cleanRow, ['side', 'type', 'representation']).toLowerCase();
+        const sideVal = getVal(cleanRow, ['side', 'transaction type', 'type', 'representation']).toLowerCase();
         const side = (sideVal.includes('seller') || sideVal.includes('listing') || sideVal === 's') ? 'seller' : 'buyer';
-        const status = getVal(cleanRow, ['pipeline_status', 'status', 'stage']) || 'Under Contract';
+        
+        let status = getVal(cleanRow, ['status', 'pipeline_status', 'stage']) || 'Pending';
         const agentName = getVal(cleanRow, ['agent', 'agent_name', 'primary_agent']);
-        const agentEmail = getVal(cleanRow, ['agent_email', 'email']);
-        const clientPhone = getVal(cleanRow, ['phone', 'mobile_phone', 'mobile']);
+        const agentEmail = getVal(cleanRow, ['contact email', 'agent_email', 'email']);
+        const clientPhone = getVal(cleanRow, ['mobile phone number', 'phone', 'mobile_phone', 'mobile']);
 
         // Financial & Date extractions
         const rawIncome = getVal(cleanRow, [
@@ -379,6 +401,10 @@ export const AdminSyncDebug: React.FC = () => {
         const rawClosedDate = getVal(cleanRow, ['closed (settlement) date', 'closed date', 'settlement date', 'closed_dt', 'closing_date', 'close date']);
         const closedDate = rawClosedDate ? rawClosedDate.slice(0, 10) : null;
 
+        if (status.toLowerCase().includes('closed') || closedDate) {
+          status = 'Closed';
+        }
+
         const rawTargetDate = getVal(cleanRow, ['forecasted closed date', 'forecast (projected) closed date', 'projected close date', 'target closing date']);
         const targetClosingDate = rawTargetDate ? rawTargetDate.slice(0, 10) : null;
 
@@ -392,9 +418,12 @@ export const AdminSyncDebug: React.FC = () => {
 
         let agentId: string | null = null;
         if (agentName || agentEmail) {
+          const checkName = (agentName || '').toLowerCase().trim();
+          const lookupName = checkName === 'michael odle' ? 'mike odle' : checkName;
+
           const { data: existingAgent } = await (supabase.from('agents') as any)
             .select('id')
-            .or(`email.eq.${(agentEmail || '').toLowerCase()},name.eq.${agentName}`)
+            .or(`email.eq.${(agentEmail || '').toLowerCase()},name.ilike.${lookupName}`)
             .maybeSingle();
 
           if (existingAgent) {
@@ -403,7 +432,7 @@ export const AdminSyncDebug: React.FC = () => {
             const { data: newAgent } = await (supabase.from('agents') as any)
               .insert({
                 name: agentName,
-                email: agentEmail ? agentEmail.toLowerCase() : `${agentName.toLowerCase().replace(/\s+/g, '.')}@mattsmithrealestategroup.com`,
+                email: agentEmail ? agentEmail.toLowerCase() : `${agentName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@mattsmithrealestategroup.com`,
                 active: true,
               })
               .select('id')
@@ -436,11 +465,7 @@ export const AdminSyncDebug: React.FC = () => {
           if (status) updateData.status = status;
           if (clientFullName && clientFullName !== 'Unnamed Client') updateData.client_name = clientFullName;
           if (clientPhone) updateData.client_phone = clientPhone;
-          if (grossAgentIncome !== null) updateData.gross_agent_paid_income = grossAgentIncome;
-          if (gci !== null) updateData.gci = gci;
           if (price !== null) updateData.price = price;
-          if (commRate !== null) updateData.commission_rate = commRate;
-          if (closedDate) updateData.closed_date = closedDate;
           if (targetClosingDate) updateData.target_closing_date = targetClosingDate;
           if (contractDate) updateData.contract_date = contractDate;
           if (otherPartyAgent) updateData.other_party_agent = otherPartyAgent;
@@ -475,15 +500,11 @@ export const AdminSyncDebug: React.FC = () => {
             state,
             side,
             status,
-            client_name: clientFullName || 'Unnamed Client',
+            client_name: clientFullName || 'Client',
             client_phone: clientPhone || null,
             listing_agent_id: side === 'seller' ? agentId : null,
             selling_agent_id: side === 'buyer' ? agentId : null,
-            gross_agent_paid_income: grossAgentIncome,
-            gci,
             price,
-            commission_rate: commRate,
-            closed_date: closedDate,
             target_closing_date: targetClosingDate,
             contract_date: contractDate,
             other_party_agent: otherPartyAgent || null,
