@@ -6,6 +6,13 @@ import { MilestoneType, MilestoneStatus } from '../types/database.types';
 import { MilestoneDotSequence } from '../components/MilestoneDotSequence';
 import { CircularProgressGauge } from '../components/hub/CircularProgressGauge';
 import { RoadmapStepCard } from '../components/hub/RoadmapStepCard';
+import { TaskCompletionModal } from '../components/hub/TaskCompletionModal';
+import {
+  parseTaskApproval,
+  encodeTaskApproval,
+  notifyTcOfTaskSubmission,
+  TaskApprovalData,
+} from '../utils/taskApproval';
 import { GuidesContent } from '../components/hub/GuidesContent';
 import { AgentHeadshotModal } from '../components/AgentHeadshotModal';
 import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
@@ -103,6 +110,8 @@ export const MyDealsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<RoadmapTabType>('under_contract');
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [activeApprovalModalStep, setActiveApprovalModalStep] = useState<HubRoadmapStep | null>(null);
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
 
   // Load live agent transactions & agent roster from Supabase
   useEffect(() => {
@@ -454,9 +463,16 @@ export const MyDealsView: React.FC = () => {
       let date: string | null = null;
       let updatedAt: string | null = null;
       let description = cfg.description;
+      let approvalData: TaskApprovalData | null = null;
 
       if (matchMilestone) {
-        if (matchMilestone.status === 'satisfied' || matchMilestone.status === 'complete') {
+        const parsed = parseTaskApproval(matchMilestone.notes);
+        approvalData = parsed.approvalData;
+
+        if (approvalData?.approvalStatus === 'pending_tc_approval') {
+          // Task submitted by agent and awaiting TC approval
+          stepStatus = 'in_progress';
+        } else if (matchMilestone.status === 'satisfied' || matchMilestone.status === 'complete') {
           stepStatus = 'completed';
         } else if (
           matchMilestone.status === 'in_progress' ||
@@ -478,8 +494,8 @@ export const MyDealsView: React.FC = () => {
             updatedAt = matchMilestone.updated_at;
           }
         }
-        if (matchMilestone.notes && matchMilestone.notes.trim()) {
-          description = `${cfg.description} — ${matchMilestone.notes.trim()}`;
+        if (parsed.cleanNotes && parsed.cleanNotes.trim()) {
+          description = `${cfg.description} — ${parsed.cleanNotes.trim()}`;
         }
       }
 
@@ -492,6 +508,8 @@ export const MyDealsView: React.FC = () => {
         date,
         updatedAt,
         order: idx + 1,
+        notes: matchMilestone?.notes || null,
+        approvalData,
       };
     });
   }, [selectedTransaction]);
@@ -511,6 +529,276 @@ export const MyDealsView: React.FC = () => {
     const firstPending = currentRoadmapSteps.find((s) => s.status === 'pending');
     return firstPending ? firstPending.id : null;
   }, [activeStepId, currentRoadmapSteps]);
+
+  // Submit task completion details to assigned TC for final approval
+  const handleSubmitForApproval = async (data: {
+    details: string;
+    completionDate: string;
+    documentLink?: string;
+  }) => {
+    if (!selectedTransaction || !activeApprovalModalStep) return;
+
+    const stepId = activeApprovalModalStep.id;
+    const nowIso = new Date().toISOString();
+    const existingMilestone = selectedTransaction.milestones?.find(
+      (m) => m.milestone_type === stepId
+    );
+
+    const tcInfo = resolveTcForAgent(selectedTransaction.agent_name);
+    const assignedTcName =
+      selectedTransaction.tc_name && selectedTransaction.tc_name !== 'Unassigned TC'
+        ? selectedTransaction.tc_name
+        : tcInfo.tc_name;
+    const assignedTcEmail = selectedTransaction.tc_email || tcInfo.tc_email;
+
+    const approvalData: TaskApprovalData = {
+      approvalStatus: 'pending_tc_approval',
+      details: data.details,
+      submittedByName: currentUser?.fullName || selectedTransaction.agent_name || 'Agent',
+      submittedByEmail: currentUser?.email || selectedTransaction.agent_email,
+      submittedAt: nowIso,
+      assignedTcName,
+      assignedTcEmail,
+      documentLink: data.documentLink,
+    };
+
+    const encodedNotes = encodeTaskApproval(approvalData, existingMilestone?.notes);
+
+    const updateTransactionList = (list: OpsTransaction[]) =>
+      list.map((tx) => {
+        if (tx.id !== selectedTransaction.id) return tx;
+        const idx = tx.milestones.findIndex((m) => m.milestone_type === stepId);
+        let updatedMilestones = [...tx.milestones];
+        if (idx >= 0) {
+          updatedMilestones[idx] = {
+            ...updatedMilestones[idx],
+            status: 'in_progress',
+            actual_date: data.completionDate,
+            notes: encodedNotes,
+            updated_at: nowIso,
+          };
+        } else {
+          updatedMilestones.push({
+            id: `temp-${stepId}-${Date.now()}`,
+            transaction_id: tx.id,
+            milestone_type: stepId as MilestoneType,
+            target_date: null,
+            actual_date: data.completionDate,
+            status: 'in_progress',
+            source: 'manual',
+            notes: encodedNotes,
+            updated_at: nowIso,
+          });
+        }
+        return { ...tx, milestones: updatedMilestones };
+      });
+
+    setDealsList(updateTransactionList);
+    setAllDealsList(updateTransactionList);
+
+    // Persist to Supabase
+    try {
+      if (existingMilestone && existingMilestone.id && !existingMilestone.id.startsWith('temp-')) {
+        await (supabase.from('milestones') as any)
+          .update({
+            status: 'in_progress',
+            actual_date: data.completionDate,
+            notes: encodedNotes,
+            updated_at: nowIso,
+          })
+          .eq('id', existingMilestone.id);
+      } else {
+        await (supabase.from('milestones') as any).insert({
+          transaction_id: selectedTransaction.id,
+          milestone_type: stepId,
+          status: 'in_progress',
+          source: 'manual',
+          actual_date: data.completionDate,
+          notes: encodedNotes,
+          updated_at: nowIso,
+        });
+      }
+    } catch (err) {
+      console.error('Error persisting task submission to Supabase:', err);
+    }
+
+    // Dispatch automated email notification to assigned TC
+    if (assignedTcEmail) {
+      notifyTcOfTaskSubmission({
+        tcName: assignedTcName,
+        tcEmail: assignedTcEmail,
+        agentName: currentUser?.fullName || selectedTransaction.agent_name || 'Agent',
+        agentEmail: currentUser?.email || selectedTransaction.agent_email,
+        propertyAddress: selectedTransaction.property_address,
+        taskTitle: activeApprovalModalStep.title,
+        details: data.details,
+        completionDate: data.completionDate,
+      }).catch((err) => console.warn('Could not dispatch TC notification:', err));
+    }
+
+    setActionSuccessMessage(`Submitted! Sent to ${assignedTcName} for final verification.`);
+    setTimeout(() => setActionSuccessMessage(null), 5000);
+  };
+
+  // TC Final Approval - marks milestone as satisfied / complete
+  const handleApproveByTc = async (stepIdOrNotes?: string) => {
+    if (!selectedTransaction) return;
+
+    const step =
+      activeApprovalModalStep ||
+      currentRoadmapSteps.find((s) => s.id === stepIdOrNotes);
+    if (!step) return;
+
+    const stepId = step.id;
+    const nowIso = new Date().toISOString();
+    const todayStr = nowIso.split('T')[0];
+    const existingMilestone = selectedTransaction.milestones?.find(
+      (m) => m.milestone_type === stepId
+    );
+
+    const prevApproval = parseTaskApproval(existingMilestone?.notes).approvalData;
+    const tcNotes =
+      typeof stepIdOrNotes === 'string' && stepIdOrNotes !== stepId
+        ? stepIdOrNotes
+        : undefined;
+
+    const updatedApproval: TaskApprovalData = {
+      ...(prevApproval || {
+        details: 'Approved by TC',
+        submittedByName: selectedTransaction.agent_name || 'Agent',
+        submittedAt: nowIso,
+      }),
+      approvalStatus: 'approved',
+      tcReviewedBy: currentUser?.fullName || 'Assigned TC',
+      tcReviewedAt: nowIso,
+      tcNotes: tcNotes || prevApproval?.tcNotes,
+    };
+
+    const encodedNotes = encodeTaskApproval(updatedApproval, existingMilestone?.notes);
+
+    const updateTransactionList = (list: OpsTransaction[]) =>
+      list.map((tx) => {
+        if (tx.id !== selectedTransaction.id) return tx;
+        const idx = tx.milestones.findIndex((m) => m.milestone_type === stepId);
+        let updatedMilestones = [...tx.milestones];
+        if (idx >= 0) {
+          updatedMilestones[idx] = {
+            ...updatedMilestones[idx],
+            status: 'satisfied',
+            actual_date: todayStr,
+            notes: encodedNotes,
+            updated_at: nowIso,
+          };
+        } else {
+          updatedMilestones.push({
+            id: `temp-${stepId}-${Date.now()}`,
+            transaction_id: tx.id,
+            milestone_type: stepId as MilestoneType,
+            target_date: null,
+            actual_date: todayStr,
+            status: 'satisfied',
+            source: 'manual',
+            notes: encodedNotes,
+            updated_at: nowIso,
+          });
+        }
+        return { ...tx, milestones: updatedMilestones };
+      });
+
+    setDealsList(updateTransactionList);
+    setAllDealsList(updateTransactionList);
+
+    try {
+      if (existingMilestone && existingMilestone.id && !existingMilestone.id.startsWith('temp-')) {
+        await (supabase.from('milestones') as any)
+          .update({
+            status: 'satisfied',
+            actual_date: todayStr,
+            notes: encodedNotes,
+            updated_at: nowIso,
+          })
+          .eq('id', existingMilestone.id);
+      } else {
+        await (supabase.from('milestones') as any).insert({
+          transaction_id: selectedTransaction.id,
+          milestone_type: stepId,
+          status: 'satisfied',
+          source: 'manual',
+          actual_date: todayStr,
+          notes: encodedNotes,
+          updated_at: nowIso,
+        });
+      }
+    } catch (err) {
+      console.error('Error approving milestone in Supabase:', err);
+    }
+
+    setActionSuccessMessage(`Task approved and marked Complete!`);
+    setTimeout(() => setActionSuccessMessage(null), 4000);
+  };
+
+  // TC Request Changes - returns task to pending with feedback notes
+  const handleRequestChangesByTc = async (tcFeedback: string) => {
+    if (!selectedTransaction || !activeApprovalModalStep) return;
+
+    const stepId = activeApprovalModalStep.id;
+    const nowIso = new Date().toISOString();
+    const existingMilestone = selectedTransaction.milestones?.find(
+      (m) => m.milestone_type === stepId
+    );
+
+    const prevApproval = parseTaskApproval(existingMilestone?.notes).approvalData;
+
+    const updatedApproval: TaskApprovalData = {
+      ...(prevApproval || {
+        details: 'Changes requested by TC',
+        submittedByName: selectedTransaction.agent_name || 'Agent',
+        submittedAt: nowIso,
+      }),
+      approvalStatus: 'changes_requested',
+      tcReviewedBy: currentUser?.fullName || 'Assigned TC',
+      tcReviewedAt: nowIso,
+      tcNotes: tcFeedback,
+    };
+
+    const encodedNotes = encodeTaskApproval(updatedApproval, existingMilestone?.notes);
+
+    const updateTransactionList = (list: OpsTransaction[]) =>
+      list.map((tx) => {
+        if (tx.id !== selectedTransaction.id) return tx;
+        const idx = tx.milestones.findIndex((m) => m.milestone_type === stepId);
+        let updatedMilestones = [...tx.milestones];
+        if (idx >= 0) {
+          updatedMilestones[idx] = {
+            ...updatedMilestones[idx],
+            status: 'pending',
+            notes: encodedNotes,
+            updated_at: nowIso,
+          };
+        }
+        return { ...tx, milestones: updatedMilestones };
+      });
+
+    setDealsList(updateTransactionList);
+    setAllDealsList(updateTransactionList);
+
+    try {
+      if (existingMilestone && existingMilestone.id && !existingMilestone.id.startsWith('temp-')) {
+        await (supabase.from('milestones') as any)
+          .update({
+            status: 'pending',
+            notes: encodedNotes,
+            updated_at: nowIso,
+          })
+          .eq('id', existingMilestone.id);
+      }
+    } catch (err) {
+      console.error('Error recording revision request in Supabase:', err);
+    }
+
+    setActionSuccessMessage(`Revision request sent to agent.`);
+    setTimeout(() => setActionSuccessMessage(null), 4000);
+  };
 
   // Toggle milestone status between pending and satisfied
   const handleToggleStepStatus = async (stepId: string) => {
@@ -1374,6 +1662,9 @@ export const MyDealsView: React.FC = () => {
                   isFirst={idx === 0}
                   isLast={idx === currentRoadmapSteps.length - 1}
                   isActive={highlightedStepId === step.id}
+                  isOpsOrTc={isOps || isAdmin}
+                  onRequestApproval={(step) => setActiveApprovalModalStep(step)}
+                  onApproveByTc={(stepId) => handleApproveByTc(stepId)}
                   onToggleStatus={handleToggleStepStatus}
                   onDateChange={handleStepDateChange}
                 />
@@ -1534,6 +1825,41 @@ export const MyDealsView: React.FC = () => {
           allAgentProfiles={agentRoster}
           onClose={() => setIsEmailModalOpen(false)}
         />
+      )}
+
+      {/* Task Completion Approval Modal */}
+      {activeApprovalModalStep && selectedTransaction && (
+        <TaskCompletionModal
+          isOpen={Boolean(activeApprovalModalStep)}
+          onClose={() => setActiveApprovalModalStep(null)}
+          taskTitle={activeApprovalModalStep.title}
+          stepNumber={activeApprovalModalStep.order}
+          propertyAddress={selectedTransaction.property_address}
+          clientName={selectedTransaction.client_name}
+          assignedTcName={
+            selectedTransaction.tc_name && selectedTransaction.tc_name !== 'Unassigned TC'
+              ? selectedTransaction.tc_name
+              : resolveTcForAgent(selectedTransaction.agent_name).tc_name
+          }
+          assignedTcEmail={
+            selectedTransaction.tc_email ||
+            resolveTcForAgent(selectedTransaction.agent_name).tc_email
+          }
+          currentDate={activeApprovalModalStep.date}
+          existingApprovalData={activeApprovalModalStep.approvalData}
+          isOpsOrTc={isOps || isAdmin}
+          onSubmitForApproval={handleSubmitForApproval}
+          onApproveByTc={handleApproveByTc}
+          onRequestChangesByTc={handleRequestChangesByTc}
+        />
+      )}
+
+      {/* Floating Action Success Toast */}
+      {actionSuccessMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-500 text-slate-950 font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-bottom-5 border border-emerald-400">
+          <CheckCircle2 className="h-5 w-5 shrink-0" />
+          <span className="text-xs sm:text-sm">{actionSuccessMessage}</span>
+        </div>
       )}
     </div>
   );

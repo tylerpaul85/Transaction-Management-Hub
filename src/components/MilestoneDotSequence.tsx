@@ -31,6 +31,13 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
           label: 'Complete',
           icon: <Check className="w-2.5 h-2.5 flex-shrink-0 text-emerald-400 stroke-[3]" />,
         };
+      case 'pending_tc_approval':
+        return {
+          pill: 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 shadow-sm shadow-amber-500/20 animate-pulse',
+          badge: 'bg-amber-500/25 text-amber-300 border-amber-500/50',
+          label: 'Pending TC',
+          icon: <Clock className="w-2.5 h-2.5 flex-shrink-0 text-amber-400 animate-pulse" />,
+        };
       case 'in_progress':
       case 'ordered':
       case 'notice_sent':
@@ -59,6 +66,14 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
     }
   };
 
+  const resolveEffectiveStatus = (m?: OpsMilestone) => {
+    if (!m) return 'pending';
+    if (m.notes && m.notes.includes('"pending_tc_approval"')) {
+      return 'pending_tc_approval';
+    }
+    return m.status || 'pending';
+  };
+
   return (
     <div className="flex flex-wrap items-center gap-1.5 py-1">
       {milestoneOrder.map((item) => {
@@ -69,12 +84,13 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
         if (item.subTypes && item.subTypes.length > 0) {
           const subMilestones = item.subTypes.map((st) => {
             const m = milestoneMap.get(st);
-            const status = m?.status || 'pending';
+            const status = resolveEffectiveStatus(m);
             return {
               type: st,
               milestone: m,
               status,
               isDone: status === 'complete' || status === 'satisfied',
+              isPendingApproval: status === 'pending_tc_approval',
               isInProgress: status === 'in_progress' || status === 'ordered' || status === 'notice_sent',
               isNa: status === 'na' || status === 'waived',
             };
@@ -82,11 +98,14 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
 
           const activeSub = subMilestones.filter((sm) => !sm.isNa);
           const allDone = activeSub.length > 0 && activeSub.every((sm) => sm.isDone);
+          const anyPendingApproval = subMilestones.some((sm) => sm.isPendingApproval);
           const anyInProgress = subMilestones.some((sm) => sm.isInProgress || sm.isDone);
           const allNa = subMilestones.every((sm) => sm.isNa);
 
           if (allDone) {
             displayStatus = 'complete';
+          } else if (anyPendingApproval) {
+            displayStatus = 'pending_tc_approval';
           } else if (allNa) {
             displayStatus = 'na';
           } else if (anyInProgress) {
@@ -108,7 +127,7 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
           const nextActionableSub = subMilestones.find((sm) => !sm.isDone && !sm.isNa);
           primaryMilestone = nextActionableSub?.milestone || subMilestones[0]?.milestone || primaryMilestone;
         } else {
-          displayStatus = primaryMilestone?.status || 'pending';
+          displayStatus = resolveEffectiveStatus(primaryMilestone);
         }
 
         const styles = getStatusStyles(displayStatus);

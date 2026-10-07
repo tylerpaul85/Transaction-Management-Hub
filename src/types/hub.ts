@@ -18,6 +18,20 @@ export interface HubRoadmapStep {
   updatedAt?: string | null;
   required?: boolean;
   order: number;
+  notes?: string | null;
+  approvalData?: {
+    approvalStatus: 'pending_tc_approval' | 'approved' | 'changes_requested';
+    details: string;
+    submittedByName: string;
+    submittedByEmail?: string;
+    submittedAt: string;
+    assignedTcName?: string;
+    assignedTcEmail?: string;
+    documentLink?: string;
+    tcNotes?: string;
+    tcReviewedAt?: string;
+    tcReviewedBy?: string;
+  } | null;
 }
 
 export interface HubTeamMember {
