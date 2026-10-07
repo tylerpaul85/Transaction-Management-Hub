@@ -96,15 +96,15 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
     if (tx.gross_agent_paid_income !== null && tx.gross_agent_paid_income !== undefined && !isNaN(tx.gross_agent_paid_income)) {
       return Number(tx.gross_agent_paid_income);
     }
-    // Fallback: GCI * commission split (default 45% as in Sisu)
+    // Fallback: GCI * commission split (default 70% as standard in Sisu)
     if (tx.gci !== null && tx.gci !== undefined && !isNaN(tx.gci)) {
-      const split = tx.commission_rate ? tx.commission_rate / 100 : 0.45;
+      const split = (tx.commission_rate && tx.commission_rate >= 10) ? tx.commission_rate / 100 : 0.70;
       return Number(tx.gci) * split;
     }
-    // Fallback 2: Price * 3% commission * 45% split
+    // Fallback 2: Price * 3% commission * 70% split
     const price = tx.price || tx.list_price || 0;
     if (price > 0) {
-      return price * 0.03 * 0.45;
+      return price * 0.03 * 0.70;
     }
     return 0;
   };
@@ -1016,7 +1016,7 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
                 filteredDeals.map((tx) => {
                   const isClosed = String(tx.status).toLowerCase().trim() === 'closed' || Boolean(tx.closed_date);
                   const income = getGrossIncome(tx);
-                  const splitPercent = tx.commission_rate || 45;
+                  const splitPercent = (tx.commission_rate && tx.commission_rate >= 10) ? tx.commission_rate : 70;
                   const gciVal = tx.gci || (income / (splitPercent / 100));
                   const dateStr = tx.closed_date || tx.target_closing_date || tx.contract_date || '—';
 

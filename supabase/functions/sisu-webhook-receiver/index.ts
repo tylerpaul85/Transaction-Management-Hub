@@ -953,10 +953,6 @@ serve(async (req: Request) => {
       if (rawPrice !== null && rawPrice !== undefined && !isNaN(Number(rawPrice))) {
         txUpdates.price = Number(rawPrice);
       }
-      if (grossAgentIncome !== null) txUpdates.gross_agent_paid_income = grossAgentIncome;
-      if (gciNum !== null) txUpdates.gci = gciNum;
-      if (commRate !== null) txUpdates.commission_rate = commRate;
-      if (closedDate) txUpdates.closed_date = closedDate;
 
       txUpdates.custom_fields = {
         ...(existingTx.custom_fields || {}),
