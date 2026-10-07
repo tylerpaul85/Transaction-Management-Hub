@@ -9,6 +9,7 @@ import { RoadmapStepCard } from '../components/hub/RoadmapStepCard';
 import { GuidesContent } from '../components/hub/GuidesContent';
 import { AgentHeadshotModal } from '../components/AgentHeadshotModal';
 import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
+import { AgentFinancialRadar } from '../components/hub/AgentFinancialRadar';
 import { getStoredAvatar } from '../utils/avatarStorage';
 import {
   Building,
@@ -48,6 +49,10 @@ export const MyDealsView: React.FC = () => {
   const [sideFilter, setSideFilter] = useState<'all' | 'buyer' | 'seller'>(() => {
     return (sessionStorage.getItem('mydeals_side_filter') as any) || 'all';
   });
+  const [activeHubSection, setActiveHubSection] = useState<'deals' | 'financials'>(() => {
+    return (sessionStorage.getItem('mydeals_hub_section') as any) || 'deals';
+  });
+  const [allDealsList, setAllDealsList] = useState<OpsTransaction[]>([]);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(() => {
     return sessionStorage.getItem('mydeals_selected_tx_id') || null;
   });
@@ -81,6 +86,10 @@ export const MyDealsView: React.FC = () => {
   useEffect(() => {
     sessionStorage.setItem('mydeals_agent_filter', selectedAgentFilter);
   }, [selectedAgentFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem('mydeals_hub_section', activeHubSection);
+  }, [activeHubSection]);
 
   // Headshot Modal State
   const [isHeadshotModalOpen, setIsHeadshotModalOpen] = useState(false);
@@ -124,13 +133,11 @@ export const MyDealsView: React.FC = () => {
         }
 
         if (data) {
-          const activeOnly = data.filter((t: any) => {
+          const validDeals = data.filter((t: any) => {
             const s = String(t.status || '').toLowerCase().trim();
             if (
               s === 'lost' ||
               s.includes('lost') ||
-              s === 'closed' ||
-              s.startsWith('closed') ||
               s === 'signed' ||
               s.includes('signed') ||
               s.includes('release') ||
@@ -144,16 +151,10 @@ export const MyDealsView: React.FC = () => {
             ) {
               return false;
             }
-            return (
-              s.includes('under contract') ||
-              s.includes('pending') ||
-              s.includes('escrow') ||
-              s.includes('closing') ||
-              s.includes('clear to close')
-            );
+            return true;
           });
 
-          const mapped: OpsTransaction[] = activeOnly.map((t: any) => {
+          const allMapped: OpsTransaction[] = validDeals.map((t: any) => {
             const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
             const agentName = leadAgent?.name || t.agent_name || 'Lead Agent';
             const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
@@ -161,10 +162,12 @@ export const MyDealsView: React.FC = () => {
             const tcName = t.assigned_tc?.name || (t.tc_name && t.tc_name !== 'Unassigned TC' ? t.tc_name : fallbackTc.tc_name);
             const tcEmail = t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email;
 
+            const isClosed = String(t.status).toLowerCase().trim() === 'closed' || Boolean(t.closed_date);
+
             return {
               id: t.id,
               sisu_transaction_id: t.sisu_transaction_id || undefined,
-              status: 'Pending',
+              status: isClosed ? 'closed' : 'Pending',
               property_address: t.property_address,
               city: t.city || 'Waynesville',
               state: t.state || 'MO',
@@ -186,6 +189,11 @@ export const MyDealsView: React.FC = () => {
               tc_email: tcEmail,
               contract_date: t.contract_date || undefined,
               target_closing_date: t.target_closing_date || undefined,
+              closed_date: t.closed_date || t.custom_fields?.closed_date || undefined,
+              gross_agent_paid_income: t.gross_agent_paid_income ?? t.custom_fields?.gross_agent_paid_income ?? null,
+              gci: t.gci ?? t.custom_fields?.gci ?? null,
+              commission_rate: t.commission_rate ?? t.custom_fields?.commission_rate ?? null,
+              price: t.price ?? null,
               flagged_for_review: false,
               created_at: t.created_at,
               updated_at: t.updated_at,
@@ -203,7 +211,8 @@ export const MyDealsView: React.FC = () => {
             };
           });
 
-          setDealsList(mapped);
+          setAllDealsList(allMapped);
+          setDealsList(allMapped.filter((t) => t.status !== 'closed'));
         }
       } catch (err) {
         console.warn('Live agent transactions query error:', err);
@@ -305,7 +314,29 @@ export const MyDealsView: React.FC = () => {
 
       return matchEmail || matchName || matchId;
     });
-  }, [dealsList, currentUser, isOps, isAdmin]);
+  }, [dealsList, selectedAgentFilter, currentUser, isOps, isAdmin]);
+
+  // Filter all deals (including closed historical) to selected agent for Financial Radar
+  const agentAllDeals = useMemo(() => {
+    return allDealsList.filter((t) => {
+      if (isOps || isAdmin) {
+        if (selectedAgentFilter !== 'All') {
+          return t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase();
+        }
+        return true;
+      }
+
+      const userEmail = (currentUser?.email || '').toLowerCase().trim();
+      const userName = (currentUser?.fullName || '').toLowerCase().trim();
+      const userAgentId = currentUser?.agent_id;
+
+      const matchEmail = Boolean(t.agent_email && t.agent_email.toLowerCase().trim() === userEmail);
+      const matchName = Boolean(t.agent_name && t.agent_name.toLowerCase().trim() === userName);
+      const matchId = Boolean(userAgentId && (t.listing_agent_id === userAgentId || t.selling_agent_id === userAgentId));
+
+      return matchEmail || matchName || matchId;
+    });
+  }, [allDealsList, selectedAgentFilter, currentUser, isOps, isAdmin]);
 
   // Filtered by side and search
   const filteredDeals = useMemo(() => {
@@ -842,10 +873,51 @@ export const MyDealsView: React.FC = () => {
             </div>
           </div>
 
-          {/* ─────────────────────────────────────────────────────────────
-              DIRECTORY SEARCH & FILTER CONTROLS (MATCHING IMAGE 2)
-             ───────────────────────────────────────────────────────────── */}
-          <div className="space-y-4">
+          {/* Main Navigation Tabs: Active Escrows vs Income & Financials */}
+          <div className="flex flex-wrap items-center gap-3 border-b border-slate-800 pb-2">
+            <button
+              onClick={() => setActiveHubSection('deals')}
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                activeHubSection === 'deals'
+                  ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-md shadow-sky-500/10'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent'
+              }`}
+            >
+              <Building className="h-4 w-4" />
+              <span>Active Escrow Files</span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-slate-800 text-slate-300">
+                {myDeals.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveHubSection('financials')}
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                activeHubSection === 'financials'
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-md shadow-emerald-500/10'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent'
+              }`}
+            >
+              <DollarSign className="h-4 w-4 text-emerald-400" />
+              <span>Income & Financials</span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Sisu Analytics
+              </span>
+            </button>
+          </div>
+
+          {activeHubSection === 'financials' ? (
+            <AgentFinancialRadar
+              transactions={agentAllDeals}
+              agentName={currentAgentObj.name}
+              agentEmail={currentAgentObj.email}
+              agentAvatarUrl={currentAvatar}
+            />
+          ) : (
+            /* ─────────────────────────────────────────────────────────────
+                DIRECTORY SEARCH & FILTER CONTROLS (MATCHING IMAGE 2)
+               ───────────────────────────────────────────────────────────── */
+            <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               {/* Rounded-full Pill Search Bar */}
               <div className="relative flex-1 max-w-xl">
@@ -1015,6 +1087,7 @@ export const MyDealsView: React.FC = () => {
               </div>
             )}
           </div>
+          )}
         </div>
       ) : (
         /* ─────────────────────────────────────────────────────────────────

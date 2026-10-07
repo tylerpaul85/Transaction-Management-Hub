@@ -58,6 +58,19 @@ function parseSisuDate(val: any): string | null {
   return null;
 }
 
+function parseMoney(val: any): number | null {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'number') return isNaN(val) ? null : val;
+  if (typeof val === 'string') {
+    const cleaned = val.replace(/[^0-9.-]/g, '');
+    if (!cleaned) return null;
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+  return null;
+}
+
+
 function findFirstMatchingValue(sources: any[], matchers: string[]): string | null {
   for (const src of sources) {
     if (!src || typeof src !== 'object') continue;
@@ -755,6 +768,45 @@ serve(async (req: Request) => {
       updatedVals.trans_amt ||
       null;
 
+    const grossAgentIncome =
+      parseMoney(findFirstMatchingValue(coopSources, [
+        'grossagentpaidincome',
+        'grossagentincome',
+        'agentpaidincome',
+        'agentpaid',
+        'agentgrossincome',
+      ])) ??
+      parseMoney(fullObj.gross_agent_paid_income) ??
+      parseMoney(sisuData.gross_agent_paid_income) ??
+      parseMoney(updatedVals.gross_agent_paid_income) ??
+      parseMoney(fullObj.agent_paid_income) ??
+      parseMoney(sisuData.agent_paid_income) ??
+      parseMoney(fullObj.agent_gross_income) ??
+      parseMoney(fullObj.custom?.gross_agent_paid_income) ??
+      null;
+
+    const gciNum =
+      parseMoney(fullObj.gci) ??
+      parseMoney(sisuData.gci) ??
+      parseMoney(updatedVals.gci) ??
+      parseMoney(fullObj.gross_commission) ??
+      parseMoney(sisuData.gross_commission) ??
+      parseMoney(fullObj.commission_amount) ??
+      null;
+
+    const commRate =
+      parseMoney(fullObj.commission_rate) ??
+      parseMoney(fullObj.commission_percent) ??
+      parseMoney(sisuData.commission_percent) ??
+      parseMoney(updatedVals.commission_percent) ??
+      parseMoney(fullObj.agent_split) ??
+      null;
+
+    const closedDate =
+      closedActualDate ||
+      parseSisuDate(fullObj.closed_dt || updatedVals.closed_dt || sisuData.closed_dt || fullObj.settlement_date || sisuData.settlement_date);
+
+
     // If marked as lost, signed (reverted from pending/mutual release), mutual release, cancelled, or terminated, take off completely
     const normStatus = (
       rawStatus ||
@@ -901,6 +953,19 @@ serve(async (req: Request) => {
       if (rawPrice !== null && rawPrice !== undefined && !isNaN(Number(rawPrice))) {
         txUpdates.price = Number(rawPrice);
       }
+      if (grossAgentIncome !== null) txUpdates.gross_agent_paid_income = grossAgentIncome;
+      if (gciNum !== null) txUpdates.gci = gciNum;
+      if (commRate !== null) txUpdates.commission_rate = commRate;
+      if (closedDate) txUpdates.closed_date = closedDate;
+
+      txUpdates.custom_fields = {
+        ...(existingTx.custom_fields || {}),
+        gross_agent_paid_income: grossAgentIncome,
+        gci: gciNum,
+        commission_rate: commRate,
+        closed_date: closedDate,
+        price: txUpdates.price,
+      };
 
       // Only update agent & TC assignments if matched in this event
       if (listingAgentId) txUpdates.listing_agent_id = listingAgentId;
@@ -950,14 +1015,18 @@ serve(async (req: Request) => {
         normInsertStatus.includes('escrow') ||
         normInsertStatus.includes('closing') ||
         normInsertStatus.includes('clear to close');
+      const isClosed =
+        normInsertStatus.includes('closed') ||
+        normInsertStatus === 'closed' ||
+        Boolean(closedDate);
 
-      if (!isPending) {
-        console.log(`[Sisu Webhook] Skipping insertion of transaction ${finalSisuId} because status '${insertStatus}' is not pending.`);
+      if (!isPending && !isClosed) {
+        console.log(`[Sisu Webhook] Skipping insertion of transaction ${finalSisuId} because status '${insertStatus}' is neither pending nor closed.`);
         return new Response(
           JSON.stringify({
             success: true,
             action: 'skipped_non_pending',
-            message: `Transaction ${finalSisuId} status '${insertStatus}' is not pending. Escrow Hub only tracks active pendings.`,
+            message: `Transaction ${finalSisuId} status '${insertStatus}' is neither pending nor closed. Escrow Hub only tracks active and closed deals.`,
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -972,7 +1041,7 @@ serve(async (req: Request) => {
       if (insertState === 'IL') insertState = 'MO';
       const insertSide = resolvedSide || 'buyer';
 
-      const finalInsertStatus = isPending ? 'Pending' : insertStatus;
+      const finalInsertStatus = isClosed ? 'Closed' : (isPending ? 'Pending' : insertStatus);
 
       const { data: newTx, error: insertErr } = await supabase
         .from('transactions')
@@ -1004,6 +1073,17 @@ serve(async (req: Request) => {
             assigned_tc_id: assignedTcId,
             contract_date: (contractDate && typeof contractDate === 'string' && contractDate.trim()) || null,
             price: (rawPrice !== null && rawPrice !== undefined && !isNaN(Number(rawPrice))) ? Number(rawPrice) : null,
+            gross_agent_paid_income: grossAgentIncome,
+            gci: gciNum,
+            commission_rate: commRate,
+            closed_date: closedDate,
+            custom_fields: {
+              gross_agent_paid_income: grossAgentIncome,
+              gci: gciNum,
+              commission_rate: commRate,
+              closed_date: closedDate,
+              price: (rawPrice !== null && rawPrice !== undefined && !isNaN(Number(rawPrice))) ? Number(rawPrice) : null,
+            },
           },
           { onConflict: 'sisu_transaction_id' }
         )

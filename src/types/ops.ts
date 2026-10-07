@@ -35,6 +35,10 @@ export interface OpsTransaction {
   listing_date?: string | null;
   expiration_date?: string | null;
   days_on_market?: number | null;
+  gross_agent_paid_income?: number | null;
+  gci?: number | null;
+  commission_rate?: number | null;
+  closed_date?: string | null;
   
   // LC Checklist Status
   photography_status?: 'pending' | 'scheduled' | 'completed';

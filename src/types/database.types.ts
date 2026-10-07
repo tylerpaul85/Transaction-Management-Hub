@@ -191,6 +191,10 @@ export interface Database {
           other_party_email?: string | null;
           other_party_phone?: string | null;
           other_party_brokerage?: string | null;
+          gross_agent_paid_income?: number | null;
+          gci?: number | null;
+          commission_rate?: number | null;
+          closed_date?: string | null;
           custom_fields?: Json | null;
           created_at: string;
           updated_at: string;
@@ -229,6 +233,10 @@ export interface Database {
           other_party_email?: string | null;
           other_party_phone?: string | null;
           other_party_brokerage?: string | null;
+          gross_agent_paid_income?: number | null;
+          gci?: number | null;
+          commission_rate?: number | null;
+          closed_date?: string | null;
           custom_fields?: Json | null;
           created_at?: string;
           updated_at?: string;
@@ -267,6 +275,10 @@ export interface Database {
           other_party_email?: string | null;
           other_party_phone?: string | null;
           other_party_brokerage?: string | null;
+          gross_agent_paid_income?: number | null;
+          gci?: number | null;
+          commission_rate?: number | null;
+          closed_date?: string | null;
           custom_fields?: Json | null;
           created_at?: string;
           updated_at?: string;

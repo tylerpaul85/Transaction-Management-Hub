@@ -58,6 +58,19 @@ function parseSisuDate(val: any): string | null {
   return null;
 }
 
+function parseMoney(val: any): number | null {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'number') return isNaN(val) ? null : val;
+  if (typeof val === 'string') {
+    const cleaned = val.replace(/[^0-9.-]/g, '');
+    if (!cleaned) return null;
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+  return null;
+}
+
+
 function findFirstMatchingValue(sources: any[], matchers: string[]): string | null {
   for (const src of sources) {
     if (!src || typeof src !== 'object') continue;
@@ -266,106 +279,153 @@ serve(async (req: Request) => {
       }
     }
 
-    const toUpsert = resultRows
-      .filter((r) => {
-        const addr = (r['Address Line 1'] || r['address'] || r['property_address'] || '').trim();
-        return isGenuineAddress(addr);
-      })
-      .map((r, idx) => {
-        const rawId = String(r['ID'] || r['sisu_id'] || r['transaction_id'] || '').trim();
-        const sisuId = rawId ? rawId.replace(/^SISU-/, '').trim() : `BATCH-${Date.now()}-${idx}`;
-        const addr = (r['Address Line 1'] || r['address'] || '').trim();
-        const city = r['City'] || 'Waynesville';
-        const state = 'MO';
-        const zip = r['Postal Code'] || '';
-        const side = String(r['Transaction Type'] || r['type'] || 'buyer').toLowerCase().includes('sell') ? 'seller' : 'buyer';
-        
-        let status = 'Pending';
-        const rawStat = String(r['Status'] || r['status'] || '').toLowerCase();
-        if (
-          rawStat.includes('lost') ||
-          rawStat === 'lost' ||
-          rawStat.includes('signed') ||
-          rawStat.includes('release') ||
-          rawStat.includes('cancel') ||
-          rawStat.includes('terminate') ||
-          rawStat.includes('fell through')
-        ) {
-          if (sisuId) {
-            await supabase.from('transactions').delete().eq('sisu_transaction_id', sisuId);
+    const { data: dbAgentsList } = await supabase.from('agents').select('id, name, email');
+    const agentMap = new Map<string, string>();
+    (dbAgentsList || []).forEach((ag: any) => {
+      if (ag.name) agentMap.set(ag.name.toLowerCase().trim(), ag.id);
+      if (ag.email) agentMap.set(ag.email.toLowerCase().trim(), ag.id);
+    });
+
+    const toUpsert: any[] = [];
+    for (let idx = 0; idx < resultRows.length; idx++) {
+      const r = resultRows[idx];
+      const addr = (r['Address Line 1'] || r['address'] || r['property_address'] || '').trim();
+      if (!isGenuineAddress(addr)) continue;
+
+      const rawId = String(r['ID'] || r['sisu_id'] || r['transaction_id'] || '').trim();
+      const sisuId = rawId ? rawId.replace(/^SISU-/, '').trim() : `BATCH-${Date.now()}-${idx}`;
+      const city = r['City'] || 'Waynesville';
+      const state = 'MO';
+      const rawSide = String(r['Transaction Type'] || r['type'] || 'buyer').toLowerCase();
+      const side = (rawSide.includes('sell') || rawSide.includes('listing')) ? 'seller' : 'buyer';
+
+      const rawStat = String(r['Status'] || r['status'] || '').toLowerCase();
+      if (
+        rawStat.includes('lost') ||
+        rawStat === 'lost' ||
+        rawStat.includes('signed') ||
+        rawStat.includes('release') ||
+        rawStat.includes('cancel') ||
+        rawStat.includes('terminate') ||
+        rawStat.includes('fell through')
+      ) {
+        if (sisuId) {
+          await supabase.from('transactions').delete().eq('sisu_transaction_id', sisuId);
+        }
+        continue;
+      }
+
+      let status = 'Pending';
+      if (rawStat.includes('close')) {
+        status = 'Closed';
+      } else if (rawStat.includes('list') || rawStat.includes('active')) {
+        status = 'active';
+      }
+
+      const firstName = r['First Name'] || '';
+      const lastName = r['Last Name'] || '';
+      const clientName = `${firstName} ${lastName}`.trim() || r['client_name'] || 'Client';
+      const clientEmail = r['Contact Email'] || null;
+      const clientPhone = r['Mobile Phone Number'] || null;
+
+      const priceNum = parseMoney(r['Transaction Amount'] || r['Price'] || r['sales_price']);
+      const grossAgentIncome = parseMoney(
+        r['Gross Agent(s) Paid Income'] ||
+        r['Gross Agent Paid Income'] ||
+        r['Agent Paid Income'] ||
+        r['Gross Income'] ||
+        r['gross_agent_paid_income']
+      );
+      const gciNum = parseMoney(r['GCI'] || r['Gross Commission'] || r['gci']);
+      const commRate = parseMoney(r['Commission %'] || r['Commission Rate'] || r['Agent Split']);
+
+      const contractDate = String(r['Under Contract Date'] || '').slice(0, 10) || new Date().toISOString().split('T')[0];
+      const closedDate = String(r['Closed (Settlement) Date'] || r['Closed Date'] || '').slice(0, 10) || null;
+      const targetClosingDate = String(r['Forecasted Closed Date'] || r['Projected Close Date'] || '').slice(0, 10) || null;
+
+      const agentRawName = String(r['Agent'] || r['agent_name'] || r['agent'] || '').toLowerCase().trim();
+      let matchedAgentId: string | null = null;
+      if (agentRawName) {
+        matchedAgentId = agentMap.get(agentRawName) || null;
+        if (!matchedAgentId) {
+          for (const [nameKey, agId] of agentMap.entries()) {
+            if (nameKey.includes(agentRawName) || agentRawName.includes(nameKey)) {
+              matchedAgentId = agId;
+              break;
+            }
           }
-          continue;
         }
-        if (rawStat.includes('list') || rawStat.includes('active')) {
-          status = 'active';
-        } else if (rawStat.includes('close')) {
-          status = 'Closed';
-        }
+      }
 
-        const firstName = r['First Name'] || '';
-        const lastName = r['Last Name'] || '';
-        const clientName = `${firstName} ${lastName}`.trim() || r['client_name'] || 'Client';
-        const clientEmail = r['Contact Email'] || null;
-        const clientPhone = r['Mobile Phone Number'] || null;
+      let assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e'; // default Ashley Charette
+      const KATIE_AGENTS = [
+        'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
+        'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
+        'marissa beatty', 'michael odle', 'robert montenegro', 'ryan reagan', 
+        'sebastian rush', 'shawn mcarthur', 'shawn witzemann'
+      ];
+      if (KATIE_AGENTS.some((a) => agentRawName.includes(a))) {
+        assignedTcId = '5580daa6-415d-4385-986a-69bc94421c0c'; // Katie Harold
+      }
 
-        const priceNum = parseFloat(String(r['Transaction Amount'] || '0').replace(/[^0-9.]/g, '')) || null;
-        const contractDate = String(r['Under Contract Date'] || '').slice(0, 10) || new Date().toISOString().split('T')[0];
-        const closingDate = String(r['Forecasted Closed Date'] || r['Closed (Settlement) Date'] || '').slice(0, 10) || null;
+      const coopAgentName =
+        r['Cooperating Agent Name'] ||
+        r['Co-op Agent Name'] ||
+        r['Coop Agent Name'] ||
+        r['Cooperating Agent'] ||
+        null;
+      const coopAgentEmail =
+        r['Cooperating Agent Email'] ||
+        r['Co-op Agent Email'] ||
+        r['Coop Agent Email'] ||
+        r['Cooperating Email'] ||
+        null;
+      const coopAgentPhone =
+        r['Cooperating Agent Phone'] ||
+        r['Co-op Agent Phone'] ||
+        r['Coop Agent Phone'] ||
+        r['Cooperating Phone'] ||
+        null;
+      const coopBrokerage =
+        r['Cooperating Brokerage'] ||
+        r['Cooperating Agent Brokerage'] ||
+        r['Co-op Brokerage'] ||
+        r['Coop Brokerage'] ||
+        null;
 
-        const agentName = String(r['Agent'] || r['agent_name'] || r['agent'] || '').toLowerCase();
-        let assignedTcId = 'f4436dcc-4d52-4a26-af80-05096b76067e'; // default Ashley Charette
-        const KATIE_AGENTS = [
-          'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
-          'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
-          'marissa beatty', 'michael odle', 'robert montenegro', 'ryan reagan', 
-          'sebastian rush', 'shawn mcarthur', 'shawn witzemann'
-        ];
-        if (KATIE_AGENTS.some((a) => agentName.includes(a))) {
-          assignedTcId = '5580daa6-415d-4385-986a-69bc94421c0c'; // Katie Harold
-        }
-
-        const coopAgentName =
-          r['Cooperating Agent Name'] ||
-          r['Co-op Agent Name'] ||
-          r['Coop Agent Name'] ||
-          r['Cooperating Agent'] ||
-          null;
-        const coopAgentEmail =
-          r['Cooperating Agent Email'] ||
-          r['Co-op Agent Email'] ||
-          r['Coop Agent Email'] ||
-          r['Cooperating Email'] ||
-          null;
-        const coopAgentPhone =
-          r['Cooperating Agent Phone'] ||
-          r['Co-op Agent Phone'] ||
-          r['Coop Agent Phone'] ||
-          r['Cooperating Phone'] ||
-          null;
-        const coopBrokerage =
-          r['Cooperating Brokerage'] ||
-          r['Cooperating Agent Brokerage'] ||
-          r['Co-op Brokerage'] ||
-          r['Coop Brokerage'] ||
-          null;
-
-        return {
-          sisu_transaction_id: sisuId,
-          property_address: addr,
-          city,
-          state,
-          side,
-          status,
-          client_name: clientName,
-          client_phone: clientPhone,
-          contract_date: contractDate,
-          other_party_agent: coopAgentName,
-          other_party_phone: coopAgentPhone,
-          other_party_email: coopAgentEmail,
-          other_party_brokerage: coopBrokerage,
-          assigned_tc_id: assignedTcId,
-        };
+      toUpsert.push({
+        sisu_transaction_id: sisuId,
+        property_address: addr,
+        city,
+        state,
+        side,
+        status,
+        client_name: clientName,
+        client_phone: clientPhone,
+        client_email: clientEmail,
+        contract_date: contractDate,
+        closed_date: closedDate,
+        target_closing_date: targetClosingDate,
+        price: priceNum,
+        gross_agent_paid_income: grossAgentIncome,
+        gci: gciNum,
+        commission_rate: commRate,
+        listing_agent_id: side === 'seller' ? matchedAgentId : null,
+        selling_agent_id: side === 'buyer' ? matchedAgentId : null,
+        other_party_agent: coopAgentName,
+        other_party_phone: coopAgentPhone,
+        other_party_email: coopAgentEmail,
+        other_party_brokerage: coopBrokerage,
+        assigned_tc_id: assignedTcId,
+        custom_fields: {
+          gross_agent_paid_income: grossAgentIncome,
+          gci: gciNum,
+          commission_rate: commRate,
+          closed_date: closedDate,
+          price: priceNum,
+        },
       });
+    }
 
     if (toUpsert.length > 0) {
       const { data: inserted, error: insErr } = await supabase
@@ -575,9 +635,7 @@ serve(async (req: Request) => {
         sisuData.client_name ||
         null;
 
-      const clientPhone = sisuData.client?.phone || sisuData.client_phone || null;
       const fullObj = sisuData.object_data?.full_object || {};
-
       const clientPhone = sisuData.client?.phone || sisuData.client_phone || fullObj.mobile_phone || null;
       const coopSources = [
         fullObj.custom,
@@ -700,6 +758,73 @@ serve(async (req: Request) => {
         continue;
       }
 
+      // Extract financial fields
+      const grossAgentIncome =
+        parseMoney(findFirstMatchingValue(coopSources, [
+          'grossagentpaidincome',
+          'grossagentincome',
+          'agentpaidincome',
+          'agentpaid',
+          'agentgrossincome',
+        ])) ??
+        parseMoney(fullObj.gross_agent_paid_income) ??
+        parseMoney(sisuData.gross_agent_paid_income) ??
+        parseMoney(fullObj.agent_paid_income) ??
+        parseMoney(sisuData.agent_paid_income) ??
+        parseMoney(fullObj.agent_gross_income) ??
+        parseMoney(fullObj.custom?.gross_agent_paid_income) ??
+        null;
+
+      const gciNum =
+        parseMoney(fullObj.gci) ??
+        parseMoney(sisuData.gci) ??
+        parseMoney(fullObj.gross_commission) ??
+        parseMoney(sisuData.gross_commission) ??
+        parseMoney(fullObj.commission_amount) ??
+        null;
+
+      const priceNum =
+        parseMoney(fullObj.transaction_amount) ??
+        parseMoney(sisuData.transaction_amount) ??
+        parseMoney(fullObj.price) ??
+        parseMoney(sisuData.price) ??
+        parseMoney(fullObj.trans_amt) ??
+        parseMoney(fullObj.volume) ??
+        null;
+
+      const commRate =
+        parseMoney(fullObj.commission_rate) ??
+        parseMoney(fullObj.commission_percent) ??
+        parseMoney(sisuData.commission_percent) ??
+        parseMoney(fullObj.agent_split) ??
+        null;
+
+      const closedDate =
+        closedActualDate ||
+        parseSisuDate(fullObj.closed_dt || sisuData.closed_dt || fullObj.settlement_date || sisuData.settlement_date);
+
+      const checkAgent = String(
+        sisuData.agent_name ||
+        sisuData.agent?.full_name ||
+        sisuData.agent?.name ||
+        fullObj.agent_name ||
+        fullObj.agent?.full_name ||
+        ''
+      ).toLowerCase().trim();
+
+      let matchedAgentId: string | null = null;
+      if (checkAgent && agentMap.size > 0) {
+        matchedAgentId = agentMap.get(checkAgent) || null;
+        if (!matchedAgentId) {
+          for (const [nameKey, agId] of agentMap.entries()) {
+            if (nameKey.includes(checkAgent) || checkAgent.includes(nameKey)) {
+              matchedAgentId = agId;
+              break;
+            }
+          }
+        }
+      }
+
       // Find in DB
       const { data: existingTx } = await supabase
         .from('transactions')
@@ -732,7 +857,8 @@ serve(async (req: Request) => {
         if (status && status.trim() !== '') {
           const sLower = status.toLowerCase();
           const isPending = sLower.includes('contract') || sLower.includes('pending') || sLower.includes('escrow') || sLower.includes('closing') || sLower.includes('clear to close');
-          txUpdates.status = isPending ? 'Pending' : status.trim();
+          const isClosed = sLower.includes('closed') || sLower === 'closed' || Boolean(closedDate);
+          txUpdates.status = isClosed ? 'Closed' : (isPending ? 'Pending' : status.trim());
         }
 
         if (side) {
@@ -785,8 +911,27 @@ serve(async (req: Request) => {
           txUpdates.contract_date = contractDate.trim();
         }
 
+        if (grossAgentIncome !== null) txUpdates.gross_agent_paid_income = grossAgentIncome;
+        if (gciNum !== null) txUpdates.gci = gciNum;
+        if (commRate !== null) txUpdates.commission_rate = commRate;
+        if (priceNum !== null) txUpdates.price = priceNum;
+        if (closedDate) txUpdates.closed_date = closedDate;
+
+        if (matchedAgentId) {
+          if (side === 'seller') txUpdates.listing_agent_id = matchedAgentId;
+          else txUpdates.selling_agent_id = matchedAgentId;
+        }
+
+        txUpdates.custom_fields = {
+          ...(existingTx.custom_fields || {}),
+          gross_agent_paid_income: grossAgentIncome,
+          gci: gciNum,
+          commission_rate: commRate,
+          price: priceNum,
+          closed_date: closedDate,
+        };
+
         if (!existingTx.assigned_tc_id) {
-          const checkAgent = String(sisuData.agent_name || sisuData.agent?.full_name || '').toLowerCase();
           const KATIE_AGENTS = [
             'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
             'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
@@ -819,9 +964,13 @@ serve(async (req: Request) => {
           normInsertStatus.includes('escrow') ||
           normInsertStatus.includes('closing') ||
           normInsertStatus.includes('clear to close');
+        const isClosed =
+          normInsertStatus.includes('closed') ||
+          normInsertStatus === 'closed' ||
+          Boolean(closedDate);
 
-        if (!isPending) {
-          console.log(`[Reconciliation] Skipping deal ${sisuTxId} because status '${insertStatus}' is not pending.`);
+        if (!isPending && !isClosed) {
+          console.log(`[Reconciliation] Skipping deal ${sisuTxId} because status '${insertStatus}' is neither pending nor closed.`);
           continue;
         }
 
@@ -831,7 +980,6 @@ serve(async (req: Request) => {
         const insertState = (rawState && typeof rawState === 'string' && rawState.trim()) || 'MO';
         const insertSide = side || 'buyer';
 
-        const checkAgent = String(sisuData.agent_name || sisuData.agent?.full_name || '').toLowerCase();
         const KATIE_AGENTS = [
           'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
           'joseph bahr', 'josh chapman', 'joshua kiehne', 'luis padilla aparicio', 
@@ -842,7 +990,7 @@ serve(async (req: Request) => {
           ? '5580daa6-415d-4385-986a-69bc94421c0c'
           : 'f4436dcc-4d52-4a26-af80-05096b76067e';
 
-        const finalInsertStatus = isPending ? 'Pending' : insertStatus;
+        const finalInsertStatus = isClosed ? 'Closed' : (isPending ? 'Pending' : insertStatus);
 
         const { data: newTx } = await supabase
           .from('transactions')
@@ -869,6 +1017,20 @@ serve(async (req: Request) => {
               target_closing_date: closingTargetDate || null,
               contract_date: contractDate || null,
               assigned_tc_id: assignedTcId,
+              listing_agent_id: insertSide === 'seller' ? matchedAgentId : null,
+              selling_agent_id: insertSide === 'buyer' ? matchedAgentId : null,
+              gross_agent_paid_income: grossAgentIncome,
+              gci: gciNum,
+              commission_rate: commRate,
+              closed_date: closedDate,
+              price: priceNum,
+              custom_fields: {
+                gross_agent_paid_income: grossAgentIncome,
+                gci: gciNum,
+                commission_rate: commRate,
+                closed_date: closedDate,
+                price: priceNum,
+              },
             },
             { onConflict: 'sisu_transaction_id' }
           )

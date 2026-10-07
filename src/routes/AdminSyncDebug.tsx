@@ -356,6 +356,40 @@ export const AdminSyncDebug: React.FC = () => {
         const agentEmail = getVal(cleanRow, ['agent_email', 'email']);
         const clientPhone = getVal(cleanRow, ['phone', 'mobile_phone', 'mobile']);
 
+        // Financial & Date extractions
+        const rawIncome = getVal(cleanRow, [
+          'gross agent(s) paid income',
+          'gross agent paid income',
+          'agent paid income',
+          'gross_agent_paid_income',
+          'gross income',
+          'agent income',
+        ]);
+        const grossAgentIncome = rawIncome ? parseFloat(rawIncome.replace(/[^0-9.]/g, '')) : null;
+
+        const rawGci = getVal(cleanRow, ['gci', 'gross commission', 'gross_commission']);
+        const gci = rawGci ? parseFloat(rawGci.replace(/[^0-9.]/g, '')) : null;
+
+        const rawPrice = getVal(cleanRow, ['transaction amount', 'sale price', 'sales price', 'price', 'volume']);
+        const price = rawPrice ? parseFloat(rawPrice.replace(/[^0-9.]/g, '')) : null;
+
+        const rawRate = getVal(cleanRow, ['commission rate', 'commission %', 'agent split', 'commission_rate']);
+        const commRate = rawRate ? parseFloat(rawRate.replace(/[^0-9.]/g, '')) : null;
+
+        const rawClosedDate = getVal(cleanRow, ['closed (settlement) date', 'closed date', 'settlement date', 'closed_dt', 'closing_date', 'close date']);
+        const closedDate = rawClosedDate ? rawClosedDate.slice(0, 10) : null;
+
+        const rawTargetDate = getVal(cleanRow, ['forecasted closed date', 'forecast (projected) closed date', 'projected close date', 'target closing date']);
+        const targetClosingDate = rawTargetDate ? rawTargetDate.slice(0, 10) : null;
+
+        const rawContractDate = getVal(cleanRow, ['under contract date', 'contract date', 'uc date', 'uc_dt']);
+        const contractDate = rawContractDate ? rawContractDate.slice(0, 10) : null;
+
+        const otherPartyAgent = getVal(cleanRow, ['cooperating agent name', 'co-op agent name', 'coop agent name', 'cooperating agent', 'other party agent']);
+        const otherPartyPhone = getVal(cleanRow, ['cooperating agent phone', 'co-op agent phone', 'coop agent phone', 'cooperating phone']);
+        const otherPartyEmail = getVal(cleanRow, ['cooperating agent email', 'co-op agent email', 'coop agent email', 'cooperating email']);
+        const otherPartyBrokerage = getVal(cleanRow, ['cooperating brokerage', 'co-op brokerage', 'coop brokerage', 'cooperating company']);
+
         let agentId: string | null = null;
         if (agentName || agentEmail) {
           const { data: existingAgent } = await (supabase.from('agents') as any)
@@ -379,7 +413,7 @@ export const AdminSyncDebug: React.FC = () => {
         }
 
         const { data: existingTx } = await (supabase.from('transactions') as any)
-          .select('id')
+          .select('id, custom_fields')
           .eq('sisu_transaction_id', sisuId)
           .maybeSingle();
 
@@ -402,6 +436,27 @@ export const AdminSyncDebug: React.FC = () => {
           if (status) updateData.status = status;
           if (clientFullName && clientFullName !== 'Unnamed Client') updateData.client_name = clientFullName;
           if (clientPhone) updateData.client_phone = clientPhone;
+          if (grossAgentIncome !== null) updateData.gross_agent_paid_income = grossAgentIncome;
+          if (gci !== null) updateData.gci = gci;
+          if (price !== null) updateData.price = price;
+          if (commRate !== null) updateData.commission_rate = commRate;
+          if (closedDate) updateData.closed_date = closedDate;
+          if (targetClosingDate) updateData.target_closing_date = targetClosingDate;
+          if (contractDate) updateData.contract_date = contractDate;
+          if (otherPartyAgent) updateData.other_party_agent = otherPartyAgent;
+          if (otherPartyPhone) updateData.other_party_phone = otherPartyPhone;
+          if (otherPartyEmail) updateData.other_party_email = otherPartyEmail;
+          if (otherPartyBrokerage) updateData.other_party_brokerage = otherPartyBrokerage;
+
+          updateData.custom_fields = {
+            ...(existingTx.custom_fields || {}),
+            gross_agent_paid_income: grossAgentIncome,
+            gci,
+            price,
+            commission_rate: commRate,
+            closed_date: closedDate,
+          };
+
           if (agentId) {
             if (side === 'seller') updateData.listing_agent_id = agentId;
             else updateData.selling_agent_id = agentId;
@@ -424,19 +479,59 @@ export const AdminSyncDebug: React.FC = () => {
             client_phone: clientPhone || null,
             listing_agent_id: side === 'seller' ? agentId : null,
             selling_agent_id: side === 'buyer' ? agentId : null,
+            gross_agent_paid_income: grossAgentIncome,
+            gci,
+            price,
+            commission_rate: commRate,
+            closed_date: closedDate,
+            target_closing_date: targetClosingDate,
+            contract_date: contractDate,
+            other_party_agent: otherPartyAgent || null,
+            other_party_phone: otherPartyPhone || null,
+            other_party_email: otherPartyEmail || null,
+            other_party_brokerage: otherPartyBrokerage || null,
+            custom_fields: {
+              gross_agent_paid_income: grossAgentIncome,
+              gci,
+              price,
+              commission_rate: commRate,
+              closed_date: closedDate,
+            },
           });
         }
 
         importedCount++;
       }
 
-      setCsvStatusMessage(`Successfully imported ${importedCount} transactions from Sisu CSV!`);
+      setCsvStatusMessage(`Successfully imported ${importedCount} transactions with income & closed financials from Sisu CSV!`);
       await loadLiveData();
     } catch (err: any) {
       console.error('CSV import error:', err);
       setCsvStatusMessage(`CSV import error: ${err.message || String(err)}`);
     } finally {
       setIsImportingCsv(false);
+    }
+  };
+
+  const [isFinancialSyncing, setIsFinancialSyncing] = useState(false);
+
+  const handleSyncHistoricalFinancials = async () => {
+    setIsFinancialSyncing(true);
+    setCsvStatusMessage('Querying Sisu API for historical & previous years closed deals...');
+    try {
+      const { data, error } = await supabase.functions.invoke('sisu-nightly-reconciliation', {
+        body: { sync_mode: 'financials_history', include_closed: true },
+      });
+      if (error) throw error;
+      setCsvStatusMessage(
+        data?.message || `Successfully synced historical financials via Sisu API! (${data?.transactions_updated || 0} deals updated)`
+      );
+      await loadLiveData();
+    } catch (err: any) {
+      console.error('Error syncing historical financials:', err);
+      setCsvStatusMessage(`Financial sync error: ${err.message || String(err)}`);
+    } finally {
+      setIsFinancialSyncing(false);
     }
   };
 
@@ -488,6 +583,14 @@ export const AdminSyncDebug: React.FC = () => {
                 className="hidden"
               />
             </label>
+            <button
+              onClick={handleSyncHistoricalFinancials}
+              disabled={isFinancialSyncing || isSyncing}
+              className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md min-h-[38px]"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isFinancialSyncing ? 'animate-spin' : ''}`} />
+              <span>{isFinancialSyncing ? 'Syncing Financials...' : 'Sync Sisu Historical Deals'}</span>
+            </button>
             <button
               onClick={handleSimulateWebhook}
               disabled={isSimulating}
