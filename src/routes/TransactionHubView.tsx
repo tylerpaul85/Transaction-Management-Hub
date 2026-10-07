@@ -120,6 +120,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
             assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
             milestones (*)
           `)
+          .neq('status', 'Closed')
           .order('created_at', { ascending: false })
           .limit(500);
 

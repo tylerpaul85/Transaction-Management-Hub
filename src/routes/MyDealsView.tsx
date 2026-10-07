@@ -115,22 +115,39 @@ export const MyDealsView: React.FC = () => {
           setAgentRoster(dbAgents);
         }
 
-        const { data, error } = await supabase
-          .from('transactions')
-          .select(`
-            *,
-            listing_agent:agents!transactions_listing_agent_id_fkey(id, name, email, phone),
-            selling_agent:agents!transactions_selling_agent_id_fkey(id, name, email, phone),
-            assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
-            milestones (*)
-          `)
-          .order('created_at', { ascending: false })
-          .limit(5000);
+        const allFetched: any[] = [];
+        let page = 0;
+        const pageSize = 1000;
 
-        if (error) {
-          console.warn('Could not fetch Supabase agent transactions:', error);
-          return;
+        while (true) {
+          const { data: chunk, error } = await supabase
+            .from('transactions')
+            .select(`
+              *,
+              listing_agent:agents!transactions_listing_agent_id_fkey(id, name, email, phone),
+              selling_agent:agents!transactions_selling_agent_id_fkey(id, name, email, phone),
+              assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
+              milestones (*)
+            `)
+            .order('created_at', { ascending: false })
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+
+          if (error) {
+            console.warn('Could not fetch Supabase agent transactions chunk:', error);
+            break;
+          }
+
+          if (chunk && chunk.length > 0) {
+            allFetched.push(...chunk);
+          }
+
+          if (!chunk || chunk.length < pageSize) {
+            break;
+          }
+          page++;
         }
+
+        const data = allFetched;
 
         if (data) {
           const validDeals = data.filter((t: any) => {

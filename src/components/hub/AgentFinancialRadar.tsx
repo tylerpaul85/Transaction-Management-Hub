@@ -42,6 +42,7 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
   agentEmail,
   agentAvatarUrl,
 }) => {
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(() => {
     return localStorage.getItem('hub_financial_privacy_mode') === 'true';
   });
@@ -50,9 +51,13 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
   const [sideFilter, setSideFilter] = useState<'all' | 'buyer' | 'seller'>('all');
   const [hoveredMonthIndex, setHoveredMonthIndex] = useState<number | null>(null);
 
-  // Active chart series toggles (Closed vs Projected Pending)
-  const [showClosedSeries, setShowClosedSeries] = useState(true);
-  const [showPendingSeries, setShowPendingSeries] = useState(true);
+  // Active chart series toggles
+  const [visibleSeries, setVisibleSeries] = useState<{ [key: string]: boolean }>({
+    '2026': true,
+    '2025': true,
+    '2024': true,
+    'pending': true,
+  });
 
   const togglePrivacy = () => {
     setIsPrivacyMode((prev) => {
@@ -104,21 +109,30 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
     return 0;
   };
 
-  // Compute 2026 financial metrics and monthly distribution
+  // Compute multi-year (2026, 2025, 2024) financial metrics and monthly distribution
   const financialData = useMemo(() => {
-    const monthlyData = {
-      closed: Array(12).fill(0) as number[],
-      pending: Array(12).fill(0) as number[],
-      closedDealCount: Array(12).fill(0) as number[],
-      pendingDealCount: Array(12).fill(0) as number[],
+    const monthlyData: {
+      [year: number]: {
+        closed: number[];
+        pending: number[];
+        closedDealCount: number[];
+        pendingDealCount: number[];
+      };
+    } = {
+      2026: { closed: Array(12).fill(0), pending: Array(12).fill(0), closedDealCount: Array(12).fill(0), pendingDealCount: Array(12).fill(0) },
+      2025: { closed: Array(12).fill(0), pending: Array(12).fill(0), closedDealCount: Array(12).fill(0), pendingDealCount: Array(12).fill(0) },
+      2024: { closed: Array(12).fill(0), pending: Array(12).fill(0), closedDealCount: Array(12).fill(0), pendingDealCount: Array(12).fill(0) },
     };
 
-    let totalClosed2026 = 0;
-    let totalPending2026 = 0;
-    let totalGci2026 = 0;
-    let totalVolume2026 = 0;
-    let closedCount2026 = 0;
-    let pendingCount2026 = 0;
+    let totalClosedSelectedYear = 0;
+    let totalPendingSelectedYear = 0;
+    let totalGciSelectedYear = 0;
+    let totalVolumeSelectedYear = 0;
+    let closedCountSelectedYear = 0;
+    let pendingCountSelectedYear = 0;
+
+    let totalClosedPrevYear = 0;
+    let closedCountPrevYear = 0;
 
     const pendingHorizonList: {
       tx: OpsTransaction;
@@ -134,32 +148,36 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
       const isClosed = String(tx.status).toLowerCase().trim() === 'closed' || Boolean(tx.closed_date);
       const { year, month } = getDealDate(tx);
 
-      // We focus cleanly on 2026 (or deals closing in 2026 pipeline)
-      const is2026Deal = year === 2026 || (!year && !isClosed);
-
-      if (month !== null && month >= 0 && month <= 11 && (year === 2026 || !year)) {
+      if (year && monthlyData[year] && month !== null && month >= 0 && month <= 11) {
         if (isClosed) {
-          monthlyData.closed[month] += income;
-          monthlyData.closedDealCount[month] += 1;
+          monthlyData[year].closed[month] += income;
+          monthlyData[year].closedDealCount[month] += 1;
         } else {
-          monthlyData.pending[month] += income;
-          monthlyData.pendingDealCount[month] += 1;
+          monthlyData[year].pending[month] += income;
+          monthlyData[year].pendingDealCount[month] += 1;
         }
       }
 
-      if (is2026Deal) {
+      // Selected Year Totals
+      if (year === selectedYear) {
         if (isClosed) {
-          totalClosed2026 += income;
-          closedCount2026 += 1;
-          totalGci2026 += (tx.gci || (income / 0.45));
-          totalVolume2026 += (tx.price || 0);
+          totalClosedSelectedYear += income;
+          closedCountSelectedYear += 1;
+          totalGciSelectedYear += (tx.gci || (income / 0.45));
+          totalVolumeSelectedYear += (tx.price || 0);
         } else {
-          totalPending2026 += income;
-          pendingCount2026 += 1;
+          totalPendingSelectedYear += income;
+          pendingCountSelectedYear += 1;
         }
       }
 
-      // Build upcoming pending horizon
+      // Previous Year Totals (for YoY Growth comparison)
+      if (year === selectedYear - 1 && isClosed) {
+        totalClosedPrevYear += income;
+        closedCountPrevYear += 1;
+      }
+
+      // Build upcoming pending horizon for current active deals
       if (!isClosed && (tx.target_closing_date || tx.contract_date)) {
         const targetStr = tx.target_closing_date || tx.contract_date || '';
         const targetD = new Date(targetStr);
@@ -178,31 +196,45 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
     // Sort pending horizon by closing date
     pendingHorizonList.sort((a, b) => a.daysRemaining - b.daysRemaining);
 
+    // Compute YoY Pace
+    const yoyGrowthPercent =
+      totalClosedPrevYear > 0
+        ? ((totalClosedSelectedYear - totalClosedPrevYear) / totalClosedPrevYear) * 100
+        : null;
+
     const avgCommissionPerDeal =
-      closedCount2026 > 0 ? totalClosed2026 / closedCount2026 : 0;
+      closedCountSelectedYear > 0 ? totalClosedSelectedYear / closedCountSelectedYear : 0;
 
     return {
       monthlyData,
-      totalClosed2026,
-      totalPending2026,
-      totalProjected2026: totalClosed2026 + totalPending2026,
-      totalGci2026,
-      totalVolume2026,
-      closedCount2026,
-      pendingCount2026,
+      totalClosedSelectedYear,
+      totalPendingSelectedYear,
+      totalProjectedSelectedYear: totalClosedSelectedYear + totalPendingSelectedYear,
+      totalGciSelectedYear,
+      totalVolumeSelectedYear,
+      closedCountSelectedYear,
+      pendingCountSelectedYear,
+      totalClosedPrevYear,
+      closedCountPrevYear,
+      yoyGrowthPercent,
       avgCommissionPerDeal,
       pendingHorizonList,
     };
-  }, [transactions]);
+  }, [transactions, selectedYear]);
 
-  // Max value calculation for SVG chart scaling
+  // Max value calculation for SVG chart scaling across all years
   const maxMonthlyVal = useMemo(() => {
     let max = 5000;
-    financialData.monthlyData.closed.forEach((v) => {
-      if (v > max) max = v;
-    });
-    financialData.monthlyData.pending.forEach((v) => {
-      if (v > max) max = v;
+    [2026, 2025, 2024].forEach((yr) => {
+      const data = financialData.monthlyData[yr];
+      if (data) {
+        data.closed.forEach((v) => {
+          if (v > max) max = v;
+        });
+        data.pending.forEach((v) => {
+          if (v > max) max = v;
+        });
+      }
     });
     // Add 15% headroom
     return Math.ceil((max * 1.15) / 5000) * 5000;
@@ -222,8 +254,7 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
       }
 
       const { year } = getDealDate(tx);
-      // Keep 2026 transactions and active pipeline
-      if (year && year !== 2026) return false;
+      if (selectedYear !== 0 && year !== selectedYear) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -235,7 +266,7 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
 
       return true;
     });
-  }, [transactions, statusFilter, sideFilter, searchQuery]);
+  }, [transactions, statusFilter, sideFilter, selectedYear, searchQuery]);
 
   // Chart SVG Dimensions
   const chartWidth = 900;
@@ -302,20 +333,20 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
                   {agentName}’s Income & Financial Radar
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  2026 Year-to-Date
+                  Live Sisu Sync
                 </span>
               </div>
               <p className="text-xs text-[#94a3b8] mt-0.5 flex items-center gap-2">
                 <span>Calculated from verified Gross Agent(s) Paid Income</span>
                 <span className="w-1 h-1 rounded-full bg-[#475569]" />
-                <span className="text-emerald-400 font-semibold">{financialData.closedCount2026} Closed</span>
+                <span className="text-emerald-400 font-semibold">{financialData.closedCountSelectedYear} Closed ({selectedYear})</span>
                 <span className="w-1 h-1 rounded-full bg-[#475569]" />
-                <span className="text-amber-400 font-semibold">{financialData.pendingCount2026} Pending</span>
+                <span className="text-amber-400 font-semibold">{financialData.pendingCountSelectedYear} Pending</span>
               </p>
             </div>
           </div>
 
-          {/* Controls: Privacy Mode + Year Indicator */}
+          {/* Controls: Privacy Mode + Year Selector Pills */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Privacy Mode Toggle */}
             <button
@@ -340,10 +371,21 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
               )}
             </button>
 
-            {/* Current Year Badge */}
-            <div className="flex items-center gap-2 bg-[#0f172a] px-3.5 py-2 rounded-xl border border-[#334155] text-xs font-bold text-[#f8fafc]">
-              <Calendar className="h-4 w-4 text-emerald-400" />
-              <span>2026 Financial Year</span>
+            {/* Year Selector Pills */}
+            <div className="flex items-center bg-[#0f172a] p-1 rounded-xl border border-[#334155]">
+              {[2026, 2025, 2024].map((year) => (
+                <button
+                  key={year}
+                  onClick={() => setSelectedYear(year)}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    selectedYear === year
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  }`}
+                >
+                  {year} {year === 2026 && '(YTD)'}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -351,11 +393,11 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
 
       {/* KPI Hero Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Closed YTD Agent Paid Income */}
+        {/* Card 1: Closed Agent Paid Income */}
         <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-emerald-500/50 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
-              2026 Closed Income
+              {selectedYear} Closed Income
             </span>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <Wallet className="h-4 w-4" />
@@ -364,23 +406,43 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
 
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-[#f8fafc] tracking-tight">
-              {fmtMoney(financialData.totalClosed2026)}
+              {fmtMoney(financialData.totalClosedSelectedYear)}
             </div>
             <div className="text-xs text-[#94a3b8] mt-1 flex items-center gap-1.5">
               <span className="font-semibold text-emerald-400">
-                {financialData.closedCount2026} Deals Closed
+                {financialData.closedCountSelectedYear} Deals Closed
               </span>
               <span>• Gross Agent Paid</span>
             </div>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-[#334155]/60 flex items-center justify-between text-xs text-[#94a3b8]">
-            <span>Income Status:</span>
-            <span className="font-semibold text-emerald-400 flex items-center gap-1">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Verified & Paid
-            </span>
-          </div>
+          {/* YoY Growth Badge */}
+          {financialData.yoyGrowthPercent !== null && (
+            <div className="mt-3 pt-3 border-t border-[#334155]/60 flex items-center justify-between text-xs">
+              <span className="text-[#94a3b8]">vs {selectedYear - 1}:</span>
+              <span
+                className={`font-bold flex items-center gap-0.5 ${
+                  financialData.yoyGrowthPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+              >
+                {financialData.yoyGrowthPercent >= 0 ? (
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                ) : (
+                  <ArrowDownRight className="h-3.5 w-3.5" />
+                )}
+                {Math.abs(financialData.yoyGrowthPercent).toFixed(1)}%
+              </span>
+            </div>
+          )}
+          {financialData.yoyGrowthPercent === null && (
+            <div className="mt-3 pt-3 border-t border-[#334155]/60 flex items-center justify-between text-xs text-[#94a3b8]">
+              <span>Income Status:</span>
+              <span className="font-semibold text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Verified & Paid
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Card 2: Pending Escrow Income */}
@@ -396,11 +458,11 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
 
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-amber-400 tracking-tight">
-              {fmtMoney(financialData.totalPending2026)}
+              {fmtMoney(financialData.totalPendingSelectedYear)}
             </div>
             <div className="text-xs text-[#94a3b8] mt-1 flex items-center gap-1.5">
               <span className="font-semibold text-amber-300">
-                {financialData.pendingCount2026} Under Contract
+                {financialData.pendingCountSelectedYear} Under Contract
               </span>
               <span>• In pipeline</span>
             </div>
@@ -412,11 +474,11 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
           </div>
         </div>
 
-        {/* Card 3: Total Projected 2026 Income */}
+        {/* Card 3: Total Projected Income */}
         <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-sky-500/50 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">
-              Total Projected 2026
+              Total Projected {selectedYear}
             </span>
             <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
               <TrendingUp className="h-4 w-4" />
@@ -425,17 +487,17 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
 
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-black text-[#f8fafc] tracking-tight">
-              {fmtMoney(financialData.totalProjected2026)}
+              {fmtMoney(financialData.totalProjectedSelectedYear)}
             </div>
             <div className="text-xs text-[#94a3b8] mt-1">
-              Closed ({fmtMoney(financialData.totalClosed2026)}) + Pending ({fmtMoney(financialData.totalPending2026)})
+              Closed ({fmtMoney(financialData.totalClosedSelectedYear)}) + Pending ({fmtMoney(financialData.totalPendingSelectedYear)})
             </div>
           </div>
 
           <div className="mt-3 pt-3 border-t border-[#334155]/60 flex items-center justify-between text-xs text-[#94a3b8]">
             <span>Total Deals:</span>
             <span className="font-bold text-sky-400">
-              {financialData.closedCount2026 + financialData.pendingCount2026} Transactions
+              {financialData.closedCountSelectedYear + financialData.pendingCountSelectedYear} Transactions
             </span>
           </div>
         </div>
@@ -463,49 +525,69 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
           <div className="mt-3 pt-3 border-t border-[#334155]/60 flex items-center justify-between text-xs text-[#94a3b8]">
             <span>Closed Sales Volume:</span>
             <span className="font-semibold text-[#f8fafc]">
-              {fmtMoney(financialData.totalVolume2026)}
+              {fmtMoney(financialData.totalVolumeSelectedYear)}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Month-by-Month 2026 Income Velocity Chart */}
+      {/* Month-by-Month Multi-Year YoY Historical Chart */}
       <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-6 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-[#f8fafc] tracking-tight">
-                2026 Monthly Income Velocity & Trajectory
+                Monthly Income Velocity & Year-over-Year Trajectory
               </h2>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#334155] text-[#94a3b8] uppercase">
                 Gross Agent Paid
               </span>
             </div>
             <p className="text-xs text-[#94a3b8] mt-0.5">
-              Month-by-month trajectory comparing verified closed earnings and upcoming pending pipeline
+              Month-by-month trajectory comparing 2026 closed velocity with 2025 and 2024 verified earnings
             </p>
           </div>
 
           {/* Interactive Legend / Series Toggles */}
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex flex-wrap items-center gap-4 text-xs">
             <button
-              onClick={() => setShowClosedSeries((prev) => !prev)}
+              onClick={() => setVisibleSeries((prev) => ({ ...prev, '2026': !prev['2026'] }))}
               className={`flex items-center gap-1.5 transition-opacity ${
-                showClosedSeries ? 'opacity-100 font-bold' : 'opacity-40 line-through'
+                visibleSeries['2026'] ? 'opacity-100 font-bold' : 'opacity-40 line-through'
               }`}
             >
               <span className="w-3 h-3 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50" />
-              <span className="text-[#f8fafc]">2026 Closed Income</span>
+              <span className="text-[#f8fafc]">2026 (Current)</span>
             </button>
 
             <button
-              onClick={() => setShowPendingSeries((prev) => !prev)}
+              onClick={() => setVisibleSeries((prev) => ({ ...prev, '2025': !prev['2025'] }))}
               className={`flex items-center gap-1.5 transition-opacity ${
-                showPendingSeries ? 'opacity-100 font-bold' : 'opacity-40 line-through'
+                visibleSeries['2025'] ? 'opacity-100 font-bold' : 'opacity-40 line-through'
               }`}
             >
-              <span className="w-3 h-3 rounded-full bg-amber-400 border border-amber-300" />
-              <span className="text-[#cbd5e1]">Projected Pending Pipeline</span>
+              <span className="w-3 h-3 rounded-full bg-amber-400" />
+              <span className="text-[#cbd5e1]">2025</span>
+            </button>
+
+            <button
+              onClick={() => setVisibleSeries((prev) => ({ ...prev, '2024': !prev['2024'] }))}
+              className={`flex items-center gap-1.5 transition-opacity ${
+                visibleSeries['2024'] ? 'opacity-100 font-bold' : 'opacity-40 line-through'
+              }`}
+            >
+              <span className="w-3 h-3 rounded-full bg-sky-400" />
+              <span className="text-[#cbd5e1]">2024</span>
+            </button>
+
+            <button
+              onClick={() => setVisibleSeries((prev) => ({ ...prev, 'pending': !prev['pending'] }))}
+              className={`flex items-center gap-1.5 transition-opacity ${
+                visibleSeries['pending'] ? 'opacity-100 font-bold' : 'opacity-40 line-through'
+              }`}
+            >
+              <span className="w-3 h-3 rounded-full bg-amber-300 border border-dashed border-amber-500" />
+              <span className="text-[#cbd5e1]">Pending Pipeline</span>
             </button>
           </div>
         </div>
@@ -605,32 +687,54 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
               );
             })}
 
-            {/* 2026 Closed Area Fill */}
-            {showClosedSeries && (
+            {/* 2024 Series (Sky Blue Line) */}
+            {visibleSeries['2024'] && (
               <path
-                d={buildAreaD(financialData.monthlyData.closed)}
+                d={buildPathD(financialData.monthlyData[2024].closed)}
+                fill="none"
+                stroke="#38bdf8"
+                strokeWidth="2"
+                strokeOpacity="0.75"
+              />
+            )}
+
+            {/* 2025 Series (Amber Line) */}
+            {visibleSeries['2025'] && (
+              <path
+                d={buildPathD(financialData.monthlyData[2025].closed)}
+                fill="none"
+                stroke="#fbbf24"
+                strokeWidth="2.5"
+                strokeOpacity="0.85"
+              />
+            )}
+
+            {/* 2026 Closed Area Fill */}
+            {visibleSeries['2026'] && (
+              <path
+                d={buildAreaD(financialData.monthlyData[2026].closed)}
                 fill="url(#emeraldGradientArea)"
               />
             )}
 
             {/* 2026 Pending Projected Line (Amber Dashed) */}
-            {showPendingSeries && (
+            {visibleSeries['pending'] && (
               <path
-                d={buildPathD(financialData.monthlyData.pending)}
+                d={buildPathD(financialData.monthlyData[2026].pending)}
                 fill="none"
-                stroke="#fbbf24"
+                stroke="#f59e0b"
                 strokeWidth="2.5"
                 strokeDasharray="6 4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeOpacity="0.85"
+                strokeOpacity="0.8"
               />
             )}
 
             {/* 2026 Closed Line (Vibrant Emerald Solid) */}
-            {showClosedSeries && (
+            {visibleSeries['2026'] && (
               <path
-                d={buildPathD(financialData.monthlyData.closed)}
+                d={buildPathD(financialData.monthlyData[2026].closed)}
                 fill="none"
                 stroke="#10b981"
                 strokeWidth="3.5"
@@ -639,9 +743,9 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
               />
             )}
 
-            {/* Interactive Data Dots for Closed */}
-            {showClosedSeries &&
-              financialData.monthlyData.closed.map((val, idx) => {
+            {/* Interactive Data Dots for 2026 */}
+            {visibleSeries['2026'] &&
+              financialData.monthlyData[2026].closed.map((val, idx) => {
                 const { x, y } = getCoordinates(idx, val);
                 const isHovered = hoveredMonthIndex === idx;
                 return (
@@ -658,19 +762,39 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
                 );
               })}
 
-            {/* Interactive Data Dots for Pending */}
-            {showPendingSeries &&
-              financialData.monthlyData.pending.map((val, idx) => {
+            {/* Interactive Data Dots for 2025 */}
+            {visibleSeries['2025'] &&
+              financialData.monthlyData[2025].closed.map((val, idx) => {
                 if (val <= 0) return null;
                 const { x, y } = getCoordinates(idx, val);
                 const isHovered = hoveredMonthIndex === idx;
                 return (
-                  <g key={`pending-dot-${idx}`}>
+                  <g key={`dot-2025-${idx}`}>
                     <circle
                       cx={x}
                       cy={y}
-                      r={isHovered ? 5 : 3.5}
-                      fill={isHovered ? '#fef08a' : '#fbbf24'}
+                      r={isHovered ? 5 : 3}
+                      fill="#fbbf24"
+                      stroke="#0f172a"
+                      strokeWidth="1.5"
+                    />
+                  </g>
+                );
+              })}
+
+            {/* Interactive Data Dots for 2024 */}
+            {visibleSeries['2024'] &&
+              financialData.monthlyData[2024].closed.map((val, idx) => {
+                if (val <= 0) return null;
+                const { x, y } = getCoordinates(idx, val);
+                const isHovered = hoveredMonthIndex === idx;
+                return (
+                  <g key={`dot-2024-${idx}`}>
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={isHovered ? 5 : 2.5}
+                      fill="#38bdf8"
                       stroke="#0f172a"
                       strokeWidth="1.5"
                     />
@@ -693,36 +817,46 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
             <div className="flex flex-wrap items-center gap-6 text-xs">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                <span className="text-[#94a3b8]">Closed Income:</span>
+                <span className="text-[#94a3b8]">2026:</span>
                 <span className="font-bold text-[#f8fafc]">
-                  {fmtMoney(financialData.monthlyData.closed[hoveredMonthIndex])}
+                  {fmtMoney(financialData.monthlyData[2026]?.closed[hoveredMonthIndex])}
                 </span>
                 <span className="text-[10px] text-emerald-400 font-semibold">
-                  ({financialData.monthlyData.closedDealCount[hoveredMonthIndex]} closed deals)
+                  ({financialData.monthlyData[2026]?.closedDealCount[hoveredMonthIndex]} deals)
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                <span className="text-[#94a3b8]">Pending Pipeline:</span>
+                <span className="text-[#94a3b8]">2025:</span>
                 <span className="font-bold text-[#f8fafc]">
-                  {fmtMoney(financialData.monthlyData.pending[hoveredMonthIndex])}
+                  {fmtMoney(financialData.monthlyData[2025]?.closed[hoveredMonthIndex])}
                 </span>
                 <span className="text-[10px] text-amber-400 font-semibold">
-                  ({financialData.monthlyData.pendingDealCount[hoveredMonthIndex]} pending)
+                  ({financialData.monthlyData[2025]?.closedDealCount[hoveredMonthIndex]} deals)
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-sky-400" />
-                <span className="text-[#94a3b8]">Total Projected Month:</span>
-                <span className="font-bold text-sky-400">
-                  {fmtMoney(
-                    financialData.monthlyData.closed[hoveredMonthIndex] +
-                    financialData.monthlyData.pending[hoveredMonthIndex]
-                  )}
+                <span className="text-[#94a3b8]">2024:</span>
+                <span className="font-bold text-[#f8fafc]">
+                  {fmtMoney(financialData.monthlyData[2024]?.closed[hoveredMonthIndex])}
+                </span>
+                <span className="text-[10px] text-sky-400 font-semibold">
+                  ({financialData.monthlyData[2024]?.closedDealCount[hoveredMonthIndex]} deals)
                 </span>
               </div>
+
+              {financialData.monthlyData[2026]?.pending[hoveredMonthIndex] > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-300" />
+                  <span className="text-[#94a3b8]">Pending 2026:</span>
+                  <span className="font-bold text-amber-300">
+                    {fmtMoney(financialData.monthlyData[2026]?.pending[hoveredMonthIndex])}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}

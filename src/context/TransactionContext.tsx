@@ -134,6 +134,7 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
             assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
             milestones (*)
           `)
+          .neq('status', 'Closed')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -153,7 +154,9 @@ export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ c
               s.includes('archived') ||
               s.includes('appt') ||
               s.includes('pipeline') ||
-              s.includes('expired')
+              s.includes('expired') ||
+              s === 'closed' ||
+              s.includes('closed')
             ) {
               return false;
             }
