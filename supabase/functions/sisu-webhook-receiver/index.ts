@@ -833,30 +833,18 @@ serve(async (req: Request) => {
       normStatus.includes('fell through');
 
     if (isReleasedOrNonPending) {
-      console.log(`[Sisu Webhook] Transaction ${finalSisuId} is marked as '${normStatus || 'cancelled/lost'}'. Preserving as cancelled.`);
+      console.log(`[Sisu Webhook] Transaction ${finalSisuId} is marked as '${normStatus || 'released/lost'}'. Taking off completely.`);
       if (finalSisuId) {
-        const { data: currentTx } = await supabase
+        await supabase
           .from('transactions')
-          .select('id, status')
-          .eq('sisu_transaction_id', finalSisuId)
-          .maybeSingle();
-
-        if (currentTx) {
-          await supabase
-            .from('transactions')
-            .update({
-              status: 'cancelled',
-              stage_before_cancelled: currentTx.status !== 'cancelled' ? currentTx.status : undefined,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', currentTx.id);
-        }
+          .delete()
+          .eq('sisu_transaction_id', finalSisuId);
       }
       return new Response(
         JSON.stringify({
           success: true,
-          action: 'preserved_cancelled',
-          message: `Transaction ${finalSisuId} preserved as 'cancelled' for Fall-Through Analysis.`,
+          action: 'deleted_released',
+          message: `Transaction ${finalSisuId} is marked as '${normStatus || 'released'}' and was completely removed from the Hub.`,
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
