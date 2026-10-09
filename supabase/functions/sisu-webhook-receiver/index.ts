@@ -1384,15 +1384,9 @@ serve(async (req: Request) => {
     // =========================================================================
     // 7b. Sisu Custom Transaction Fields Synchronization (Yes/No Form Fields)
     // =========================================================================
-    const prevCustom = (dataObj?.previous_values?.custom || {}) as Record<string, any>;
-    const updatedCustom = (dataObj?.updated_values?.custom || {}) as Record<string, any>;
-    const fullCustom = (fullObj?.custom || sisuData?.custom || payload?.custom || {}) as Record<string, any>;
-
-    // Incoming delta fields explicitly sent in this webhook payload
-    const incomingCustom: Record<string, any> = {
-      ...fullCustom,
-      ...updatedCustom,
-    };
+    const prevCustom = (dataObj?.previous_values?.custom || dataObj?.previous_values?.custom_fields || {}) as Record<string, any>;
+    const updatedCustom = (dataObj?.updated_values?.custom || dataObj?.updated_values?.custom_fields || {}) as Record<string, any>;
+    const fullCustom = (fullObj?.custom || fullObj?.custom_fields || sisuData?.custom || sisuData?.custom_fields || payload?.custom || payload?.custom_fields || {}) as Record<string, any>;
 
     // Existing custom fields saved on this transaction in our database
     const existingCustom = ((existingTx?.custom_fields as Record<string, any>) || {});
@@ -1400,7 +1394,13 @@ serve(async (req: Request) => {
     // Merged state preserves all previously answered form fields on the transaction
     const mergedCustomFields: Record<string, any> = {
       ...existingCustom,
-      ...incomingCustom,
+      ...fullCustom,
+      ...updatedCustom,
+    };
+
+    // Incoming delta and full fields to evaluate for milestone sync
+    const incomingCustom: Record<string, any> = {
+      ...mergedCustomFields,
     };
 
     // Helper: evaluate Sisu 4-choice field value (Yes, No, In Progress, N/A)

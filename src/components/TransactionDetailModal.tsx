@@ -442,6 +442,12 @@ export const TransactionDetailModal: React.FC = () => {
                       const CUSTOM_LABEL_OVERRIDES: Record<string, string> = {
                         inspection_completeds_63: 'Inspection Ordered',
                         inspection_completed: 'Inspection Ordered',
+                        'inspection_ordred?_-_internal_use': 'Inspection Ordered',
+                        'inspection_ordered?_-_internal_use': 'Inspection Ordered',
+                        'inspection_ordred? - internal use': 'Inspection Ordered',
+                        'inspection_ordered? - internal use': 'Inspection Ordered',
+                        inspection_ordred: 'Inspection Ordered',
+                        inspection_ordered: 'Inspection Ordered',
                         inspection_satisfieds_63: 'Inspection Satisfied',
                         insurance_obtaineds_63: 'Insurance Obtained',
                         earnest_money_depositeds_63: 'Earnest Money Deposited',

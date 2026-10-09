@@ -1315,7 +1315,12 @@ serve(async (req: Request) => {
 
       // Reconcile custom transaction form fields
       const fullCustom: Record<string, any> = {
+        ...((existingTx?.custom_fields as Record<string, any>) || {}),
+        ...(sisuData?.custom_fields || {}),
         ...(sisuData?.custom || {}),
+        ...(fullObj?.custom_fields || {}),
+        ...(fullObj?.custom || {}),
+        ...(sisuData?.object_data?.full_object?.custom_fields || {}),
         ...(sisuData?.object_data?.full_object?.custom || {}),
       };
       const hasFullCustomState = Object.keys(fullCustom).length > 0;
