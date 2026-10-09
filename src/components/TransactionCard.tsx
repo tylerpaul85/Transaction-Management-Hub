@@ -129,11 +129,11 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction })
   return (
     <div
       onClick={() => setSelectedTransactionId(transaction.id)}
-      className="group relative bg-[#1e293b]/90 hover:bg-[#1e293b] border border-[#334155] hover:border-[#d97706]/60 rounded-xl p-4 cursor-pointer transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-black/40 active:scale-[0.99] flex flex-col gap-3"
+      className="group relative bg-[#111726] hover:bg-[#111726] border border-white/10 hover:border-amber-400/60 rounded-xl p-4 cursor-pointer transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-black/40 active:scale-[0.99] flex flex-col gap-3"
     >
       {/* Top Header: Image & Badges */}
       <div className="flex items-start gap-3">
-        <div className="relative h-16 w-20 sm:h-20 sm:w-24 rounded-lg overflow-hidden flex-shrink-0 bg-[#0f172a] border border-[#334155]">
+        <div className="relative h-16 w-20 sm:h-20 sm:w-24 rounded-lg overflow-hidden flex-shrink-0 bg-[#090d16] border border-white/10">
           <img
             src={transaction.photoUrl}
             alt={transaction.address}
@@ -142,15 +142,15 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction })
               (e.target as HTMLElement).style.display = 'none';
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/80 via-transparent to-transparent" />
-          <span className="absolute bottom-1 left-1.5 text-[10px] font-mono-code font-bold text-[#f8fafc] bg-black/60 px-1 py-0.2 rounded">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#090d16]/80 via-transparent to-transparent" />
+          <span className="absolute bottom-1 left-1.5 text-[10px] font-mono tabular-nums font-bold text-slate-100 bg-black/60 px-1 py-0.2 rounded">
             {transaction.propertyType.split(' ')[0]}
           </span>
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-1 mb-1">
-            <span className="font-mono-code text-xs text-[#94a3b8] font-semibold">
+            <span className="font-mono tabular-nums text-xs text-slate-400 font-semibold">
               {transaction.fileNumber}
             </span>
             <span
@@ -158,7 +158,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction })
                 transaction.representation === 'Buyer'
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                   : transaction.representation === 'Seller'
-                  ? 'bg-[#d97706]/15 text-[#d97706] border-[#d97706]/30'
+                  ? 'bg-amber-400/15 text-amber-400 border-amber-400/30'
                   : 'bg-sky-500/10 text-sky-400 border-sky-500/30'
               }`}
             >
@@ -166,29 +166,29 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction })
             </span>
           </div>
 
-          <h4 className="font-editorial text-sm sm:text-base font-semibold text-[#f8fafc] truncate leading-tight group-hover:text-[#d97706] transition-colors">
+          <h4 className="text-sm sm:text-base font-semibold text-slate-100 truncate leading-tight group-hover:text-amber-400 transition-colors">
             {transaction.address}
           </h4>
           {transaction.unit && (
-            <p className="text-xs text-[#94a3b8] truncate font-medium">{transaction.unit}</p>
+            <p className="text-xs text-slate-400 truncate font-medium">{transaction.unit}</p>
           )}
-          <p className="text-xs text-[#94a3b8] truncate">
+          <p className="text-xs text-slate-400 truncate">
             {transaction.city}, {transaction.state} {transaction.zip}
           </p>
         </div>
       </div>
 
       {/* Contract Price & Commission Payout */}
-      <div className="flex items-baseline justify-between pt-1 border-t border-[#334155]/50">
+      <div className="flex items-baseline justify-between pt-1 border-t border-white/10">
         <div>
-          <span className="text-[11px] text-[#94a3b8] block">Contract Price</span>
-          <span className="font-mono-code text-base sm:text-lg font-bold text-[#f8fafc]">
+          <span className="text-[11px] text-slate-400 block">Contract Price</span>
+          <span className="font-mono tabular-nums text-base sm:text-lg font-bold text-slate-100">
             {formatCurrency(transaction.contractPrice)}
           </span>
         </div>
         <div className="text-right">
-          <span className="text-[11px] text-[#94a3b8] block">Agent Net Est.</span>
-          <span className="font-mono-code text-xs sm:text-sm font-semibold text-[#d97706]">
+          <span className="text-[11px] text-slate-400 block">Agent Net Est.</span>
+          <span className="font-mono tabular-nums text-xs sm:text-sm font-semibold text-amber-400">
             {formatCurrency(transaction.commission?.netAgentPayout || 0)}
           </span>
         </div>
@@ -218,7 +218,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction })
           <span>{closingCountdown.text}</span>
         </div>
 
-        <div className="flex items-center gap-1 text-[#94a3b8] text-[11px]">
+        <div className="flex items-center gap-1 text-slate-400 text-[11px]">
           <FileText className="h-3 w-3" />
           <span>
             {compliantDocsCount}/{totalDocsCount} Docs
@@ -227,12 +227,12 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction })
       </div>
 
       {/* Card Footer: Agent Avatar & Quick Stage Mover */}
-      <div className="flex items-center justify-between pt-2 border-t border-[#334155]/60 mt-auto">
+      <div className="flex items-center justify-between pt-2 border-t border-white/10 mt-auto">
         <div className="flex items-center gap-1.5">
-          <div className="h-6 w-6 rounded-full bg-[#334155] border border-[#2a354c] flex items-center justify-center text-[10px] font-bold text-[#f8fafc]">
+          <div className="h-6 w-6 rounded-full bg-white/10 border border-[#2a354c] flex items-center justify-center text-[10px] font-bold text-slate-100">
             {transaction.agentAvatar}
           </div>
-          <span className="text-xs text-[#94a3b8] truncate max-w-[100px]">
+          <span className="text-xs text-slate-400 truncate max-w-[100px]">
             {transaction.agentName.split(' ')[0]}
           </span>
         </div>
@@ -243,7 +243,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction })
             <button
               title={`Move back to ${STAGE_CONFIG[prevStage].label}`}
               onClick={() => updateTransactionStage(transaction.id, prevStage)}
-              className="p-1 rounded-md bg-[#131826] hover:bg-[#334155] text-[#94a3b8] hover:text-[#f8fafc] border border-[#334155] transition-all"
+              className="p-1 rounded-md bg-[#0d121f] hover:bg-white/10 text-slate-400 hover:text-slate-100 border border-white/10 transition-all"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
             </button>
@@ -252,7 +252,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction })
             <button
               title={`Advance to ${STAGE_CONFIG[nextStage].label}`}
               onClick={() => updateTransactionStage(transaction.id, nextStage)}
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#131826] hover:bg-[#d97706] text-[#94a3b8] hover:text-[#0f172a] border border-[#334155] hover:border-[#d97706] text-[11px] font-medium transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#0d121f] hover:bg-amber-400 text-slate-400 hover:text-slate-950 border border-white/10 hover:border-amber-400 text-[11px] font-medium transition-all"
             >
               <span>Next</span>
               <ArrowRight className="h-3.5 w-3.5" />

@@ -571,29 +571,29 @@ export const AdminSyncDebug: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header Banner */}
-      <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-6 shadow-xl space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-[#111726] border border-white/10 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400">
               <ShieldAlert className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-editorial text-xl sm:text-2xl font-bold text-[#f8fafc]">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight">
                   Sisu Sync & Conflict Debug Console
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30 uppercase">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30 uppercase">
                   Admin Internal Only
                 </span>
               </div>
-              <p className="text-xs text-[#94a3b8] font-mono-code mt-0.5">
+              <p className="text-xs text-slate-400 font-mono mt-0.5">
                 Monitoring webhook receiver, manual edit preservation, and nightly reconciliation.
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <label className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-[#f8fafc] font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md min-h-[38px]">
+            <label className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm min-h-[38px]">
               <Upload className="h-3.5 w-3.5" />
               <span>{isImportingCsv ? 'Importing CSV...' : 'Import Sisu CSV Export'}</span>
               <input
@@ -607,7 +607,7 @@ export const AdminSyncDebug: React.FC = () => {
             <button
               onClick={handleSyncHistoricalFinancials}
               disabled={isFinancialSyncing || isSyncing}
-              className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md min-h-[38px]"
+              className="px-3.5 py-2 bg-[#162035] hover:bg-white/10 text-emerald-400 border border-emerald-500/30 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors shadow-sm min-h-[38px]"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${isFinancialSyncing ? 'animate-spin' : ''}`} />
               <span>{isFinancialSyncing ? 'Syncing Financials...' : 'Sync Sisu Historical Deals'}</span>
@@ -615,7 +615,7 @@ export const AdminSyncDebug: React.FC = () => {
             <button
               onClick={handleSimulateWebhook}
               disabled={isSimulating}
-              className="px-3.5 py-2 bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md min-h-[38px]"
+              className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors shadow-sm min-h-[38px]"
             >
               <Send className="h-3.5 w-3.5" />
               <span>{isSimulating ? 'Sending...' : 'Test Webhook POST'}</span>
@@ -623,7 +623,7 @@ export const AdminSyncDebug: React.FC = () => {
             <button
               onClick={handleTriggerReconciliation}
               disabled={isSyncing}
-              className="px-3.5 py-2 bg-[#131826] hover:bg-[#334155] text-[#f8fafc] font-semibold rounded-xl text-xs flex items-center gap-1.5 border border-[#334155] transition-all min-h-[38px]"
+              className="px-3.5 py-2 bg-[#162035] hover:bg-white/10 text-slate-200 font-semibold rounded-xl text-xs flex items-center gap-1.5 border border-white/10 transition-colors min-h-[38px]"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>{isSyncing ? 'Syncing...' : 'Run Nightly Sync'}</span>
@@ -632,53 +632,53 @@ export const AdminSyncDebug: React.FC = () => {
         </div>
 
         {csvStatusMessage && (
-          <div className="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-xs text-emerald-300 flex items-center gap-2">
+          <div className="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4 text-emerald-400 shrink-0" />
             <span>{csvStatusMessage}</span>
           </div>
         )}
 
         {/* Informative Sisu Historical Backfill Note */}
-        <div className="p-3.5 bg-sky-950/40 border border-sky-500/30 rounded-xl flex items-start gap-3 text-xs text-sky-200">
+        <div className="p-3.5 bg-sky-950/30 border border-sky-500/20 rounded-xl flex items-start gap-3 text-xs text-sky-200">
           <AlertCircle className="h-4 w-4 text-sky-400 shrink-0 mt-0.5" />
           <div>
             <strong className="text-sky-100 font-semibold block mb-0.5">Sisu Real-Time Sync Active (Team ID 1200):</strong>
             The system has logged and synced <strong>5 live transactions</strong> so far via Sisu webhooks. To import all 100+ active historical deals into this management hub:
             <ul className="list-disc list-inside space-y-0.5 mt-1 text-sky-300">
-              <li>Log in to Sisu Admin (<code className="bg-slate-900/60 px-1 py-0.5 rounded text-[#f8fafc]">beta.sisu.co</code>) &gt; <strong>Admin / Team Settings</strong> &gt; <strong>Webhooks</strong>.</li>
+              <li>Log in to Sisu Admin (<code className="bg-slate-900/60 px-1 py-0.5 rounded text-white">beta.sisu.co</code>) &gt; <strong>Admin / Team Settings</strong> &gt; <strong>Webhooks</strong>.</li>
               <li>Click <strong>Resend / Trigger Webhooks</strong> or touch/edit transactions in Sisu to stream all 100+ deals directly to your Supabase listener.</li>
             </ul>
           </div>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-2 pt-2 border-t border-[#334155]/60">
+        <div className="flex items-center gap-2 pt-2 border-t border-white/10">
           <button
             onClick={() => setActiveTab('logs')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'logs'
-                ? 'bg-[#0f172a] text-[#f8fafc] border border-[#334155]'
-                : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Webhook Logs ({logs.length})
           </button>
           <button
             onClick={() => setActiveTab('conflicts')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'conflicts'
-                ? 'bg-[#0f172a] text-[#f8fafc] border border-[#334155]'
-                : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Sync Conflicts ({conflicts.filter((c) => !c.resolved).length} active)
           </button>
           <button
             onClick={() => setActiveTab('reconciliation')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'reconciliation'
-                ? 'bg-[#0f172a] text-[#f8fafc] border border-[#334155]'
-                : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Nightly Runs ({runs.length})
@@ -688,17 +688,17 @@ export const AdminSyncDebug: React.FC = () => {
 
       {/* TAB 1: WEBHOOK LOGS */}
       {activeTab === 'logs' && (
-        <div className="bg-[#1e293b] border border-[#334155] rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-4 border-b border-[#334155] flex items-center justify-between">
-            <h3 className="font-editorial text-base font-bold text-[#f8fafc]">
+        <div className="bg-[#111726] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="p-4 bg-[#0d121f] border-b border-white/10 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-100">
               Recent Sisu Webhooks (Last 50 Entries)
             </h3>
-            <span className="text-xs text-[#94a3b8]">Stored in public.sisu_webhook_log</span>
+            <span className="text-xs text-slate-400">Stored in public.sisu_webhook_log</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-[#131826] text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wider border-b border-[#334155]">
+              <thead className="bg-[#0d121f] text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-white/10">
                 <tr>
                   <th className="py-3 px-4">Received Time</th>
                   <th className="py-3 px-4">Event Type</th>
@@ -707,14 +707,14 @@ export const AdminSyncDebug: React.FC = () => {
                   <th className="py-3 px-4 text-right">Payload</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#334155]/60">
+              <tbody className="divide-y divide-white/5">
                 {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-[#131826]/60 transition-colors">
-                    <td className="py-3 px-4 font-mono-code text-xs text-[#94a3b8]">
+                  <tr key={log.id} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="py-3 px-4 font-mono text-xs text-slate-400 tabular-nums">
                       {log.received_at}
                     </td>
-                    <td className="py-3 px-4 font-semibold text-[#f8fafc]">{log.event_type}</td>
-                    <td className="py-3 px-4 font-mono-code font-bold text-[#d97706]">
+                    <td className="py-3 px-4 font-semibold text-slate-200">{log.event_type}</td>
+                    <td className="py-3 px-4 font-mono font-bold text-amber-400 tabular-nums">
                       {log.transaction_id}
                     </td>
                     <td className="py-3 px-4">
@@ -725,7 +725,7 @@ export const AdminSyncDebug: React.FC = () => {
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => setSelectedPayload(log.payload)}
-                        className="px-2.5 py-1 bg-[#131826] hover:bg-[#334155] text-[#94a3b8] hover:text-[#f8fafc] rounded-lg text-xs font-mono-code border border-[#334155] inline-flex items-center gap-1"
+                        className="px-2.5 py-1 bg-[#162035] hover:bg-white/10 text-slate-300 hover:text-white rounded-lg text-xs font-mono border border-white/10 inline-flex items-center gap-1 transition-colors min-h-[30px]"
                       >
                         <Eye className="h-3 w-3" />
                         <span>View JSON</span>
@@ -742,17 +742,17 @@ export const AdminSyncDebug: React.FC = () => {
       {/* TAB 2: SYNC CONFLICTS */}
       {activeTab === 'conflicts' && (
         <div className="space-y-4">
-          <div className="p-4 bg-[#1e293b] border border-[#334155] rounded-2xl flex items-center justify-between">
+          <div className="p-4 bg-[#111726] border border-white/10 rounded-2xl flex items-center justify-between">
             <div>
-              <h3 className="font-editorial text-base font-bold text-[#f8fafc]">
+              <h3 className="text-sm font-bold text-slate-100">
                 Manual Edit Preservation & Conflict Queue
               </h3>
-              <p className="text-xs text-[#94a3b8]">
+              <p className="text-xs text-slate-400">
                 When a milestone was edited manually in MSREG Hub, Sisu updates are held for review
                 so your custom dates are never clobbered.
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 tabular-nums">
               {conflicts.filter((c) => !c.resolved).length} Pending Review
             </span>
           </div>
@@ -761,17 +761,17 @@ export const AdminSyncDebug: React.FC = () => {
             {conflicts.map((c) => (
               <div
                 key={c.id}
-                className="p-5 bg-[#1e293b] border border-[#334155] rounded-2xl shadow-lg space-y-4"
+                className="p-5 bg-[#111726] border border-white/10 rounded-2xl shadow-lg space-y-4"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#334155] pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
                   <div>
-                    <span className="font-mono-code text-xs text-[#d97706] font-bold block">
+                    <span className="font-mono text-xs text-amber-400 font-bold block tabular-nums">
                       {c.sisu_transaction_id} • Milestone: {c.milestone_type.toUpperCase()}
                     </span>
-                    <h4 className="text-base font-bold text-[#f8fafc]">{c.property_address}</h4>
+                    <h4 className="text-base font-bold text-slate-100">{c.property_address}</h4>
                   </div>
 
-                  <span className="text-xs text-[#94a3b8] font-mono-code">
+                  <span className="text-xs text-slate-400 font-mono tabular-nums">
                     Detected: {c.detected_at}
                   </span>
                 </div>
@@ -779,44 +779,44 @@ export const AdminSyncDebug: React.FC = () => {
                 {/* Side-by-Side Comparison */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   {/* Current Manual */}
-                  <div className="p-4 bg-[#131826] rounded-xl border border-emerald-500/30 space-y-2">
+                  <div className="p-4 bg-[#0d121f] rounded-xl border border-emerald-500/30 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-emerald-400 uppercase tracking-wider">
                         Current Value in MSREG Hub (Manual Edit)
                       </span>
-                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
                         PRESERVED
                       </span>
                     </div>
-                    <div className="space-y-1 text-[#f8fafc]">
+                    <div className="space-y-1 text-slate-200">
                       <div>
                         Target Date:{' '}
-                        <strong className="font-mono-code text-emerald-300">
+                        <strong className="font-mono text-emerald-300 tabular-nums">
                           {c.current_manual_value.target_date}
                         </strong>
                       </div>
                       <div>Status: {c.current_manual_value.status}</div>
                       <div>Notes: {c.current_manual_value.notes}</div>
-                      <div className="text-[10px] text-[#94a3b8] pt-1">
+                      <div className="text-[10px] text-slate-400 pt-1">
                         Last edited locally at {c.current_manual_value.updated_at}
                       </div>
                     </div>
                   </div>
 
                   {/* Incoming Sisu */}
-                  <div className="p-4 bg-[#131826] rounded-xl border border-amber-500/30 space-y-2">
+                  <div className="p-4 bg-[#0d121f] rounded-xl border border-amber-500/30 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-amber-400 uppercase tracking-wider">
                         Incoming Sisu CRM Value
                       </span>
-                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">
                         BLOCKED OVERWRITE
                       </span>
                     </div>
-                    <div className="space-y-1 text-[#f8fafc]">
+                    <div className="space-y-1 text-slate-200">
                       <div>
                         Target Date:{' '}
-                        <strong className="font-mono-code text-amber-300">
+                        <strong className="font-mono text-amber-300 tabular-nums">
                           {c.incoming_sisu_value.target_date}
                         </strong>
                       </div>
@@ -827,8 +827,8 @@ export const AdminSyncDebug: React.FC = () => {
                 </div>
 
                 {/* Resolution Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-[#334155]/60">
-                  <span className="text-xs text-[#94a3b8]">
+                <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                  <span className="text-xs text-slate-400">
                     {c.resolved ? `Resolved (${c.resolution_action})` : 'Choose action:'}
                   </span>
 
@@ -836,13 +836,13 @@ export const AdminSyncDebug: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleResolveConflict(c.id, 'kept_manual')}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-[#0f172a] border border-emerald-500/30 text-xs font-bold transition-all"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/30 text-xs font-bold transition-colors min-h-[34px]"
                       >
                         Keep Manual (Safe)
                       </button>
                       <button
                         onClick={() => handleResolveConflict(c.id, 'accepted_sisu')}
-                        className="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-400 hover:text-[#0f172a] border border-amber-500/30 text-xs font-bold transition-all"
+                        className="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-400 text-amber-400 hover:text-slate-950 border border-amber-500/30 text-xs font-bold transition-colors min-h-[34px]"
                       >
                         Accept Sisu Update
                       </button>
@@ -861,17 +861,17 @@ export const AdminSyncDebug: React.FC = () => {
 
       {/* TAB 3: RECONCILIATION RUNS */}
       {activeTab === 'reconciliation' && (
-        <div className="bg-[#1e293b] border border-[#334155] rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-4 border-b border-[#334155] flex items-center justify-between">
-            <h3 className="font-editorial text-base font-bold text-[#f8fafc]">
+        <div className="bg-[#111726] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="p-4 bg-[#0d121f] border-b border-white/10 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-100">
               Nightly Sisu Reconciliation History
             </h3>
-            <span className="text-xs text-[#94a3b8]">Stored in public.reconciliation_runs</span>
+            <span className="text-xs text-slate-400">Stored in public.reconciliation_runs</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-[#131826] text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wider border-b border-[#334155]">
+              <thead className="bg-[#0d121f] text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-white/10">
                 <tr>
                   <th className="py-3 px-4">Run Timestamp</th>
                   <th className="py-3 px-4">Checked</th>
@@ -881,18 +881,18 @@ export const AdminSyncDebug: React.FC = () => {
                   <th className="py-3 px-4 text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#334155]/60">
+              <tbody className="divide-y divide-white/5">
                 {runs.map((r) => (
-                  <tr key={r.id} className="hover:bg-[#131826]/60 transition-colors">
-                    <td className="py-3 px-4 font-mono-code text-xs text-[#f8fafc]">{r.run_at}</td>
-                    <td className="py-3 px-4 font-mono-code">{r.transactions_checked} Deals</td>
-                    <td className="py-3 px-4 font-mono-code text-[#d97706]">
+                  <tr key={r.id} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="py-3 px-4 font-mono text-xs text-slate-200 tabular-nums">{r.run_at}</td>
+                    <td className="py-3 px-4 font-mono tabular-nums">{r.transactions_checked} Deals</td>
+                    <td className="py-3 px-4 font-mono text-amber-400 tabular-nums">
                       {r.transactions_updated} Updated
                     </td>
-                    <td className="py-3 px-4 font-mono-code text-amber-400">
+                    <td className="py-3 px-4 font-mono text-amber-400 tabular-nums">
                       {r.conflicts_found} Conflicts
                     </td>
-                    <td className="py-3 px-4 font-mono-code text-xs text-[#94a3b8]">
+                    <td className="py-3 px-4 font-mono text-xs text-slate-400 tabular-nums">
                       {r.duration_ms} ms
                     </td>
                     <td className="py-3 px-4 text-right">
@@ -911,22 +911,22 @@ export const AdminSyncDebug: React.FC = () => {
       {/* Raw Payload Modal */}
       {selectedPayload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#1a2235] border border-[#334155] rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="p-4 bg-[#131826] border-b border-[#334155] flex items-center justify-between">
+          <div className="bg-[#111726] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-4 bg-[#0d121f] border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileCode className="h-4 w-4 text-[#d97706]" />
-                <span className="font-editorial font-bold text-sm text-[#f8fafc]">
+                <FileCode className="h-4 w-4 text-amber-400" />
+                <span className="font-bold text-sm text-slate-100">
                   Raw Sisu JSON Payload
                 </span>
               </div>
               <button
                 onClick={() => setSelectedPayload(null)}
-                className="p-1 rounded-lg hover:bg-[#334155] text-[#94a3b8] hover:text-[#f8fafc]"
+                className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="p-4 overflow-y-auto font-mono-code text-xs bg-[#0f172a] text-emerald-400">
+            <div className="p-4 overflow-y-auto font-mono text-xs bg-[#090d16] text-emerald-400">
               <pre>{JSON.stringify(selectedPayload, null, 2)}</pre>
             </div>
           </div>

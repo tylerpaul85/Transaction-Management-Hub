@@ -50,7 +50,7 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
       case 'na':
       case 'waived':
         return {
-          pill: 'bg-[#1e293b]/40 text-slate-500 border-slate-700/50 line-through opacity-55 hover:opacity-80',
+          pill: 'bg-[#111726] text-slate-500 border-slate-700/50 line-through opacity-55 hover:opacity-80',
           badge: 'bg-slate-800 text-slate-400 border-slate-700',
           label: 'N/A',
           icon: <Minus className="w-2.5 h-2.5 flex-shrink-0 text-slate-500" />,
@@ -58,7 +58,7 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
       case 'pending':
       default:
         return {
-          pill: 'bg-[#131826]/90 text-slate-400 border-[#334155] hover:border-amber-400/50 hover:text-slate-200',
+          pill: 'bg-[#0d121f]/90 text-slate-400 border-white/10 hover:border-amber-400/50 hover:text-slate-200',
           badge: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
           label: 'Pending',
           icon: <Circle className="w-2 h-2 flex-shrink-0 text-slate-500" />,
@@ -158,9 +158,9 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
 
             {/* Hover Tooltip Popover */}
             {isHovered && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 w-60 p-3 bg-[#131826] border border-[#334155] rounded-xl shadow-2xl text-xs pointer-events-none space-y-2 backdrop-blur-md">
-                <div className="flex items-center justify-between gap-1 border-b border-[#334155]/60 pb-1.5">
-                  <span className="font-bold text-[#f8fafc] truncate">{item.label}</span>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 w-60 p-3 bg-[#0d121f] border border-white/10 rounded-xl shadow-2xl text-xs pointer-events-none space-y-2 backdrop-blur-md">
+                <div className="flex items-center justify-between gap-1 border-b border-white/10 pb-1.5">
+                  <span className="font-bold text-slate-100 truncate">{item.label}</span>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${styles.badge}`}>
                     {styles.label}
                   </span>
@@ -184,16 +184,16 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
                     })}
                   </div>
                 ) : (
-                  <div className="text-[#94a3b8] space-y-1 text-[11px]">
+                  <div className="text-slate-400 space-y-1 text-[11px]">
                     <div>
-                      Status: <strong className="text-[#f8fafc] uppercase">{styles.label}</strong>
+                      Status: <strong className="text-slate-100 uppercase">{styles.label}</strong>
                     </div>
                     {primaryMilestone?.target_date && <div>Target: {primaryMilestone.target_date}</div>}
                     {primaryMilestone?.actual_date && (
                       <div className="text-emerald-400">Actual: {primaryMilestone.actual_date}</div>
                     )}
                     {primaryMilestone?.notes && (
-                      <p className="italic text-[10px] text-slate-400 pt-0.5 border-t border-[#334155]/40 mt-1">
+                      <p className="italic text-[10px] text-slate-400 pt-0.5 border-t border-white/10 mt-1">
                         {primaryMilestone.notes}
                       </p>
                     )}

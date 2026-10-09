@@ -120,7 +120,7 @@ export const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-in fade-in duration-200">
       <div
         className="bg-[#0e1726] border border-slate-700/80 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
@@ -134,7 +134,7 @@ export const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                 TC Verification Required
               </span>
               {stepNumber && (
-                <span className="text-[11px] text-slate-400 font-mono-code">
+                <span className="text-[11px] text-slate-400 font-mono tabular-nums">
                   Step #{stepNumber}
                 </span>
               )}
@@ -165,7 +165,7 @@ export const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
         <div className="p-5 overflow-y-auto space-y-4 text-sm">
           {/* Assigned TC Notice Card */}
           <div className="bg-[#142032] border border-sky-500/20 rounded-xl p-3.5 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 flex items-center justify-center font-bold text-xs shrink-0 font-mono-code">
+            <div className="h-10 w-10 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 flex items-center justify-center font-bold text-xs shrink-0 font-mono tabular-nums">
               {assignedTcName
                 .split(' ')
                 .map((n) => n[0])
@@ -209,7 +209,7 @@ export const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                   </span>
                 )}
               </div>
-              <div className="text-xs text-slate-200 bg-slate-900/60 rounded-lg p-2.5 font-mono-code text-[11px] whitespace-pre-wrap border border-slate-800">
+              <div className="text-xs text-slate-200 bg-slate-900/60 rounded-lg p-2.5 font-mono tabular-nums text-[11px] whitespace-pre-wrap border border-slate-800">
                 {existingApprovalData.details}
               </div>
               {existingApprovalData.submittedByName && (

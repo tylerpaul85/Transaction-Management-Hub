@@ -29,15 +29,15 @@ export const CDAPrintModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-[#1e293b] border border-[#334155] rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[95vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-[#111726] border border-white/10 rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[95vh] flex flex-col">
         {/* Top Control Bar (Hidden on Print) */}
-        <div className="no-print bg-[#131826] border-b border-[#334155] p-4 flex items-center justify-between">
+        <div className="no-print bg-[#0d121f] border-b border-white/10 p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-mono-code text-xs px-2.5 py-1 rounded-md bg-[#d97706]/15 text-[#d97706] border border-[#d97706]/30 font-bold">
+            <span className="font-mono tabular-nums text-xs px-2.5 py-1 rounded-md bg-amber-400/15 text-amber-400 border border-amber-400/30 font-bold">
               {comm.cdaNumber}
             </span>
-            <span className="text-sm font-semibold text-[#f8fafc]">
+            <span className="text-sm font-semibold text-slate-100">
               Official Commission Disbursement Authorization
             </span>
           </div>
@@ -45,21 +45,21 @@ export const CDAPrintModal: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={handleMarkSent}
-              className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-[#0f172a] border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all min-h-[36px]"
+              className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all min-h-[36px]"
             >
               <Check className="h-4 w-4" />
               <span>Mark Sent to Title</span>
             </button>
             <button
               onClick={handlePrint}
-              className="px-3 py-1.5 rounded-lg bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-bold text-xs flex items-center gap-1.5 transition-all min-h-[36px]"
+              className="px-3 py-1.5 rounded-lg bg-amber-400 text-slate-950 hover:bg-amber-400/90 font-bold text-xs flex items-center gap-1.5 transition-all min-h-[36px]"
             >
               <Printer className="h-4 w-4" />
               <span>Print / Save PDF</span>
             </button>
             <button
               onClick={closeCdaModal}
-              className="p-1.5 rounded-lg bg-[#1e293b] hover:bg-[#334155] text-[#94a3b8] hover:text-[#f8fafc] border border-[#334155] transition-all min-h-[36px] min-w-[36px] flex items-center justify-center"
+              className="p-1.5 rounded-lg bg-[#111726] hover:bg-white/10 text-slate-400 hover:text-slate-100 border border-white/10 transition-all min-h-[36px] min-w-[36px] flex items-center justify-center"
             >
               <X className="h-5 w-5" />
             </button>

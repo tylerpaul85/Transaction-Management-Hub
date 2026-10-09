@@ -43,37 +43,37 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
 
   return (
     <div className="max-w-lg mx-auto px-4 py-20 text-center">
-      <div className="p-8 bg-[#1e293b] border border-[#334155] rounded-3xl shadow-2xl space-y-5">
+      <div className="p-8 bg-[#111726] border border-white/10 rounded-2xl shadow-2xl space-y-5">
         <div className="h-14 w-14 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
           <Lock className="h-7 w-7" />
         </div>
 
         <div className="space-y-2">
-          <h2 className="font-editorial text-xl font-bold text-[#f8fafc]">
+          <h2 className="text-xl font-bold text-slate-100 tracking-tight">
             Access Restricted
           </h2>
-          <p className="text-sm text-[#94a3b8] leading-relaxed">
-            The <strong className="text-[#f8fafc] font-mono text-xs bg-[#131826] px-1.5 py-0.5 rounded">{routeName}</strong> route
+          <p className="text-sm text-slate-400 leading-relaxed">
+            The <strong className="text-slate-200 font-mono text-xs bg-[#0d121f] px-2 py-0.5 rounded border border-white/10">{routeName}</strong> route
             requires{' '}
-            <strong className="text-[#f8fafc]">
+            <strong className="text-slate-200">
               {allowedRoles.map((r) => r.replace('_', ' ')).join(' or ')}
             </strong>{' '}
             access. Your account is configured as{' '}
-            <strong className="text-[#d97706]">{currentUser.role.replace('_', ' ')}</strong>.
+            <strong className="text-amber-400">{currentUser.role.replace('_', ' ')}</strong>.
           </p>
         </div>
 
         {onNavigate && (
           <button
             onClick={() => onNavigate(homeRoute)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-bold rounded-xl text-sm transition-all shadow-md"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-400 text-slate-950 hover:bg-amber-300 font-bold rounded-xl text-sm transition-colors shadow-md min-h-[44px]"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Go to My Dashboard</span>
           </button>
         )}
 
-        <p className="text-[11px] text-[#94a3b8]/60">
+        <p className="text-[11px] text-slate-500">
           If you need access, contact your system administrator.
         </p>
       </div>

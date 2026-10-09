@@ -337,15 +337,15 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
       )}
 
       {/* Hero Header & Action Bar */}
-      <div className="bg-[#1e293b] p-6 rounded-2xl border border-[#334155] shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-[#111726] p-6 rounded-2xl border border-white/10 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#d97706]/20 border border-[#d97706]/40 flex items-center justify-center text-[#d97706]">
+            <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-400">
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-[#f8fafc] tracking-tight">Agent Directory & Roster</h1>
-              <p className="text-xs text-[#94a3b8] mt-0.5">
+              <h1 className="text-xl font-bold text-slate-100 tracking-tight">Agent Directory & Roster</h1>
+              <p className="text-xs text-slate-400 mt-0.5">
                 Official agent roster and verified email recipients synchronized with MSREG Office Roster.
               </p>
             </div>
@@ -358,7 +358,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
             href={GOOGLE_ROSTER_SHEET_URL.replace('/gviz/tq?tqx=out:csv&sheet=full%20office%20roster', '/edit')}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-2 rounded-xl bg-[#131826] hover:bg-[#1a2333] text-[#94a3b8] hover:text-[#f8fafc] border border-[#334155] text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-3 py-2 rounded-xl bg-[#0d121f] hover:bg-[#1a2333] text-slate-400 hover:text-slate-100 border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
             title="Open Live Google Sheet Roster in new tab"
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
@@ -370,7 +370,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
           <button
             onClick={handleSyncGoogleSheet}
             disabled={isSyncing}
-            className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-[#0f172a] border border-emerald-500/40 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/40 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
             title="Pull the latest emails, phones, and additions directly from Google Sheet"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
@@ -380,7 +380,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
           {/* Add Agent Button */}
           <button
             onClick={handleOpenAddModal}
-            className="px-4 py-2 rounded-xl bg-[#d97706] hover:bg-amber-500 text-[#0f172a] font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-[0.98]"
+            className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
             <span>+ Add Agent</span>
@@ -390,41 +390,41 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
 
       {/* Stats Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-[#1e293b] p-4 rounded-xl border border-[#334155]">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#94a3b8] block">Total Agents</span>
-          <span className="font-mono-code text-2xl font-black text-[#f8fafc]">{agents.length}</span>
+        <div className="bg-[#111726] p-4 rounded-xl border border-white/10">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Total Agents</span>
+          <span className="font-mono tabular-nums text-2xl font-black text-slate-100">{agents.length}</span>
         </div>
-        <div className="bg-[#1e293b] p-4 rounded-xl border border-[#334155]">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#94a3b8] block">Active Agents</span>
-          <span className="font-mono-code text-2xl font-black text-emerald-400">{activeCount}</span>
+        <div className="bg-[#111726] p-4 rounded-xl border border-white/10">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Active Agents</span>
+          <span className="font-mono tabular-nums text-2xl font-black text-emerald-400">{activeCount}</span>
         </div>
-        <div className="bg-[#1e293b] p-4 rounded-xl border border-[#334155]">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#94a3b8] block">Active Escrow Deals</span>
-          <span className="font-mono-code text-2xl font-black text-sky-400">{totalDealsAcrossAll}</span>
+        <div className="bg-[#111726] p-4 rounded-xl border border-white/10">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Active Escrow Deals</span>
+          <span className="font-mono tabular-nums text-2xl font-black text-sky-400">{totalDealsAcrossAll}</span>
         </div>
-        <div className="bg-[#1e293b] p-4 rounded-xl border border-[#334155]">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#94a3b8] block">Filtered Results</span>
-          <span className="font-mono-code text-2xl font-black text-amber-400">{filteredAgents.length}</span>
+        <div className="bg-[#111726] p-4 rounded-xl border border-white/10">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Filtered Results</span>
+          <span className="font-mono tabular-nums text-2xl font-black text-amber-400">{filteredAgents.length}</span>
         </div>
       </div>
 
       {/* Search & Category Filter Ribbon */}
-      <div className="bg-[#1e293b] p-4 rounded-2xl border border-[#334155] space-y-3 shadow-md">
+      <div className="bg-[#111726] p-4 rounded-2xl border border-white/10 space-y-3 shadow-md">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Search Box */}
           <div className="relative flex-1 min-w-[260px]">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by agent name, verified email, phone, or role..."
-              className="w-full pl-10 pr-4 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-[#d97706]"
+              className="w-full pl-10 pr-4 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-400"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#f8fafc] text-xs cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-100 text-xs cursor-pointer"
               >
                 Clear
               </button>
@@ -432,11 +432,11 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
           </div>
 
           {/* Status Filter */}
-          <div className="flex items-center gap-1 bg-[#131826] p-1 rounded-xl border border-[#334155]">
+          <div className="flex items-center gap-1 bg-[#0d121f] p-1 rounded-xl border border-white/10">
             <button
               onClick={() => setStatusFilter('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                statusFilter === 'all' ? 'bg-[#d97706] text-[#0f172a]' : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                statusFilter === 'all' ? 'bg-amber-400 text-slate-950' : 'text-slate-400 hover:text-slate-100'
               }`}
             >
               All
@@ -444,7 +444,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
             <button
               onClick={() => setStatusFilter('active')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                statusFilter === 'active' ? 'bg-emerald-500 text-[#0f172a]' : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                statusFilter === 'active' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-slate-100'
               }`}
             >
               Active
@@ -452,7 +452,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
             <button
               onClick={() => setStatusFilter('inactive')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                statusFilter === 'inactive' ? 'bg-slate-700 text-slate-200' : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                statusFilter === 'inactive' ? 'bg-slate-700 text-slate-200' : 'text-slate-400 hover:text-slate-100'
               }`}
             >
               Inactive
@@ -461,7 +461,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
         </div>
 
         {/* Category Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#334155]">
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/10">
           {categories.map((cat) => (
             <button
               key={cat}
@@ -469,7 +469,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 selectedCategory === cat
                   ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm'
-                  : 'bg-[#131826] text-[#94a3b8] border border-[#334155] hover:text-[#f8fafc]'
+                  : 'bg-[#0d121f] text-slate-400 border border-white/10 hover:text-slate-100'
               }`}
             >
               {cat}
@@ -480,15 +480,15 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
 
       {/* Agents Table / Cards */}
       {loading ? (
-        <div className="bg-[#1e293b] p-12 rounded-2xl border border-[#334155] text-center text-[#94a3b8]">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#d97706] mb-3" />
+        <div className="bg-[#111726] p-12 rounded-2xl border border-white/10 text-center text-slate-400">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-amber-400 mb-3" />
           <p className="text-sm font-semibold">Loading agent directory...</p>
         </div>
       ) : filteredAgents.length === 0 ? (
-        <div className="bg-[#1e293b] p-12 rounded-2xl border border-[#334155] text-center">
-          <Users className="h-10 w-10 mx-auto text-[#64748b] mb-3" />
-          <h3 className="text-base font-bold text-[#f8fafc]">No Agents Found</h3>
-          <p className="text-xs text-[#94a3b8] mt-1 max-w-sm mx-auto">
+        <div className="bg-[#111726] p-12 rounded-2xl border border-white/10 text-center">
+          <Users className="h-10 w-10 mx-auto text-slate-500 mb-3" />
+          <h3 className="text-base font-bold text-slate-100">No Agents Found</h3>
+          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
             No agents matched your current filter criteria. Try clearing your search or click "Sync from Google Sheet".
           </p>
           <button
@@ -497,16 +497,16 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
               setSelectedCategory('All');
               setStatusFilter('all');
             }}
-            className="mt-4 px-4 py-2 bg-[#131826] hover:bg-[#334155] text-xs font-bold text-sky-400 rounded-xl border border-[#334155] cursor-pointer"
+            className="mt-4 px-4 py-2 bg-[#0d121f] hover:bg-white/10 text-xs font-bold text-sky-400 rounded-xl border border-white/10 cursor-pointer"
           >
             Reset Filters
           </button>
         </div>
       ) : (
-        <div className="bg-[#1e293b] rounded-2xl border border-[#334155] overflow-hidden shadow-lg">
+        <div className="bg-[#111726] rounded-2xl border border-white/10 overflow-hidden shadow-lg">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-[#cbd5e1]">
-              <thead className="bg-[#131826] text-[11px] font-bold uppercase tracking-wider text-[#94a3b8] border-b border-[#334155]">
+              <thead className="bg-[#0d121f] text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/10">
                 <tr>
                   <th className="px-5 py-3.5">Agent Name</th>
                   <th className="px-5 py-3.5">Verified Email (Recipient)</th>
@@ -517,7 +517,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#334155]">
+              <tbody className="divide-y divide-white/5">
                 {filteredAgents.map((agent) => {
                   const dealCount = dealCounts[agent.id] || 0;
                   const avatar = agent.avatar_url || getStoredAvatar(agent.id, agent.email);
@@ -529,7 +529,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                     .slice(0, 2);
 
                   return (
-                    <tr key={agent.id} className="hover:bg-[#1e293b]/60 transition-colors group">
+                    <tr key={agent.id} className="hover:bg-[#111726] transition-colors group">
                       {/* Name & Avatar / Headshot */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
@@ -545,7 +545,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                                 className="w-9 h-9 rounded-full object-cover border-2 border-amber-500/40 shadow-sm"
                               />
                             ) : (
-                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500/30 to-[#d97706]/40 border border-[#d97706]/50 flex items-center justify-center font-bold text-xs text-[#f8fafc]">
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500/30 to-amber-400/40 border border-amber-400/50 flex items-center justify-center font-bold text-xs text-slate-100">
                                 {initials}
                               </div>
                             )}
@@ -554,9 +554,9 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                             </div>
                           </div>
                           <div>
-                            <span className="font-bold text-[#f8fafc] block">{agent.name}</span>
+                            <span className="font-bold text-slate-100 block">{agent.name}</span>
                             {agent.category && (
-                              <span className="text-[10px] text-[#94a3b8] block">{agent.category}</span>
+                              <span className="text-[10px] text-slate-400 block">{agent.category}</span>
                             )}
                           </div>
                         </div>
@@ -565,12 +565,12 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                       {/* Email */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono-code text-xs text-sky-300 font-medium">
+                          <span className="font-mono tabular-nums text-xs text-sky-300 font-medium">
                             {agent.email}
                           </span>
                           <button
                             onClick={() => handleCopyEmail(agent.email)}
-                            className="p-1 hover:bg-[#131826] rounded text-[#94a3b8] hover:text-[#f8fafc] transition-all cursor-pointer"
+                            className="p-1 hover:bg-[#0d121f] rounded text-slate-400 hover:text-slate-100 transition-all cursor-pointer"
                             title="Copy email"
                           >
                             {copiedEmail === agent.email ? (
@@ -584,22 +584,22 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
 
                       {/* Role */}
                       <td className="px-5 py-3.5">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#131826] border border-[#334155] text-[#94a3b8]">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#0d121f] border border-white/10 text-slate-400">
                           {agent.role || 'Agent'}
                         </span>
                       </td>
 
                       {/* Phone */}
-                      <td className="px-5 py-3.5 font-mono-code text-xs text-[#94a3b8]">
+                      <td className="px-5 py-3.5 font-mono tabular-nums text-xs text-slate-400">
                         {agent.phone ? (
                           <a
                             href={`tel:${agent.phone.replace(/[^0-9]/g, '')}`}
-                            className="hover:text-[#f8fafc] hover:underline"
+                            className="hover:text-slate-100 hover:underline"
                           >
                             {agent.phone}
                           </a>
                         ) : (
-                          <span className="text-[#64748b]">—</span>
+                          <span className="text-slate-500">—</span>
                         )}
                       </td>
 
@@ -608,13 +608,13 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                         {dealCount > 0 ? (
                           <button
                             onClick={() => onAgentSelect && onAgentSelect(agent.name)}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-[#0f172a] transition-all cursor-pointer"
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-slate-950 transition-all cursor-pointer"
                             title={`View ${dealCount} active escrows for ${agent.name}`}
                           >
                             {dealCount} {dealCount === 1 ? 'Deal' : 'Deals'}
                           </button>
                         ) : (
-                          <span className="text-xs text-[#64748b] font-mono-code">0</span>
+                          <span className="text-xs text-slate-500 font-mono tabular-nums">0</span>
                         )}
                       </td>
 
@@ -624,7 +624,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                           onClick={() => handleToggleActive(agent)}
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold cursor-pointer transition-all ${
                             agent.active
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500 hover:text-[#0f172a]'
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500 hover:text-slate-950'
                               : 'bg-slate-700/50 text-slate-400 border border-slate-600 hover:bg-slate-700'
                           }`}
                           title={`Click to ${agent.active ? 'deactivate' : 'reactivate'}`}
@@ -643,21 +643,21 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setHeadshotAgent(agent)}
-                            className="p-1.5 rounded-lg hover:bg-[#131826] text-[#94a3b8] hover:text-amber-400 border border-transparent hover:border-[#334155] transition-all cursor-pointer"
+                            className="p-1.5 rounded-lg hover:bg-[#0d121f] text-slate-400 hover:text-amber-400 border border-transparent hover:border-white/10 transition-all cursor-pointer"
                             title="Upload / Change Headshot"
                           >
                             <Camera className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => handleOpenEditModal(agent)}
-                            className="p-1.5 rounded-lg hover:bg-[#131826] text-[#94a3b8] hover:text-[#f8fafc] border border-transparent hover:border-[#334155] transition-all cursor-pointer"
+                            className="p-1.5 rounded-lg hover:bg-[#0d121f] text-slate-400 hover:text-slate-100 border border-transparent hover:border-white/10 transition-all cursor-pointer"
                             title="Edit Agent Information"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => setDeleteCandidate(agent)}
-                            className="p-1.5 rounded-lg hover:bg-rose-950/40 text-[#94a3b8] hover:text-rose-400 border border-transparent hover:border-rose-800/40 transition-all cursor-pointer"
+                            className="p-1.5 rounded-lg hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 border border-transparent hover:border-rose-800/40 transition-all cursor-pointer"
                             title="Delete / Remove Agent"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -676,18 +676,18 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
       {/* Add / Edit Agent Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#090d16]/80 backdrop-blur-sm">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
+          <div className="bg-[#111726] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute right-4 top-4 text-[#94a3b8] hover:text-[#f8fafc] cursor-pointer"
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-100 cursor-pointer"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="text-lg font-bold text-[#f8fafc] mb-1">
+            <h3 className="text-lg font-bold text-slate-100 mb-1">
               {modalMode === 'add' ? 'Add New Agent' : `Edit Agent: ${editingAgent?.name}`}
             </h3>
-            <p className="text-xs text-[#94a3b8] mb-5">
+            <p className="text-xs text-slate-400 mb-5">
               {modalMode === 'add'
                 ? 'Add an agent to the directory with their official recipient email.'
                 : 'Update name, verified email address, role, or contact phone.'}
@@ -702,7 +702,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Jane Doe"
-                  className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
 
@@ -716,9 +716,9 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="e.g. jane@mattsmithrealestategroup.com"
-                  className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400"
                 />
-                <span className="text-[10px] text-[#94a3b8] mt-0.5 block">
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
                   All transaction notifications and digest emails will be sent to this verified address.
                 </span>
               </div>
@@ -731,7 +731,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     placeholder="e.g. STR Agent"
-                    className="w-full px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-3 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400"
                   />
                 </div>
 
@@ -740,7 +740,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm text-[#f8fafc] focus:outline-none focus:border-[#d97706] cursor-pointer"
+                    className="w-full px-3 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer"
                   >
                     <option value="Buyer Specialist">Buyer Specialist</option>
                     <option value="Listing Specialist">Listing Specialist</option>
@@ -758,7 +758,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="e.g. 573-555-1234"
-                  className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
 
@@ -768,25 +768,25 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                   id="agentActiveCheck"
                   checked={formData.active}
                   onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                  className="w-4 h-4 rounded border-[#334155] text-[#d97706] focus:ring-0 focus:ring-offset-0 bg-[#131826] cursor-pointer"
+                  className="w-4 h-4 rounded border-white/10 text-amber-400 focus:ring-0 focus:ring-offset-0 bg-[#0d121f] cursor-pointer"
                 />
                 <label htmlFor="agentActiveCheck" className="text-xs font-medium text-[#cbd5e1] cursor-pointer">
                   Active Agent (eligible for deal assignment and weekly digests)
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#334155]">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-[#131826] hover:bg-[#334155] text-[#94a3b8] hover:text-[#f8fafc] rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="px-4 py-2 bg-[#0d121f] hover:bg-white/10 text-slate-400 hover:text-slate-100 rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={formSubmitting}
-                  className="px-5 py-2 bg-[#d97706] hover:bg-amber-500 text-[#0f172a] rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {formSubmitting ? 'Saving...' : modalMode === 'add' ? 'Add Agent' : 'Save Changes'}
                 </button>
@@ -799,19 +799,19 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
       {/* Delete Confirmation Modal */}
       {deleteCandidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#090d16]/80 backdrop-blur-sm">
-          <div className="bg-[#1e293b] border border-rose-500/40 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center">
+          <div className="bg-[#111726] border border-rose-500/40 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center">
             <div className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mx-auto mb-3">
               <Trash2 className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-bold text-[#f8fafc]">Delete Agent?</h3>
-            <p className="text-xs text-[#94a3b8] mt-1.5">
+            <h3 className="text-base font-bold text-slate-100">Delete Agent?</h3>
+            <p className="text-xs text-slate-400 mt-1.5">
               Are you sure you want to remove <strong>{deleteCandidate.name}</strong> ({deleteCandidate.email})?
               If this agent has historical transactions, it is recommended to toggle them to <strong>Inactive</strong> instead.
             </p>
             <div className="flex items-center justify-center gap-2 mt-5">
               <button
                 onClick={() => setDeleteCandidate(null)}
-                className="px-4 py-2 bg-[#131826] hover:bg-[#334155] text-xs font-bold text-[#94a3b8] rounded-xl cursor-pointer"
+                className="px-4 py-2 bg-[#0d121f] hover:bg-white/10 text-xs font-bold text-slate-400 rounded-xl cursor-pointer"
               >
                 Cancel
               </button>

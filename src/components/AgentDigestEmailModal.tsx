@@ -459,10 +459,10 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-[#1e293b] border border-[#334155] rounded-3xl shadow-2xl overflow-hidden my-8 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-[#111726] border border-white/10 rounded-3xl shadow-2xl overflow-hidden my-8 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-5 sm:p-6 bg-[#131826] border-b border-[#334155] flex items-center justify-between">
+        <div className="p-5 sm:p-6 bg-[#0d121f] border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {viewMode === 'single' && isInitialAll && (
               <button
@@ -470,7 +470,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                   setViewMode('all');
                   setSendResult(null);
                 }}
-                className="p-2 rounded-xl bg-[#1e293b] hover:bg-[#334155] text-[#94a3b8] hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold"
+                className="p-2 rounded-xl bg-[#111726] hover:bg-white/10 text-slate-400 hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold"
                 title="Back to all agents roster"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -478,20 +478,20 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
               </button>
             )}
 
-            <div className="p-2.5 rounded-2xl bg-[#d97706]/15 border border-[#d97706]/30 text-[#d97706]">
+            <div className="p-2.5 rounded-2xl bg-amber-400/15 border border-amber-400/30 text-amber-400">
               {viewMode === 'all' ? <Users className="h-6 w-6" /> : <Mail className="h-6 w-6" />}
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#d97706]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
                   {viewMode === 'all' ? 'Team Broadcast Dispatch' : 'Agent Transaction Update'}
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
                   {viewMode === 'all' ? `${agentGroups.length} Active Agents` : `${currentAgentTransactions.length} Deals`}
                 </span>
               </div>
-              <h2 className="text-lg font-bold text-[#f8fafc]">
+              <h2 className="text-lg font-bold text-slate-100">
                 {viewMode === 'all'
                   ? 'Send File Update Emails to All Agents'
                   : `Email Overview for ${activeAgentName || 'Agent'}`}
@@ -506,7 +506,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                   setViewMode('all');
                   setSendResult(null);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-[#1e293b] hover:bg-[#334155] text-xs font-bold text-[#94a3b8] hover:text-white transition-all"
+                className="px-3 py-1.5 rounded-xl bg-[#111726] hover:bg-white/10 text-xs font-bold text-slate-400 hover:text-white transition-all"
               >
                 View All Agents
               </button>
@@ -514,7 +514,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-[#1e293b] hover:bg-[#334155] text-[#94a3b8] hover:text-white transition-all"
+              className="p-2 rounded-xl bg-[#111726] hover:bg-white/10 text-slate-400 hover:text-white transition-all"
             >
               <X className="h-5 w-5" />
             </button>
@@ -548,41 +548,41 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
             <div className="space-y-5">
               {/* Summary Metrics Strip */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 bg-[#131826] rounded-2xl border border-[#334155]">
-                  <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
+                <div className="p-3.5 bg-[#0d121f] rounded-2xl border border-white/10">
+                  <span className="text-[11px] text-slate-400 block font-medium uppercase tracking-wider">
                     Agents With Active Files
                   </span>
-                  <span className="font-mono-code text-xl font-bold text-sky-400">
+                  <span className="font-mono tabular-nums text-xl font-bold text-sky-400">
                     {agentGroups.length} Agents
                   </span>
                 </div>
 
-                <div className="p-3.5 bg-[#131826] rounded-2xl border border-[#334155]">
-                  <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
+                <div className="p-3.5 bg-[#0d121f] rounded-2xl border border-white/10">
+                  <span className="text-[11px] text-slate-400 block font-medium uppercase tracking-wider">
                     Total Active Files
                   </span>
-                  <span className="font-mono-code text-xl font-bold text-[#d97706]">
+                  <span className="font-mono tabular-nums text-xl font-bold text-amber-400">
                     {transactions.length} Files
                   </span>
                 </div>
 
-                <div className="p-3.5 bg-[#131826] rounded-2xl border border-[#334155]">
-                  <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
+                <div className="p-3.5 bg-[#0d121f] rounded-2xl border border-white/10">
+                  <span className="text-[11px] text-slate-400 block font-medium uppercase tracking-wider">
                     Selected for Email
                   </span>
-                  <span className="font-mono-code text-xl font-bold text-emerald-400">
+                  <span className="font-mono tabular-nums text-xl font-bold text-emerald-400">
                     {selectedAgentNames.size} of {agentGroups.length}
                   </span>
                 </div>
               </div>
 
               {/* Hub Link Destination Setting */}
-              <div className="p-3 bg-[#131826] rounded-xl border border-[#334155] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="p-3 bg-[#0d121f] rounded-xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-[#d97706] flex-shrink-0" />
+                  <Globe className="h-4 w-4 text-amber-400 flex-shrink-0" />
                   <div>
-                    <span className="text-xs font-bold text-[#f8fafc] block">Hub Portal Destination Link</span>
-                    <span className="text-[10px] text-[#94a3b8]">Where the "Open In Hub" button in emails sends agents</span>
+                    <span className="text-xs font-bold text-slate-100 block">Hub Portal Destination Link</span>
+                    <span className="text-[10px] text-slate-400">Where the "Open In Hub" button in emails sends agents</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-1 max-w-md">
@@ -591,7 +591,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                     value={hubBaseUrl}
                     onChange={(e) => handleUpdateHubUrl(e.target.value)}
                     placeholder="https://..."
-                    className="w-full px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-3 py-1.5 bg-[#090d16] border border-white/10 rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-amber-400"
                   />
                   {detectedOrigin && hubBaseUrl !== detectedOrigin && (
                     <button
@@ -609,20 +609,20 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
               {/* Controls bar: Search + Select All */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <div className="relative flex-1 min-w-[200px] max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search agents by name or email..."
-                    className="w-full pl-9 pr-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-[#d97706]"
+                    className="w-full pl-9 pr-3 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-xs font-semibold text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-400"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleSelectAll}
-                    className="px-3 py-1.5 rounded-lg bg-[#131826] hover:bg-[#334155] border border-[#334155] text-xs font-bold text-[#94a3b8] hover:text-white transition-all flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg bg-[#0d121f] hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-400 hover:text-white transition-all flex items-center gap-1.5"
                   >
                     <CheckSquare className="h-3.5 w-3.5 text-emerald-400" />
                     <span>Select All</span>
@@ -630,7 +630,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
 
                   <button
                     onClick={handleDeselectAll}
-                    className="px-3 py-1.5 rounded-lg bg-[#131826] hover:bg-[#334155] border border-[#334155] text-xs font-bold text-[#94a3b8] hover:text-white transition-all flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg bg-[#0d121f] hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-400 hover:text-white transition-all flex items-center gap-1.5"
                   >
                     <Square className="h-3.5 w-3.5 text-slate-400" />
                     <span>Deselect All</span>
@@ -639,9 +639,9 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
               </div>
 
               {/* Agent Roster List */}
-              <div className="bg-[#0f172a] border border-[#334155] rounded-2xl p-2 max-h-96 overflow-y-auto divide-y divide-[#1e293b]">
+              <div className="bg-[#090d16] border border-white/10 rounded-2xl p-2 max-h-96 overflow-y-auto divide-y divide-[#111726]">
                 {filteredAgentGroups.length === 0 ? (
-                  <div className="p-8 text-center text-[#94a3b8] text-xs">
+                  <div className="p-8 text-center text-slate-400 text-xs">
                     No agents match your search filter.
                   </div>
                 ) : (
@@ -653,7 +653,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                       <div
                         key={agent.name}
                         className={`p-3 rounded-xl flex items-center justify-between gap-3 transition-colors ${
-                          isChecked ? 'bg-[#1e293b]/60' : 'bg-transparent opacity-70'
+                          isChecked ? 'bg-[#111726]' : 'bg-transparent opacity-70'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
@@ -661,12 +661,12 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => handleToggleAgent(agent.name)}
-                            className="h-4 w-4 rounded border-[#334155] text-[#d97706] focus:ring-[#d97706] focus:ring-offset-0 bg-[#131826] cursor-pointer"
+                            className="h-4 w-4 rounded border-white/10 text-amber-400 focus:ring-amber-400 focus:ring-offset-0 bg-[#0d121f] cursor-pointer"
                           />
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm text-[#f8fafc] truncate">
+                              <span className="font-bold text-sm text-slate-100 truncate">
                                 {agent.name}
                               </span>
 
@@ -685,9 +685,9 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                                 <span
                                   className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                     statusInfo.status === 'sent'
-                                      ? 'bg-emerald-500 text-[#0f172a]'
+                                      ? 'bg-emerald-500 text-slate-950'
                                       : statusInfo.status === 'skipped'
-                                      ? 'bg-amber-500 text-[#0f172a]'
+                                      ? 'bg-amber-500 text-slate-950'
                                       : 'bg-red-500 text-white'
                                   }`}
                                 >
@@ -696,7 +696,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                               )}
                             </div>
 
-                            <p className="text-xs text-[#94a3b8] truncate font-mono-code">
+                            <p className="text-xs text-slate-400 truncate font-mono tabular-nums">
                               {agent.email} • {agent.totalDeals} deal{agent.totalDeals === 1 ? '' : 's'}
                             </p>
                           </div>
@@ -705,7 +705,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             onClick={() => handlePreviewAgent(agent)}
-                            className="px-3 py-1.5 rounded-xl bg-[#131826] hover:bg-[#334155] border border-[#334155] text-sky-400 hover:text-sky-300 text-xs font-bold flex items-center gap-1.5 transition-all"
+                            className="px-3 py-1.5 rounded-xl bg-[#0d121f] hover:bg-white/10 border border-white/10 text-sky-400 hover:text-sky-300 text-xs font-bold flex items-center gap-1.5 transition-all"
                             title="Preview and customize email for this agent"
                           >
                             <FileText className="h-3.5 w-3.5 text-sky-400" />
@@ -724,30 +724,30 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
               {/* Target Email, Subject, and Hub Link Inputs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1.5">
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">
                     Recipient Email Address
                   </label>
                   <input
                     type="email"
                     value={recipientEmail}
                     onChange={(e) => setRecipientEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-4 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1.5">
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">
                     Subject Line
                   </label>
                   <input
                     type="text"
                     value={customSubject || subject}
                     onChange={(e) => setCustomSubject(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-4 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold text-[#94a3b8] uppercase">
+                    <label className="block text-xs font-bold text-slate-400 uppercase">
                       Hub Link (Portal URL)
                     </label>
                     {detectedOrigin && hubBaseUrl !== detectedOrigin && (
@@ -766,7 +766,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                     value={hubBaseUrl}
                     onChange={(e) => handleUpdateHubUrl(e.target.value)}
                     placeholder="https://..."
-                    className="w-full px-4 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-4 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>
@@ -774,22 +774,22 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
               {/* Email Content Preview Card */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-[#94a3b8] uppercase flex items-center gap-1.5">
-                    <FileText className="h-4 w-4 text-[#d97706]" />
+                  <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5">
+                    <FileText className="h-4 w-4 text-amber-400" />
                     <span>Live Email Preview ({currentAgentTransactions.length} Deals)</span>
                   </label>
 
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleCopy(html, 'html')}
-                      className="px-3 py-1 bg-[#131826] hover:bg-[#334155] border border-[#334155] text-xs text-sky-400 font-bold rounded-lg flex items-center gap-1 transition-all"
+                      className="px-3 py-1 bg-[#0d121f] hover:bg-white/10 border border-white/10 text-xs text-sky-400 font-bold rounded-lg flex items-center gap-1 transition-all"
                     >
                       {copiedType === 'html' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                       <span>Copy HTML</span>
                     </button>
                     <button
                       onClick={() => handleCopy(text, 'text')}
-                      className="px-3 py-1 bg-[#131826] hover:bg-[#334155] border border-[#334155] text-xs text-emerald-400 font-bold rounded-lg flex items-center gap-1 transition-all"
+                      className="px-3 py-1 bg-[#0d121f] hover:bg-white/10 border border-white/10 text-xs text-emerald-400 font-bold rounded-lg flex items-center gap-1 transition-all"
                     >
                       {copiedType === 'text' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                       <span>Copy Text</span>
@@ -797,7 +797,7 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-[#0f172a] border border-[#334155] rounded-2xl p-4 max-h-96 overflow-y-auto">
+                <div className="bg-[#090d16] border border-white/10 rounded-2xl p-4 max-h-96 overflow-y-auto">
                   <div dangerouslySetInnerHTML={{ __html: html }} />
                 </div>
               </div>
@@ -806,10 +806,10 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 sm:p-5 bg-[#131826] border-t border-[#334155] flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 bg-[#0d121f] border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold transition-all"
+            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-[#475569] text-white text-xs font-semibold transition-all"
           >
             Close
           </button>
@@ -819,12 +819,12 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
               <button
                 onClick={handleSendAllSelectedAgents}
                 disabled={isSending || selectedAgentNames.size === 0}
-                className="px-5 py-2.5 rounded-xl bg-[#d97706] hover:bg-[#b45309] text-[#0f172a] font-extrabold text-xs flex items-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-[#d97706]/20 disabled:opacity-50 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-[#b45309] text-slate-950 font-extrabold text-xs flex items-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-amber-400/20 disabled:opacity-50 cursor-pointer"
               >
                 {isSending ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-[#0f172a]" />
+                  <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
                 ) : (
-                  <Send className="h-4 w-4 text-[#0f172a]" />
+                  <Send className="h-4 w-4 text-slate-950" />
                 )}
                 <span>Send Updates to {selectedAgentNames.size} Selected Agents</span>
               </button>
@@ -842,12 +842,12 @@ export const AgentDigestEmailModal: React.FC<AgentDigestEmailModalProps> = ({
                 <button
                   onClick={handleSendSingleAgentEmail}
                   disabled={isSending}
-                  className="px-5 py-2.5 rounded-xl bg-[#d97706] hover:bg-[#b45309] text-[#0f172a] font-extrabold text-xs flex items-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-[#d97706]/20 disabled:opacity-50 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-[#b45309] text-slate-950 font-extrabold text-xs flex items-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-amber-400/20 disabled:opacity-50 cursor-pointer"
                 >
                   {isSending ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-[#0f172a]" />
+                    <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
                   ) : (
-                    <Send className="h-4 w-4 text-[#0f172a]" />
+                    <Send className="h-4 w-4 text-slate-950" />
                   )}
                   <span>Send Update to {activeAgentName || 'Agent'}</span>
                 </button>

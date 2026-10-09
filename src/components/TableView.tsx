@@ -55,14 +55,14 @@ export const TableView: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="bg-[#1e293b]/80 border border-[#334155] rounded-2xl overflow-hidden shadow-xl backdrop-blur-md">
+      <div className="bg-[#111726] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#334155] bg-[#131826]/80 text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wider">
+              <tr className="border-b border-white/10 bg-[#0d121f] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 <th
                   onClick={() => handleSort('fileNumber')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-[#f8fafc] transition-colors"
+                  className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>File #</span>
@@ -71,7 +71,7 @@ export const TableView: React.FC = () => {
                 </th>
                 <th
                   onClick={() => handleSort('address')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-[#f8fafc] transition-colors"
+                  className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Property Address</span>
@@ -81,7 +81,7 @@ export const TableView: React.FC = () => {
                 <th className="py-3.5 px-4">Role</th>
                 <th
                   onClick={() => handleSort('contractPrice')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-[#f8fafc] transition-colors"
+                  className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Price / Net Comm.</span>
@@ -90,7 +90,7 @@ export const TableView: React.FC = () => {
                 </th>
                 <th
                   onClick={() => handleSort('stage')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-[#f8fafc] transition-colors"
+                  className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Stage</span>
@@ -99,7 +99,7 @@ export const TableView: React.FC = () => {
                 </th>
                 <th
                   onClick={() => handleSort('targetClosingDate')}
-                  className="py-3.5 px-4 cursor-pointer hover:text-[#f8fafc] transition-colors"
+                  className="py-3.5 px-4 cursor-pointer hover:text-white transition-colors"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Closing Date</span>
@@ -110,10 +110,10 @@ export const TableView: React.FC = () => {
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#334155]/60 text-sm">
+            <tbody className="divide-y divide-white/5 text-sm">
               {sortedTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-[#94a3b8]">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     No transactions match the selected filters.
                   </td>
                 </tr>
@@ -132,7 +132,7 @@ export const TableView: React.FC = () => {
                     <tr
                       key={trx.id}
                       onClick={() => setSelectedTransactionId(trx.id)}
-                      className="hover:bg-[#131826]/60 cursor-pointer transition-colors group"
+                      className="hover:bg-white/[0.03] cursor-pointer transition-colors group"
                     >
                       {/* File # & Photo */}
                       <td className="py-3.5 px-4">
@@ -140,14 +140,14 @@ export const TableView: React.FC = () => {
                           <img
                             src={trx.photoUrl}
                             alt=""
-                            className="h-10 w-12 rounded-lg object-cover bg-[#0f172a] border border-[#334155] flex-shrink-0"
+                            className="h-10 w-12 rounded-lg object-cover bg-slate-900 border border-white/10 flex-shrink-0"
                             onError={(e) => ((e.target as HTMLElement).style.display = 'none')}
                           />
                           <div>
-                            <span className="font-mono-code text-xs font-bold text-[#f8fafc] block">
+                            <span className="font-mono text-xs font-bold text-slate-200 block tabular-nums">
                               {trx.fileNumber}
                             </span>
-                            <span className="text-[11px] text-[#94a3b8]">
+                            <span className="text-[11px] text-slate-400">
                               {trx.propertyType.split(' ')[0]}
                             </span>
                           </div>
@@ -157,10 +157,10 @@ export const TableView: React.FC = () => {
                       {/* Address */}
                       <td className="py-3.5 px-4">
                         <div className="max-w-[220px]">
-                          <span className="font-editorial text-sm font-semibold text-[#f8fafc] group-hover:text-[#d97706] transition-colors block truncate">
+                          <span className="text-sm font-semibold text-slate-100 group-hover:text-amber-400 transition-colors block truncate">
                             {trx.address} {trx.unit ? `(${trx.unit})` : ''}
                           </span>
-                          <span className="text-xs text-[#94a3b8] truncate block">
+                          <span className="text-xs text-slate-400 truncate block">
                             {trx.clientNames.join(', ')}
                           </span>
                         </div>
@@ -173,7 +173,7 @@ export const TableView: React.FC = () => {
                             trx.representation === 'Buyer'
                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                               : trx.representation === 'Seller'
-                              ? 'bg-[#d97706]/15 text-[#d97706] border-[#d97706]/30'
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                               : 'bg-sky-500/10 text-sky-400 border-sky-500/30'
                           }`}
                         >
@@ -184,10 +184,10 @@ export const TableView: React.FC = () => {
                       {/* Price & Comm */}
                       <td className="py-3.5 px-4">
                         <div>
-                          <span className="font-mono-code text-sm font-bold text-[#f8fafc] block">
+                          <span className="font-mono text-sm font-bold text-slate-200 block tabular-nums">
                             {formatCurrency(trx.contractPrice)}
                           </span>
-                          <span className="font-mono-code text-xs text-[#d97706] font-medium block">
+                          <span className="font-mono text-xs text-amber-400 font-medium block tabular-nums">
                             Net: {formatCurrency(trx.commission?.netAgentPayout || 0)}
                           </span>
                         </div>
@@ -196,8 +196,8 @@ export const TableView: React.FC = () => {
                       {/* Stage */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-[#d97706]" />
-                          <span className="text-xs font-medium text-[#f8fafc]">
+                          <span className="h-2 w-2 rounded-full bg-amber-400" />
+                          <span className="text-xs font-medium text-slate-200">
                             {stageInfo.label}
                           </span>
                         </div>
@@ -206,16 +206,16 @@ export const TableView: React.FC = () => {
                       {/* Closing Date */}
                       <td className="py-3.5 px-4">
                         <div>
-                          <span className="font-mono-code text-xs font-semibold text-[#f8fafc] block">
+                          <span className="font-mono text-xs font-semibold text-slate-200 block tabular-nums">
                             {trx.targetClosingDate}
                           </span>
                           <span
-                            className={`text-[11px] font-medium ${
+                            className={`text-[11px] font-medium tabular-nums ${
                               trx.stage === 'closed'
                                 ? 'text-emerald-400'
                                 : daysToClose <= 5
                                 ? 'text-amber-400'
-                                : 'text-[#94a3b8]'
+                                : 'text-slate-400'
                             }`}
                           >
                             {trx.stage === 'closed'
@@ -230,8 +230,8 @@ export const TableView: React.FC = () => {
                       {/* Agent & TC */}
                       <td className="py-3.5 px-4">
                         <div className="text-xs">
-                          <span className="text-[#f8fafc] font-medium block">{trx.agentName}</span>
-                          <span className="text-[#94a3b8] text-[11px] block">TC: {trx.tcName}</span>
+                          <span className="text-slate-200 font-medium block">{trx.agentName}</span>
+                          <span className="text-slate-400 text-[11px] block">TC: {trx.tcName}</span>
                         </div>
                       </td>
 
@@ -249,13 +249,13 @@ export const TableView: React.FC = () => {
                           <button
                             onClick={() => openCdaModal(trx)}
                             title="Generate Official CDA"
-                            className="p-1.5 rounded-lg bg-[#131826] hover:bg-[#d97706] text-[#94a3b8] hover:text-[#0f172a] border border-[#334155] transition-all"
+                            className="p-1.5 rounded-lg bg-[#162035] hover:bg-amber-400 text-slate-400 hover:text-slate-950 border border-white/10 transition-all min-h-[36px] min-w-[36px] flex items-center justify-center"
                           >
                             <FileText className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => setSelectedTransactionId(trx.id)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#d97706]/15 hover:bg-[#d97706] text-[#d97706] hover:text-[#0f172a] border border-[#d97706]/30 text-xs font-semibold transition-all min-h-[36px]"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-400 text-amber-400 hover:text-slate-950 border border-amber-500/30 text-xs font-semibold transition-all min-h-[36px]"
                           >
                             <span>Open</span>
                             <ArrowRight className="h-3.5 w-3.5" />

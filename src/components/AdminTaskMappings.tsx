@@ -334,22 +334,20 @@ export const AdminTaskMappings: React.FC = () => {
   }, [mappings, searchQuery]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 animate-fadeIn">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#1e293b] via-[#1a2234] to-[#131826] p-6 sm:p-8 rounded-2xl border border-[#334155] shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 relative z-10">
+      <div className="bg-[#111726] p-6 sm:p-8 rounded-2xl border border-white/10 shadow-xl">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="p-2.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl">
+            <div className="flex items-center gap-3">
+              <span className="p-2.5 bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-xl">
                 <ListChecks className="h-6 w-6" />
               </span>
               <div>
-                <h1 className="font-editorial text-2xl sm:text-3xl font-bold text-[#f8fafc]">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight">
                   Sisu Task-Level Milestone Synchronization
                 </h1>
-                <p className="text-xs sm:text-sm text-[#94a3b8] mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
                   Automatically mark transaction milestones complete whenever specific Sisu checklist tasks are completed.
                 </p>
               </div>
@@ -363,7 +361,7 @@ export const AdminTaskMappings: React.FC = () => {
                 fetchData();
               }}
               disabled={isLoading || isScanning}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#334155] hover:bg-[#475569] text-[#f8fafc] transition-all disabled:opacity-50 border border-slate-600 shadow-md"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-[#162035] hover:bg-white/10 text-slate-200 transition-colors disabled:opacity-50 border border-white/10 shadow-sm min-h-[40px]"
             >
               <RefreshCw className={`h-4 w-4 ${isScanning ? 'animate-spin' : ''}`} />
               <span>{isScanning ? 'Scanning Payloads...' : 'Re-Scan Tasks & Logs'}</span>
@@ -372,11 +370,11 @@ export const AdminTaskMappings: React.FC = () => {
         </div>
 
         {/* Metrics Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-[#334155]/60">
-          <div className="p-4 bg-[#0f172a]/60 rounded-xl border border-[#334155] flex items-center justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/10">
+          <div className="p-4 bg-[#0d121f] rounded-xl border border-white/10 flex items-center justify-between">
             <div>
-              <span className="text-xs text-[#94a3b8] font-medium uppercase tracking-wider block">Active Mappings</span>
-              <span className="font-mono-code text-2xl font-bold text-emerald-400">
+              <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">Active Mappings</span>
+              <span className="font-mono text-2xl font-bold text-emerald-400 tabular-nums">
                 {mappings.filter((m) => m.active).length}
               </span>
             </div>
@@ -385,10 +383,10 @@ export const AdminTaskMappings: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 bg-[#0f172a]/60 rounded-xl border border-[#334155] flex items-center justify-between">
+          <div className="p-4 bg-[#0d121f] rounded-xl border border-white/10 flex items-center justify-between">
             <div>
-              <span className="text-xs text-[#94a3b8] font-medium uppercase tracking-wider block">Unmatched Tasks Seen</span>
-              <span className="font-mono-code text-2xl font-bold text-amber-400">
+              <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">Unmatched Tasks Seen</span>
+              <span className="font-mono text-2xl font-bold text-amber-400 tabular-nums">
                 {unmatchedTasks.length}
               </span>
             </div>
@@ -397,10 +395,10 @@ export const AdminTaskMappings: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 bg-[#0f172a]/60 rounded-xl border border-[#334155] flex items-center justify-between">
+          <div className="p-4 bg-[#0d121f] rounded-xl border border-white/10 flex items-center justify-between">
             <div>
-              <span className="text-xs text-[#94a3b8] font-medium uppercase tracking-wider block">Total Mappings Configured</span>
-              <span className="font-mono-code text-2xl font-bold text-sky-400">
+              <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">Total Mappings Configured</span>
+              <span className="font-mono text-2xl font-bold text-sky-400 tabular-nums">
                 {mappings.length}
               </span>
             </div>
@@ -438,21 +436,21 @@ export const AdminTaskMappings: React.FC = () => {
       )}
 
       {/* Quick Add Manual Mapping Card */}
-      <div className="bg-[#1e293b] p-6 rounded-2xl border border-[#334155] shadow-md space-y-4">
+      <div className="bg-[#111726] p-6 rounded-2xl border border-white/10 shadow-lg space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h2 className="text-base font-bold text-[#f8fafc] flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
               <Plus className="h-4 w-4 text-amber-400" />
               Add or Pre-Map a Sisu Task
             </h2>
-            <p className="text-xs text-[#94a3b8]">
+            <p className="text-xs text-slate-400">
               Configure any Sisu checklist task title before or after it appears in incoming webhooks.
             </p>
           </div>
 
           {/* Quick-fill pills for Tyler's screenshot test items */}
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-[#94a3b8] font-medium text-[11px]">Quick Fill Test Tasks:</span>
+            <span className="text-slate-400 font-medium text-[11px]">Quick Fill Test Tasks:</span>
             {TEST_SUGGESTIONS.map((sug) => (
               <button
                 key={sug.name}
@@ -461,7 +459,7 @@ export const AdminTaskMappings: React.FC = () => {
                   setManualTaskName(sug.name);
                   setManualMilestoneField(sug.defaultField);
                 }}
-                className="px-2.5 py-1 rounded-lg bg-[#334155] hover:bg-[#475569] text-amber-300 border border-amber-500/30 text-[11px] font-mono-code transition-all"
+                className="px-2.5 py-1 rounded-lg bg-[#162035] hover:bg-white/10 text-amber-400 border border-white/10 text-[11px] font-mono transition-colors"
               >
                 + {sug.name.split(' - ')[0]}
               </button>
@@ -471,7 +469,7 @@ export const AdminTaskMappings: React.FC = () => {
 
         <form onSubmit={handleCreateManualMapping} className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2">
           <div className="md:col-span-6">
-            <label className="block text-[11px] font-bold uppercase text-[#94a3b8] mb-1">
+            <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
               Exact Sisu Task Name
             </label>
             <input
@@ -479,19 +477,19 @@ export const AdminTaskMappings: React.FC = () => {
               value={manualTaskName}
               onChange={(e) => setManualTaskName(e.target.value)}
               placeholder="e.g. Earnest Money Deposited - Transaction Hub"
-              className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-sm text-[#f8fafc] placeholder-[#64748b] focus:outline-none focus:border-amber-400 font-mono-code"
+              className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 font-mono transition-colors"
               required
             />
           </div>
 
           <div className="md:col-span-4">
-            <label className="block text-[11px] font-bold uppercase text-[#94a3b8] mb-1">
+            <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
               Target Milestone Field
             </label>
             <select
               value={manualMilestoneField}
               onChange={(e) => setManualMilestoneField(e.target.value)}
-              className="w-full px-3 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-sm text-[#f8fafc] focus:outline-none focus:border-amber-400"
+              className="w-full px-3 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400 transition-colors"
             >
               {ALL_MILESTONES_CONFIG.map((conf) => (
                 <option key={conf.type} value={conf.type}>
@@ -505,7 +503,7 @@ export const AdminTaskMappings: React.FC = () => {
             <button
               type="submit"
               disabled={isSavingManual || !manualTaskName.trim()}
-              className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-[#0f172a] font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+              className="w-full py-2.5 px-4 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 min-h-[42px]"
             >
               <Plus className="h-4 w-4" />
               <span>{isSavingManual ? 'Saving...' : 'Add Mapping'}</span>
@@ -517,32 +515,32 @@ export const AdminTaskMappings: React.FC = () => {
       {/* Global Search Bar */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search task names or milestones..."
-            className="w-full pl-10 pr-4 py-2 bg-[#1e293b] border border-[#334155] rounded-xl text-sm text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-amber-400"
+            className="w-full pl-10 pr-4 py-2 bg-[#111726] border border-white/10 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
           />
         </div>
-        <span className="text-xs text-[#94a3b8]">
+        <span className="text-xs text-slate-400 tabular-nums">
           Showing {filteredUnmatched.length} unmatched / {filteredMappings.length} mapped
         </span>
       </div>
 
       {/* Section 1: Unmatched Tasks Punch List */}
-      <div className="bg-[#1e293b] rounded-2xl border border-[#334155] shadow-lg overflow-hidden">
-        <div className="p-5 border-b border-[#334155] flex items-center justify-between bg-[#182234]">
+      <div className="bg-[#111726] rounded-2xl border border-white/10 shadow-xl overflow-hidden">
+        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#0d121f]">
           <div className="flex items-center gap-2.5">
-            <span className="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg">
+            <span className="p-1.5 bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-lg">
               <AlertCircle className="h-4 w-4" />
             </span>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-[#f8fafc]">
+              <h2 className="text-sm sm:text-base font-bold text-slate-100">
                 Unmatched Sisu Tasks Punch List ({filteredUnmatched.length})
               </h2>
-              <p className="text-[11px] text-[#94a3b8]">
+              <p className="text-[11px] text-slate-400">
                 Tasks detected in incoming Sisu webhooks or logs that do not have a milestone assigned yet.
               </p>
             </div>
@@ -550,17 +548,17 @@ export const AdminTaskMappings: React.FC = () => {
         </div>
 
         {filteredUnmatched.length === 0 ? (
-          <div className="p-12 text-center text-[#94a3b8]">
-            <CheckCircle2 className="h-10 w-10 mx-auto text-emerald-400/60 mb-2" />
-            <p className="text-sm font-semibold text-[#f8fafc]">All Detected Tasks Are Mapped!</p>
-            <p className="text-xs text-[#64748b] mt-1 max-w-md mx-auto">
+          <div className="p-12 text-center text-slate-400">
+            <CheckCircle2 className="h-10 w-10 mx-auto text-emerald-400/80 mb-2" />
+            <p className="text-sm font-semibold text-slate-100">All Detected Tasks Are Mapped!</p>
+            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
               No unmatched tasks found across sisu_unmatched_tasks or recent webhook logs. When new Sisu tasks are received, they will appear here automatically.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-[#f8fafc]">
-              <thead className="bg-[#131826] text-[#94a3b8] uppercase text-[10px] tracking-wider border-b border-[#334155]">
+            <table className="w-full text-left text-xs text-slate-200">
+              <thead className="bg-[#0d121f] text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/10">
                 <tr>
                   <th className="py-3 px-4 font-bold">Detected Task Name (Sisu)</th>
                   <th className="py-3 px-4 font-bold">Times Seen</th>
@@ -569,12 +567,12 @@ export const AdminTaskMappings: React.FC = () => {
                   <th className="py-3 px-4 font-bold text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#334155]/60">
+              <tbody className="divide-y divide-white/5">
                 {filteredUnmatched.map((item) => {
                   const currentSelected = selectedMilestones[item.taskName] || 'earnest_money';
                   return (
-                    <tr key={item.taskName} className="hover:bg-[#131826]/40 transition-colors">
-                      <td className="py-3.5 px-4 font-mono-code font-bold text-amber-300">
+                    <tr key={item.taskName} className="hover:bg-white/[0.03] transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-amber-400">
                         <div className="flex items-center gap-2">
                           <span>{item.taskName}</span>
                           <button
@@ -584,23 +582,23 @@ export const AdminTaskMappings: React.FC = () => {
                               navigator.clipboard.writeText(item.taskName);
                               setStatusMessage({ type: 'info', text: `Copied "${item.taskName}" to clipboard` });
                             }}
-                            className="text-[#64748b] hover:text-[#f8fafc] transition-colors"
+                            className="text-slate-500 hover:text-white transition-colors"
                           >
                             <Copy className="h-3 w-3" />
                           </button>
                         </div>
                         {item.sampleTxId && (
-                          <span className="text-[10px] text-[#64748b] font-normal block mt-0.5">
+                          <span className="text-[10px] text-slate-500 font-normal block mt-0.5">
                             Tx ID: {item.sampleTxId}
                           </span>
                         )}
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#334155] text-slate-200">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#162035] text-slate-200 border border-white/10 tabular-nums">
                           {item.count}x
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-[#94a3b8] text-[11px]">
+                      <td className="py-3.5 px-4 text-slate-400 text-[11px] tabular-nums">
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-3 w-3 text-slate-500" />
                           <span>{new Date(item.latestDetectedAt).toLocaleString()}</span>
@@ -615,7 +613,7 @@ export const AdminTaskMappings: React.FC = () => {
                               [item.taskName]: e.target.value,
                             }))
                           }
-                          className="w-full px-2.5 py-1.5 bg-[#131826] border border-[#334155] rounded-lg text-xs text-[#f8fafc] focus:outline-none focus:border-amber-400"
+                          className="w-full px-2.5 py-1.5 bg-[#0d121f] border border-white/10 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-amber-400 transition-colors"
                         >
                           {ALL_MILESTONES_CONFIG.map((conf) => (
                             <option key={conf.type} value={conf.type}>
@@ -628,7 +626,7 @@ export const AdminTaskMappings: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleSaveUnmatchedMapping(item.taskName)}
-                          className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-[#0f172a] font-bold text-xs rounded-lg shadow transition-all inline-flex items-center gap-1"
+                          className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg shadow-sm transition-colors inline-flex items-center gap-1 min-h-[32px]"
                         >
                           <Check className="h-3.5 w-3.5" />
                           <span>Save Mapping</span>
@@ -644,17 +642,17 @@ export const AdminTaskMappings: React.FC = () => {
       </div>
 
       {/* Section 2: Active Task Mappings */}
-      <div className="bg-[#1e293b] rounded-2xl border border-[#334155] shadow-lg overflow-hidden">
-        <div className="p-5 border-b border-[#334155] flex items-center justify-between bg-[#182234]">
+      <div className="bg-[#111726] rounded-2xl border border-white/10 shadow-xl overflow-hidden">
+        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#0d121f]">
           <div className="flex items-center gap-2.5">
-            <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg">
+            <span className="p-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-lg">
               <CheckCircle2 className="h-4 w-4" />
             </span>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-[#f8fafc]">
+              <h2 className="text-sm sm:text-base font-bold text-slate-100">
                 Configured Sisu Task Mappings ({filteredMappings.length})
               </h2>
-              <p className="text-[11px] text-[#94a3b8]">
+              <p className="text-[11px] text-slate-400">
                 These checklist tasks automatically update their designated milestone in the transactions table upon completion.
               </p>
             </div>
@@ -662,17 +660,17 @@ export const AdminTaskMappings: React.FC = () => {
         </div>
 
         {filteredMappings.length === 0 ? (
-          <div className="p-10 text-center text-[#94a3b8]">
-            <ListChecks className="h-8 w-8 mx-auto text-slate-500 mb-2" />
+          <div className="p-10 text-center text-slate-400">
+            <ListChecks className="h-8 w-8 mx-auto text-slate-600 mb-2" />
             <p className="text-sm text-slate-300">No task mappings configured yet.</p>
-            <p className="text-xs text-[#64748b] mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Use the manual form above or assign an unmatched task from the punch list.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-[#f8fafc]">
-              <thead className="bg-[#131826] text-[#94a3b8] uppercase text-[10px] tracking-wider border-b border-[#334155]">
+            <table className="w-full text-left text-xs text-slate-200">
+              <thead className="bg-[#0d121f] text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/10">
                 <tr>
                   <th className="py-3 px-4 font-bold">Exact Sisu Task Name</th>
                   <th className="py-3 px-4 font-bold">Target Milestone</th>
@@ -681,31 +679,31 @@ export const AdminTaskMappings: React.FC = () => {
                   <th className="py-3 px-4 font-bold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#334155]/60">
+              <tbody className="divide-y divide-white/5">
                 {filteredMappings.map((m) => (
-                  <tr key={m.id} className="hover:bg-[#131826]/40 transition-colors">
-                    <td className="py-3.5 px-4 font-mono-code font-bold text-[#f8fafc]">
+                  <tr key={m.id} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-100">
                       {m.sisu_task_name}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
                         {getMilestoneLabel(m.milestone_field)}
                       </span>
-                      <span className="text-[10px] text-[#64748b] font-mono-code block mt-0.5">
+                      <span className="text-[10px] text-slate-500 font-mono block mt-0.5">
                         field: {m.milestone_field}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-[#94a3b8] font-mono-code text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-400 font-mono text-[11px]">
                       {m.milestone_table || 'milestones'}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <button
                         type="button"
                         onClick={() => handleToggleActive(m.id, m.active)}
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border ${
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border ${
                           m.active
-                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
-                            : 'bg-slate-700/50 text-slate-400 border-slate-600 hover:bg-slate-700'
+                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                            : 'bg-[#162035] text-slate-400 border-white/10 hover:bg-white/10'
                         }`}
                       >
                         {m.active ? 'Active' : 'Disabled'}
@@ -715,7 +713,7 @@ export const AdminTaskMappings: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleDeleteMapping(m.id, m.sisu_task_name)}
-                        className="p-1.5 text-[#94a3b8] hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
                         title="Delete Mapping"
                       >
                         <Trash2 className="h-4 w-4" />

@@ -7,16 +7,12 @@ export const GoogleAuthGate: React.FC = () => {
   const workspaceDomain = import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com';
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-[#f8fafc] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background gradient accents */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-b from-[#d97706]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-gradient-to-tl from-sky-500/3 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-      <div className="relative w-full max-w-md bg-[#1e293b] border border-[#334155] rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex items-center justify-center p-4 relative">
+      <div className="relative w-full max-w-md bg-[#111726] border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
 
         {/* Brand Logo & Title */}
-        <div className="space-y-2">
-          <div className="h-16 w-16 mx-auto rounded-2xl bg-[#131826] border border-[#334155] p-2 flex items-center justify-center shadow-inner overflow-hidden">
+        <div className="space-y-3">
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-[#0d121f] border border-white/10 p-2 flex items-center justify-center shadow-inner overflow-hidden">
             <img
               src="/msreg-logo.png"
               alt="MSREG Logo"
@@ -27,7 +23,7 @@ export const GoogleAuthGate: React.FC = () => {
                 const parent = (e.target as HTMLElement).parentElement;
                 if (parent) {
                   const fallback = document.createElement('span');
-                  fallback.className = 'text-[#d97706] font-bold text-lg';
+                  fallback.className = 'text-amber-400 font-bold text-lg';
                   fallback.textContent = 'MS';
                   parent.appendChild(fallback);
                 }
@@ -36,13 +32,13 @@ export const GoogleAuthGate: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-[#d97706]">
-              MSREG Marketing Hub
+            <span className="text-[11px] font-bold uppercase tracking-widest text-amber-400">
+              MSREG Operations
             </span>
-            <h1 className="font-editorial text-2xl sm:text-3xl font-bold text-[#f8fafc]">
-              Transaction Management
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 tracking-tight">
+              Transaction Hub
             </h1>
-            <p className="text-xs text-[#94a3b8]">
+            <p className="text-xs text-slate-400">
               Authorized Google Workspace Access Only
             </p>
           </div>
@@ -50,21 +46,21 @@ export const GoogleAuthGate: React.FC = () => {
 
         {/* Access Denied / Authorization Error Callout */}
         {authError && (
-          <div className="p-4 bg-rose-500/15 border border-rose-500/40 rounded-2xl text-left space-y-1.5">
+          <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-left space-y-1.5">
             <div className="flex items-center gap-2 text-rose-400 font-bold text-xs uppercase tracking-wider">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               <span>Access Denied</span>
             </div>
-            <p className="text-xs text-rose-200 leading-relaxed">
+            <p className="text-xs text-rose-300 leading-relaxed">
               {authError}
             </p>
           </div>
         )}
 
         {/* Domain Notice Card */}
-        <div className="p-3.5 bg-[#131826] rounded-2xl border border-[#334155] text-xs text-[#94a3b8] text-left space-y-1.5">
-          <div className="flex items-center gap-2 text-[#f8fafc] font-semibold">
-            <Lock className="h-3.5 w-3.5 text-[#d97706]" />
+        <div className="p-3.5 bg-[#0d121f] rounded-xl border border-white/10 text-xs text-slate-400 text-left space-y-1.5">
+          <div className="flex items-center gap-2 text-slate-200 font-semibold">
+            <Lock className="h-3.5 w-3.5 text-amber-400" />
             <span>Single Sign-On (SSO) Enforced</span>
           </div>
           <p className="text-[11px] leading-relaxed">
@@ -77,11 +73,11 @@ export const GoogleAuthGate: React.FC = () => {
           <button
             onClick={() => signInWithGoogle()}
             disabled={isLoading}
-            className="w-full inline-flex items-center justify-center gap-3 px-6 py-3.5 bg-[#f8fafc] hover:bg-white text-[#0f172a] font-bold rounded-2xl shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] disabled:opacity-50 min-h-[48px]"
+            className="w-full inline-flex items-center justify-center gap-3 px-6 py-3.5 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl shadow-lg transition-colors active:scale-[0.98] disabled:opacity-50 min-h-[48px]"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin text-[#0f172a]" />
+                <Loader2 className="h-5 w-5 animate-spin text-slate-900" />
                 <span>Authorizing with Google…</span>
               </>
             ) : (
@@ -113,8 +109,8 @@ export const GoogleAuthGate: React.FC = () => {
 
         {/* Development Quick-Access Bypass */}
         {import.meta.env.DEV && (
-          <div className="pt-3 border-t border-slate-800 space-y-2 text-left">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#d97706] block">
+          <div className="pt-3 border-t border-white/10 space-y-2 text-left">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
               Development Quick Access
             </span>
             <div className="grid grid-cols-2 gap-2">
@@ -131,9 +127,9 @@ export const GoogleAuthGate: React.FC = () => {
                     });
                   }
                 }}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-colors text-center"
+                className="p-2.5 rounded-xl bg-[#162035] hover:bg-white/10 text-xs font-semibold text-slate-200 border border-white/10 transition-colors text-center"
               >
-                Enter as Tyler (Admin)
+                Tyler (Admin)
               </button>
 
               <button
@@ -149,16 +145,16 @@ export const GoogleAuthGate: React.FC = () => {
                     });
                   }
                 }}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-sky-300 border border-slate-700 transition-colors text-center"
+                className="p-2.5 rounded-xl bg-[#162035] hover:bg-white/10 text-xs font-semibold text-amber-400 border border-white/10 transition-colors text-center"
               >
-                Enter as Shawn (Agent)
+                Shawn (Agent)
               </button>
             </div>
           </div>
         )}
 
         {/* Footer info */}
-        <p className="text-[11px] text-[#94a3b8]/70">
+        <p className="text-[11px] text-slate-500">
           Need an account provisioned? Contact your transaction coordinator or system administrator.
         </p>
       </div>

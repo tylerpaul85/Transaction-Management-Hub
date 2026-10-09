@@ -803,33 +803,36 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
   }, [selectedTransaction, activeTab, orderByDate]);
 
   return (
-    <div className="min-h-screen bg-[#080d17] text-[#f8fafc] font-sans">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 font-sans">
       {/* ─────────────────────────────────────────────────────────────────
-          VIEW A: CLIENT PORTAL 2.0 DIRECTORY (MATCHING IMAGE 2)
-          When no transaction is selected or when user is browsing directory
+          VIEW A: CLIENT PORTAL DIRECTORY
+          When no transaction is selected or when browsing directory
          ───────────────────────────────────────────────────────────────── */}
       {!selectedTransaction ? (
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          {/* Brand Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
-            <div className="space-y-1">
-              <span className="text-xs font-bold tracking-widest text-[#f59e0b] uppercase">
-                Matt Smith Real Estate Group
-              </span>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                CLIENT PORTAL <span className="text-[#38bdf8] font-mono">2.0</span>
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          {/* Header & Quick Action Strip */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-5">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <span>Client Portal & Transaction Hub</span>
+                <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                  Live
+                </span>
               </h1>
+              <p className="text-xs text-slate-400 mt-1">
+                Contract-to-close milestones, client roadmap tracking, and transaction compliance.
+              </p>
             </div>
 
-            {/* Quick Stats Summary */}
+            {/* Quick Actions & Counter */}
             <div className="flex items-center gap-3">
-              <div className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-medium text-slate-300 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>{transactions.length} Total Transactions</span>
+              <div className="px-3 py-1.5 rounded-xl bg-[#131b2e] border border-white/10 text-xs text-slate-300 flex items-center gap-2 tabular-nums">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <span>{filteredDirectoryTransactions.length} Active Files</span>
               </div>
               <button
                 onClick={handleExportCSV}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1.5 transition-all shadow-sm"
+                className="px-3.5 py-1.5 rounded-xl bg-[#131b2e] hover:bg-[#182238] border border-white/10 hover:border-white/20 text-xs font-semibold text-sky-400 flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
                 <span>Export CSV</span>
@@ -837,292 +840,248 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
             </div>
           </div>
 
-          {/* Contact Search Section (Image 2 Top) */}
-          <div className="space-y-3">
-            <div>
-              <h2 className="text-lg font-bold text-white">Contact Search</h2>
-              <p className="text-xs text-slate-400">Search for a contact to view transactions.</p>
-            </div>
-
-            {/* Big Rounded Pill Search Bar */}
-            <div className="relative max-w-xl">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+          {/* Unified Search & Filter Toolbar */}
+          <div className="bg-[#111726] p-3.5 rounded-2xl border border-white/[0.08] flex flex-wrap items-center justify-between gap-3 shadow-sm">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[260px] max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 value={contactSearchQuery}
                 onChange={(e) => setContactSearchQuery(e.target.value)}
-                placeholder="Search name, email or address"
-                className="w-full pl-12 pr-10 py-3.5 bg-[#0e1726] border border-slate-700/80 rounded-full text-base text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-lg shadow-black/40"
+                placeholder="Search address, client name, agent, phone..."
+                className="w-full pl-9 pr-8 py-2 bg-[#090d16] border border-white/10 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/40 transition-all"
               />
               {contactSearchQuery && (
                 <button
                   onClick={() => setContactSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
                 >
                   Clear
                 </button>
               )}
             </div>
+
+            {/* Filter Pills / Dropdowns */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Type Filter */}
+              <div className="flex items-center bg-[#090d16] p-1 rounded-xl border border-white/10 text-xs font-medium">
+                {['All', 'Seller', 'Buyer'].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedTypeFilter(type)}
+                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                      selectedTypeFilter.toLowerCase() === type.toLowerCase()
+                        ? 'bg-[#182238] text-white font-semibold border border-white/10 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+
+              {/* Status Filter */}
+              <select
+                value={selectedStatusFilter}
+                onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                className="px-3 py-1.5 bg-[#090d16] border border-white/10 rounded-xl text-xs font-medium text-slate-300 focus:outline-none focus:border-amber-500/60 cursor-pointer"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Under Contract">Under Contract</option>
+                <option value="Pending">Pending</option>
+                <option value="Active">Active</option>
+              </select>
+
+              {/* Agent Filter */}
+              <select
+                value={selectedAgentFilter}
+                onChange={(e) => setSelectedAgentFilter(e.target.value)}
+                className="px-3 py-1.5 bg-[#090d16] border border-white/10 rounded-xl text-xs font-medium text-slate-300 focus:outline-none focus:border-amber-500/60 cursor-pointer"
+              >
+                <option value="All">All Agents</option>
+                {Array.from(new Set(transactions.map((t) => t.agent.name))).map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Transactions Section (Image 2 Main Table) */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">Transactions</h2>
-                <div
-                  className="text-slate-400 hover:text-slate-200 cursor-pointer"
-                  title="Synced live with Sisu and active escrow records"
-                >
-                  <Info className="h-4 w-4" />
-                </div>
-              </div>
-
-              {/* In-table search & filters */}
-              <div className="flex items-center gap-3">
-                <div className="relative w-48 sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    value={tableSearchQuery}
-                    onChange={(e) => setTableSearchQuery(e.target.value)}
-                    placeholder="Search table..."
-                    className="w-full pl-9 pr-8 py-1.5 bg-[#0e1726] border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                  />
-                  {tableSearchQuery && (
-                    <button
-                      onClick={() => setTableSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-white"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-
-                {tableSearchQuery && (
-                  <button
-                    onClick={() => setTableSearchQuery('')}
-                    className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 rounded-xl transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Comprehensive Data Table Matching Image 2 */}
-            <div className="bg-[#0b1320] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
-                  <thead>
-                    <tr className="bg-[#0e1726] border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      <th className="py-3 px-3 w-8">
-                        <input
-                          type="checkbox"
-                          checked={
-                            selectedRowIds.length > 0 &&
-                            selectedRowIds.length === filteredDirectoryTransactions.length
+          {/* High-Density Data Table */}
+          <div className="bg-[#111726] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs whitespace-nowrap border-collapse">
+                <thead>
+                  <tr className="bg-[#0e1422] border-b border-white/[0.08] text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <th className="py-3 px-3 w-8">
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedRowIds.length > 0 &&
+                          selectedRowIds.length === filteredDirectoryTransactions.length
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRowIds(filteredDirectoryTransactions.map((t) => t.id));
+                          } else {
+                            setSelectedRowIds([]);
                           }
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedRowIds(filteredDirectoryTransactions.map((t) => t.id));
-                            } else {
-                              setSelectedRowIds([]);
-                            }
-                          }}
-                          className="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0 cursor-pointer"
-                        />
-                      </th>
-                      <th className="py-3 px-3">ID ↑↓</th>
-                      <th className="py-3 px-3">Created ↑↓</th>
-                      <th className="py-3 px-3">Agent ↑↓</th>
-                      <th className="py-3 px-3">Status ↑↓</th>
-                      <th className="py-3 px-3">Payments Details ↑↓</th>
-                      <th className="py-3 px-3">Roadmaps Applied ↑↓</th>
-                      <th className="py-3 px-3">First Name ↑↓</th>
-                      <th className="py-3 px-3">Last Name ↑↓</th>
-                      <th className="py-3 px-3">Transaction Type ↑↓</th>
-                      <th className="py-3 px-3">Contact Email ↑↓</th>
-                      <th className="py-3 px-3">Mobile Phone Number ↑↓</th>
-                      <th className="py-3 px-3">Address Line 1 ↑↓</th>
-                      <th className="py-3 px-3">City ↑↓</th>
-                      <th className="py-3 px-3">State ↑↓</th>
-                      <th className="py-3 px-3">Postal Code ↑↓</th>
-                      <th className="py-3 px-3 text-right">Action</th>
+                        }}
+                        className="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
+                      />
+                    </th>
+                    <th className="py-3 px-3">File ID</th>
+                    <th className="py-3 px-3">Created</th>
+                    <th className="py-3 px-3">Agent</th>
+                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-3">Type</th>
+                    <th className="py-3 px-3">Client</th>
+                    <th className="py-3 px-3">Address</th>
+                    <th className="py-3 px-3">City</th>
+                    <th className="py-3 px-3">Price</th>
+                    <th className="py-3 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.05] text-[12px]">
+                  {filteredDirectoryTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="py-12 text-center text-slate-400 font-sans">
+                        No transactions found matching your search criteria.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-mono-code text-[11px]">
-                    {filteredDirectoryTransactions.length === 0 ? (
-                      <tr>
-                        <td colSpan={17} className="py-12 text-center text-slate-400 font-sans">
-                          No transactions found matching your search.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredDirectoryTransactions.map((trx) => {
-                        const isRowSelected = selectedRowIds.includes(trx.id);
+                  ) : (
+                    filteredDirectoryTransactions.map((trx) => {
+                      const isRowSelected = selectedRowIds.includes(trx.id);
 
-                        return (
-                          <tr
-                            key={trx.id}
-                            onClick={() => setSelectedTransactionId(trx.id)}
-                            className="hover:bg-[#111c2e] cursor-pointer transition-colors group"
-                          >
-                            <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={isRowSelected}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedRowIds((prev) => [...prev, trx.id]);
-                                  } else {
-                                    setSelectedRowIds((prev) => prev.filter((id) => id !== trx.id));
-                                  }
-                                }}
-                                className="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0 cursor-pointer"
-                              />
-                            </td>
+                      return (
+                        <tr
+                          key={trx.id}
+                          onClick={() => setSelectedTransactionId(trx.id)}
+                          className="hover:bg-white/[0.03] cursor-pointer transition-colors group"
+                        >
+                          <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isRowSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedRowIds((prev) => [...prev, trx.id]);
+                                } else {
+                                  setSelectedRowIds((prev) => prev.filter((id) => id !== trx.id));
+                                }
+                              }}
+                              className="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
+                            />
+                          </td>
 
-                            {/* ID */}
-                            <td className="py-3 px-3 font-semibold text-slate-200">
-                              {trx.sisuId}
-                            </td>
+                          {/* ID */}
+                          <td className="py-3 px-3 font-mono font-medium text-slate-300 tabular-nums">
+                            {trx.sisuId}
+                          </td>
 
-                            {/* Created */}
-                            <td className="py-3 px-3 text-slate-400">{trx.createdAt}</td>
+                          {/* Created */}
+                          <td className="py-3 px-3 text-slate-400 tabular-nums">{trx.createdAt}</td>
 
-                            {/* Agent */}
-                            <td className="py-3 px-3 font-sans text-slate-200 font-medium">
-                              <div className="flex items-center gap-2">
-                                <span className="h-5 w-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[9px] font-bold text-sky-400">
-                                  {trx.agent.initials || 'A'}
-                                </span>
-                                <span>{trx.agent.name}</span>
-                              </div>
-                            </td>
-
-                            {/* Status */}
-                            <td className="py-3 px-3">
-                              <span
-                                className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider ${
-                                  trx.status === 'Closed'
-                                    ? 'bg-slate-800 text-slate-300 border border-slate-700'
-                                    : trx.status === 'Under Contract' || trx.status === 'Pending'
-                                    ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
-                                    : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                                }`}
-                              >
-                                {trx.status}
+                          {/* Agent */}
+                          <td className="py-3 px-3 font-sans text-slate-200">
+                            <div className="flex items-center gap-2">
+                              <span className="h-5 w-5 rounded-full bg-[#182238] border border-white/10 flex items-center justify-center text-[9px] font-bold text-amber-400">
+                                {trx.agent.initials || 'A'}
                               </span>
-                            </td>
+                              <span className="font-medium">{trx.agent.name}</span>
+                            </div>
+                          </td>
 
-                            {/* Payments Details */}
-                            <td className="py-3 px-3 text-slate-400">
-                              {trx.paymentsDetails || '—'}
-                            </td>
+                          {/* Status */}
+                          <td className="py-3 px-3">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                                trx.status === 'Closed'
+                                  ? 'bg-slate-800 text-slate-300 border border-white/10'
+                                  : trx.status === 'Under Contract' || trx.status === 'Pending'
+                                  ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
+                                  : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                              }`}
+                            >
+                              {trx.status}
+                            </span>
+                          </td>
 
-                            {/* Roadmaps Applied */}
-                            <td className="py-3 px-3 text-center font-bold text-sky-400">
-                              {trx.roadmapsAppliedCount}
-                            </td>
+                          {/* Transaction Type */}
+                          <td className="py-3 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                trx.transactionType === 'Seller'
+                                  ? 'bg-amber-500/15 text-amber-300 border border-amber-500/25'
+                                  : 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/25'
+                              }`}
+                            >
+                              {trx.transactionType}
+                            </span>
+                          </td>
 
-                            {/* First Name */}
-                            <td className="py-3 px-3 font-sans text-slate-200">{trx.clientFirstName}</td>
+                          {/* Client Full Name */}
+                          <td className="py-3 px-3 text-slate-200 font-medium">
+                            {trx.clientFullName}
+                          </td>
 
-                            {/* Last Name */}
-                            <td className="py-3 px-3 font-sans text-slate-200">{trx.clientLastName}</td>
+                          {/* Address Line 1 */}
+                          <td className="py-3 px-3 font-medium text-white group-hover:text-amber-400 transition-colors">
+                            {trx.addressLine1}
+                          </td>
 
-                            {/* Transaction Type */}
-                            <td className="py-3 px-3 font-sans">
-                              <span
-                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                                  trx.transactionType === 'Seller'
-                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                }`}
-                              >
-                                {trx.transactionType}
-                              </span>
-                            </td>
+                          {/* City */}
+                          <td className="py-3 px-3 text-slate-300">{trx.city}</td>
 
-                            {/* Contact Email */}
-                            <td className="py-3 px-3 text-sky-400 hover:underline">
-                              <a
-                                href={`mailto:${trx.contactEmail}`}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {trx.contactEmail}
-                              </a>
-                            </td>
+                          {/* Price */}
+                          <td className="py-3 px-3 font-mono font-medium text-white tabular-nums">
+                            {formatCurrency(trx.price)}
+                          </td>
 
-                            {/* Mobile Phone Number */}
-                            <td className="py-3 px-3 text-slate-300">
-                              <a
-                                href={`tel:${trx.contactPhone}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="hover:text-sky-300"
-                              >
-                                {trx.contactPhone}
-                              </a>
-                            </td>
-
-                            {/* Address Line 1 */}
-                            <td className="py-3 px-3 font-sans font-medium text-white group-hover:text-sky-300 transition-colors">
-                              {trx.addressLine1}
-                            </td>
-
-                            {/* City */}
-                            <td className="py-3 px-3 font-sans text-slate-300">{trx.city}</td>
-
-                            {/* State */}
-                            <td className="py-3 px-3 text-slate-400">{trx.state}</td>
-
-                            {/* Postal Code */}
-                            <td className="py-3 px-3 text-slate-400">{trx.postalCode}</td>
-
-                            {/* Action Button */}
-                            <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={() => setSelectedTransactionId(trx.id)}
-                                className="px-3 py-1 bg-sky-500/15 hover:bg-sky-500 text-sky-400 hover:text-slate-950 font-sans font-semibold rounded-lg text-xs transition-all border border-sky-500/30"
-                              >
-                                View Hub →
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                          {/* Action Button */}
+                          <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => setSelectedTransactionId(trx.id)}
+                              className="px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-semibold rounded-lg text-xs transition-all border border-amber-500/30 cursor-pointer"
+                            >
+                              View Hub →
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       ) : (
         /* ─────────────────────────────────────────────────────────────────
-           VIEW B: TRANSACTION HUB DETAIL & ROADMAPS (MATCHING IMAGE 1)
+           VIEW B: TRANSACTION HUB DETAIL & ROADMAPS
            Full detail layout with Agent, Gauge, Roadmaps, Property, Team
            ───────────────────────────────────────────────────────────────── */
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* Top Return Navigation & Switcher */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
             <button
               onClick={() => setSelectedTransactionId(null)}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-sm"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#111726] hover:bg-[#182238] border border-white/10 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-sm cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span>Back to Portal Directory</span>
+              <span>Back to Directory</span>
             </button>
 
             {/* Quick Switcher dropdown & Actions */}
             <div className="flex items-center gap-2.5">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 hidden sm:inline">Viewing Transaction:</span>
+                <span className="text-xs text-slate-400 hidden sm:inline">Transaction:</span>
                 <select
                   value={selectedTransaction.id}
                   onChange={(e) => setSelectedTransactionId(e.target.value)}
-                  className="bg-[#0e1726] border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-sky-500 cursor-pointer shadow-sm"
+                  className="bg-[#111726] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-amber-500/60 cursor-pointer shadow-sm"
                 >
                   {transactions.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -1134,7 +1093,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
 
               <button
                 onClick={handleCopyLink}
-                className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-sky-300 transition-colors"
+                className="p-2 rounded-xl bg-[#111726] hover:bg-[#182238] border border-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
                 title="Copy shareable link"
               >
                 <Share2 className="h-4 w-4" />
@@ -1142,7 +1101,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
 
               <button
                 onClick={() => window.print()}
-                className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-sky-300 transition-colors"
+                className="p-2 rounded-xl bg-[#111726] hover:bg-[#182238] border border-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
                 title="Print Roadmap"
               >
                 <Printer className="h-4 w-4" />
@@ -1158,19 +1117,14 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
           )}
 
           {/* ─────────────────────────────────────────────────────────────
-              Top Hero Section: Agent Card, Progress Gauge, Transaction Info
-              (Exact layout matching Image 1 Top Bar)
+              Top Hero Section: Agent Profile, Progress Gauge, Transaction Info
              ───────────────────────────────────────────────────────────── */}
-          <div className="bg-[#0b1320] border border-slate-800/90 rounded-3xl p-5 sm:p-7 shadow-2xl relative overflow-hidden">
-            {/* Subtle background glow */}
-            <div className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-bl from-sky-500/5 via-emerald-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-              {/* Left Column: Agent Profile Card (Cols 1-5) */}
+          <div className="bg-[#111726] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xl">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              {/* Left Column: Agent Profile (Cols 1-5) */}
               <div className="md:col-span-5 flex items-center gap-4">
-                {/* Agent Photo */}
                 <div className="relative flex-shrink-0">
-                  <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full overflow-hidden border-2 border-slate-700 bg-slate-800 shadow-xl">
+                  <div className="h-16 w-16 sm:h-18 sm:w-18 rounded-full overflow-hidden border border-white/10 bg-[#182238] shadow-md">
                     {selectedTransaction.agent.avatarUrl ? (
                       <img
                         src={selectedTransaction.agent.avatarUrl}
@@ -1178,40 +1132,36 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="h-full w-full flex items-center justify-center font-bold text-lg text-sky-400 bg-slate-900">
+                      <div className="h-full w-full flex items-center justify-center font-bold text-base text-amber-400 bg-[#182238]">
                         {selectedTransaction.agent.initials || 'AG'}
                       </div>
                     )}
                   </div>
-                  <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-emerald-500 ring-2 ring-[#0b1320]" />
+                  <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-[#111726]" />
                 </div>
 
-                {/* Agent Details */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block">
-                    Agent
-                  </span>
+                <div className="space-y-0.5">
                   <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                     {selectedTransaction.agent.name}
                   </h2>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <p className="text-xs text-slate-400 font-medium">
                     {selectedTransaction.agent.company || 'Matt Smith Real Estate Group'}
                   </p>
 
-                  <div className="pt-1 flex flex-col gap-0.5 text-xs text-slate-300 font-mono-code">
+                  <div className="pt-1 flex flex-col gap-0.5 text-xs text-slate-300">
                     {selectedTransaction.agent.phone && (
                       <a
                         href={`tel:${selectedTransaction.agent.phone}`}
-                        className="hover:text-sky-400 transition-colors flex items-center gap-1.5"
+                        className="hover:text-amber-400 transition-colors flex items-center gap-1.5"
                       >
                         <Phone className="h-3 w-3 text-slate-400" />
-                        <span>{selectedTransaction.agent.phone}</span>
+                        <span className="font-mono tabular-nums">{selectedTransaction.agent.phone}</span>
                       </a>
                     )}
                     {selectedTransaction.agent.email && (
                       <a
                         href={`mailto:${selectedTransaction.agent.email}`}
-                        className="hover:text-sky-400 transition-colors flex items-center gap-1.5 truncate max-w-[220px]"
+                        className="hover:text-amber-400 transition-colors flex items-center gap-1.5 truncate max-w-[220px]"
                       >
                         <Mail className="h-3 w-3 text-slate-400" />
                         <span className="truncate">{selectedTransaction.agent.email}</span>
@@ -1222,35 +1172,34 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
               </div>
 
               {/* Center Column: Circular Progress Gauge (Cols 6-8) */}
-              <div className="md:col-span-3 flex flex-col items-center justify-center py-2">
+              <div className="md:col-span-3 flex flex-col items-center justify-center py-2 border-y md:border-y-0 md:border-x border-white/[0.08]">
                 <CircularProgressGauge
                   percentage={selectedTransaction.completionPercentage}
-                  size={120}
-                  strokeWidth={9}
+                  size={110}
+                  strokeWidth={8}
                 />
               </div>
 
               {/* Right Column: Transaction Details (Cols 9-12) */}
-              <div className="md:col-span-4 space-y-1.5 text-left md:text-right">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block">
-                  Transaction
-                </span>
-                <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+              <div className="md:col-span-4 space-y-1 text-left md:text-right">
+                <div className="flex items-center justify-start md:justify-end gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 uppercase tracking-wider">
+                    {selectedTransaction.status}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-slate-400 border border-white/10 uppercase">
+                    {selectedTransaction.transactionType} Rep
+                  </span>
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   {selectedTransaction.clientFullName}
                 </h2>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                  The Sale of
-                </p>
-                <p className="text-xs font-semibold text-slate-300 leading-snug">
-                  {selectedTransaction.addressLine1} {selectedTransaction.city}, {selectedTransaction.state} {selectedTransaction.postalCode}
+                <p className="text-xs text-slate-300 font-medium">
+                  {selectedTransaction.addressLine1}, {selectedTransaction.city}, {selectedTransaction.state}
                 </p>
 
-                <div className="pt-2 flex items-center justify-start md:justify-end gap-3">
-                  <span className="font-mono-code text-xl sm:text-2xl font-bold text-white tracking-tight">
+                <div className="pt-1.5">
+                  <span className="font-mono text-xl sm:text-2xl font-bold text-white tabular-nums tracking-tight">
                     {formatCurrency(selectedTransaction.price)}
-                  </span>
-                  <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-sky-950/80 text-sky-300 border border-sky-800/80 uppercase">
-                    {selectedTransaction.status}
                   </span>
                 </div>
               </div>
@@ -1258,21 +1207,21 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
           </div>
 
           {/* ─────────────────────────────────────────────────────────────
-              Horizontal Sub-Navigation Tabs (Image 1 Sub-bar)
+              Horizontal Sub-Navigation Tabs
              ───────────────────────────────────────────────────────────── */}
-          <div className="border-b border-slate-800 flex items-center gap-1 sm:gap-6 overflow-x-auto scrollbar-none text-xs sm:text-sm font-semibold select-none">
+          <div className="border-b border-white/[0.08] flex items-center gap-2 sm:gap-6 overflow-x-auto scrollbar-none text-xs sm:text-sm font-semibold select-none">
             {selectedTransaction.transactionType === 'Seller' ? (
               <>
                 <button
                   onClick={() => setActiveTab('new_listing')}
                   className={`pb-3 px-2 border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                     activeTab === 'new_listing'
-                      ? 'border-sky-400 text-white font-bold'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                      ? 'border-amber-400 text-white font-bold'
+                      : 'border-transparent text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>New Listing</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono-code">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#182238] text-slate-300 font-mono tabular-nums">
                     {selectedTransaction.roadmaps.new_listing?.length || 7}
                   </span>
                 </button>
@@ -1281,12 +1230,12 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                   onClick={() => setActiveTab('under_contract')}
                   className={`pb-3 px-2 border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                     activeTab === 'under_contract'
-                      ? 'border-sky-400 text-white font-bold'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                      ? 'border-amber-400 text-white font-bold'
+                      : 'border-transparent text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>Listing Under Contract</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono-code">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#182238] text-slate-300 font-mono tabular-nums">
                     {selectedTransaction.roadmaps.under_contract?.length || 11}
                   </span>
                 </button>
@@ -1295,8 +1244,8 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                   onClick={() => setActiveTab('listing_guide')}
                   className={`pb-3 px-2 border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                     activeTab === 'listing_guide'
-                      ? 'border-sky-400 text-white font-bold'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                      ? 'border-amber-400 text-white font-bold'
+                      : 'border-transparent text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>Home Listing Guide</span>
@@ -1306,8 +1255,8 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                   onClick={() => setActiveTab('selling_guide')}
                   className={`pb-3 px-2 border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                     activeTab === 'selling_guide'
-                      ? 'border-sky-400 text-white font-bold'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                      ? 'border-amber-400 text-white font-bold'
+                      : 'border-transparent text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>Home Selling Guide</span>
@@ -1319,12 +1268,12 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                   onClick={() => setActiveTab('buyer_roadmap')}
                   className={`pb-3 px-2 border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                     activeTab === 'buyer_roadmap'
-                      ? 'border-sky-400 text-white font-bold'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                      ? 'border-amber-400 text-white font-bold'
+                      : 'border-transparent text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>Buyer Roadmap</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono-code">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#182238] text-slate-300 font-mono tabular-nums">
                     5
                   </span>
                 </button>
@@ -1333,12 +1282,12 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                   onClick={() => setActiveTab('under_contract')}
                   className={`pb-3 px-2 border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                     activeTab === 'under_contract'
-                      ? 'border-sky-400 text-white font-bold'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                      ? 'border-amber-400 text-white font-bold'
+                      : 'border-transparent text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>Under Contract Escrow</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono-code">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#182238] text-slate-300 font-mono tabular-nums">
                     11
                   </span>
                 </button>
@@ -1347,8 +1296,8 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                   onClick={() => setActiveTab('selling_guide')}
                   className={`pb-3 px-2 border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
                     activeTab === 'selling_guide'
-                      ? 'border-sky-400 text-white font-bold'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                      ? 'border-amber-400 text-white font-bold'
+                      : 'border-transparent text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>Home Buying Guide</span>
@@ -1438,69 +1387,69 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
             </div>
 
             {/* Right Column: Sidebar Cards (Cols 9-12) */}
-            <div className="lg:col-span-4 space-y-6">
-              {/* Card 1: Property (Image 1 Right Top) */}
-              <div className="bg-[#0b1320] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <h3 className="font-bold text-base text-white">Property</h3>
+            <div className="lg:col-span-4 space-y-5">
+              {/* Card 1: Property */}
+              <div className="bg-[#111726] border border-white/[0.08] rounded-2xl p-5 shadow-lg space-y-3.5">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                  <h3 className="font-semibold text-sm text-white">Property Information</h3>
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                       `${selectedTransaction.addressLine1}, ${selectedTransaction.city}, ${selectedTransaction.state} ${selectedTransaction.postalCode}`
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 font-medium"
+                    className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-medium"
                   >
                     <span>Maps</span>
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
 
-                <div className="space-y-3 text-xs">
+                <div className="space-y-2.5 text-xs">
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-slate-400">Address:</span>
-                    <span className="font-semibold text-white text-right">
+                    <span className="font-medium text-white text-right">
                       {selectedTransaction.addressLine1}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">City:</span>
-                    <span className="font-semibold text-white">{selectedTransaction.city}</span>
+                    <span className="font-medium text-white">{selectedTransaction.city}</span>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">State:</span>
-                    <span className="font-semibold text-white">{selectedTransaction.state}</span>
+                    <span className="font-medium text-white">{selectedTransaction.state}</span>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Postal Code:</span>
-                    <span className="font-mono-code font-semibold text-white">
+                    <span className="font-mono text-white tabular-nums">
                       {selectedTransaction.postalCode}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">MLS ID:</span>
-                    <span className="font-mono-code text-slate-300">
+                    <span className="font-mono text-slate-300 tabular-nums">
                       {selectedTransaction.mlsId || 'Pending'}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                    <span className="text-slate-400">Transaction Amount:</span>
-                    <span className="font-mono-code font-bold text-sm text-white">
+                  <div className="flex items-center justify-between pt-2 border-t border-white/[0.08]">
+                    <span className="text-slate-400">Contract Price:</span>
+                    <span className="font-mono font-bold text-sm text-white tabular-nums">
                       {formatCurrency(selectedTransaction.price)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Card 2: Team (Image 1 Right Center) */}
-              <div className="bg-[#0b1320] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-                <div className="border-b border-slate-800 pb-3">
-                  <h3 className="font-bold text-base text-white">Team</h3>
+              {/* Card 2: Team */}
+              <div className="bg-[#111726] border border-white/[0.08] rounded-2xl p-5 shadow-lg space-y-3.5">
+                <div className="border-b border-white/[0.08] pb-3">
+                  <h3 className="font-semibold text-sm text-white">Transaction Team</h3>
                 </div>
 
                 <div className="space-y-4">
@@ -1530,7 +1479,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                         {selectedTransaction.agent.phone && (
                           <a
                             href={`tel:${selectedTransaction.agent.phone}`}
-                            className="font-mono-code text-[11px] text-slate-400 hover:text-sky-300 transition-colors block"
+                            className="font-mono tabular-nums text-[11px] text-slate-400 hover:text-sky-300 transition-colors block"
                           >
                             {selectedTransaction.agent.phone}
                           </a>
@@ -1575,7 +1524,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                           {selectedTransaction.tc.phone && (
                             <a
                               href={`tel:${selectedTransaction.tc.phone}`}
-                              className="font-mono-code text-[11px] text-slate-400 hover:text-emerald-300 transition-colors block"
+                              className="font-mono tabular-nums text-[11px] text-slate-400 hover:text-emerald-300 transition-colors block"
                             >
                               {selectedTransaction.tc.phone}
                             </a>
@@ -1626,7 +1575,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                           {selectedTransaction.coopAgent.phone && (
                             <a
                               href={`tel:${selectedTransaction.coopAgent.phone}`}
-                              className="font-mono-code text-[11px] text-slate-400 hover:text-purple-300 transition-colors block pt-0.5"
+                              className="font-mono tabular-nums text-[11px] text-slate-400 hover:text-purple-300 transition-colors block pt-0.5"
                             >
                               {selectedTransaction.coopAgent.phone}
                             </a>

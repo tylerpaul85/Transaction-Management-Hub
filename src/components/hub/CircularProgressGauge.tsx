@@ -79,7 +79,7 @@ export const CircularProgressGauge: React.FC<CircularProgressGaugeProps> = ({
 
       {/* Inner Label */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="font-mono-code text-xl sm:text-2xl font-black text-white tracking-tight leading-none drop-shadow">
+        <span className="font-mono tabular-nums text-xl sm:text-2xl font-black text-white tracking-tight leading-none drop-shadow">
           {clampedPercentage}%
         </span>
         <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 mt-0.5">

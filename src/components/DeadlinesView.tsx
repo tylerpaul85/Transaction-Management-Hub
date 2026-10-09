@@ -84,7 +84,7 @@ export const DeadlinesView: React.FC = () => {
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-3">
           {icon}
-          <h3 className="font-editorial text-lg font-bold text-[#f8fafc]">{title}</h3>
+          <h3 className="text-base font-bold text-white tracking-tight">{title}</h3>
           <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${badgeColor}`}>
             {items.length}
           </span>
@@ -94,16 +94,16 @@ export const DeadlinesView: React.FC = () => {
           {items.map(({ contingency, transaction, diffDays }) => (
             <div
               key={`${transaction.id}-${contingency.id}`}
-              className="bg-[#1e293b]/90 border border-[#334155] hover:border-[#d97706]/60 rounded-xl p-4 transition-all shadow-md flex flex-col justify-between gap-3 group"
+              className="bg-[#111726] border border-white/10 hover:border-amber-500/40 rounded-xl p-4 transition-all shadow-md flex flex-col justify-between gap-3 group"
             >
               <div>
                 {/* Header: Property & File */}
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <span className="font-mono-code text-xs text-[#94a3b8] font-bold">
+                  <span className="font-mono tabular-nums text-xs text-slate-400 font-bold">
                     {transaction.fileNumber}
                   </span>
                   <span
-                    className={`font-mono-code text-xs px-2 py-0.5 rounded-md border font-semibold ${
+                    className={`font-mono tabular-nums text-xs px-2 py-0.5 rounded-md border font-semibold ${
                       contingency.status === 'satisfied' || contingency.status === 'complete'
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                         : diffDays < 0
@@ -124,13 +124,13 @@ export const DeadlinesView: React.FC = () => {
                 </div>
 
                 {/* Contingency Title */}
-                <h4 className="text-base font-semibold text-[#f8fafc] group-hover:text-[#d97706] transition-colors">
+                <h4 className="text-base font-semibold text-slate-100 group-hover:text-amber-400 transition-colors">
                   {contingency.name}
                 </h4>
 
                 {/* Property Address */}
-                <div className="flex items-center gap-1.5 text-xs text-[#94a3b8] mt-1">
-                  <Building className="h-3.5 w-3.5 text-[#d97706]" />
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
+                  <Building className="h-3.5 w-3.5 text-amber-400" />
                   <span>
                     {transaction.address} {transaction.unit ? `• ${transaction.unit}` : ''}
                   </span>
@@ -138,16 +138,16 @@ export const DeadlinesView: React.FC = () => {
 
                 {/* Notes */}
                 {contingency.notes && (
-                  <p className="mt-2 text-xs text-[#94a3b8] bg-[#131826]/70 p-2 rounded-lg border border-[#334155]/60">
+                  <p className="mt-2 text-xs text-slate-400 bg-[#0d121f]/70 p-2 rounded-lg border border-white/10">
                     {contingency.notes}
                   </p>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-2 border-t border-[#334155]/60">
-                <div className="text-xs text-[#94a3b8]">
-                  Agent: <span className="text-[#f8fafc]">{transaction.agentName}</span>
+              <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                <div className="text-xs text-slate-400">
+                  Agent: <span className="text-slate-100">{transaction.agentName}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -161,7 +161,7 @@ export const DeadlinesView: React.FC = () => {
                           'Marked satisfied from Deadlines Hub'
                         )
                       }
-                      className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-[#0f172a] border border-emerald-500/30 text-xs font-semibold transition-all flex items-center gap-1 min-h-[36px]"
+                      className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/30 text-xs font-semibold transition-all flex items-center gap-1 min-h-[36px]"
                     >
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       <span>Satisfy</span>
@@ -170,7 +170,7 @@ export const DeadlinesView: React.FC = () => {
 
                   <button
                     onClick={() => setSelectedTransactionId(transaction.id)}
-                    className="p-1.5 rounded-lg bg-[#131826] hover:bg-[#334155] text-[#94a3b8] hover:text-[#f8fafc] border border-[#334155] transition-all min-h-[36px] min-w-[36px] flex items-center justify-center"
+                    className="p-1.5 rounded-lg bg-[#0d121f] hover:bg-white/10 text-slate-400 hover:text-slate-100 border border-white/10 transition-all min-h-[36px] min-w-[36px] flex items-center justify-center"
                     title="View Full File"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -189,21 +189,21 @@ export const DeadlinesView: React.FC = () => {
       {/* View Header & Filter */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="font-editorial text-2xl font-bold text-[#f8fafc]">
+          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Contingency & Deadline Stream
           </h2>
-          <p className="text-sm text-[#94a3b8]">
+          <p className="text-xs text-slate-400">
             Real-time contractual obligation timeline across all active MSREG transactions.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#1e293b] p-1 rounded-xl border border-[#334155]">
+        <div className="flex items-center gap-1.5 bg-[#111726] p-1 rounded-xl border border-white/10">
           <button
             onClick={() => setFilterCategory('pending')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               filterCategory === 'pending'
-                ? 'bg-[#0f172a] text-[#f8fafc] border border-[#334155] font-semibold'
-                : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                ? 'bg-amber-500 text-slate-950 font-bold'
+                : 'text-slate-400 hover:text-slate-100'
             }`}
           >
             Pending Only ({allFlat.filter((i) => i.contingency.status === 'pending').length})
@@ -212,8 +212,8 @@ export const DeadlinesView: React.FC = () => {
             onClick={() => setFilterCategory('satisfied')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               filterCategory === 'satisfied'
-                ? 'bg-[#0f172a] text-[#f8fafc] border border-[#334155] font-semibold'
-                : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                ? 'bg-[#090d16] text-slate-100 border border-white/10 font-semibold'
+                : 'text-slate-400 hover:text-slate-100'
             }`}
           >
             Satisfied / Waived ({satisfied.length})
@@ -222,8 +222,8 @@ export const DeadlinesView: React.FC = () => {
             onClick={() => setFilterCategory('all')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               filterCategory === 'all'
-                ? 'bg-[#0f172a] text-[#f8fafc] border border-[#334155] font-semibold'
-                : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                ? 'bg-[#090d16] text-slate-100 border border-white/10 font-semibold'
+                : 'text-slate-400 hover:text-slate-100'
             }`}
           >
             All ({allFlat.length})

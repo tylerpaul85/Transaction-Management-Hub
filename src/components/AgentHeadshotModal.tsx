@@ -117,23 +117,23 @@ export const AgentHeadshotModal: React.FC<AgentHeadshotModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#1e293b] border border-[#334155] rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-6">
+      <div className="bg-[#111726] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#334155] pb-4">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-xl bg-amber-500/20 text-[#d97706] border border-amber-500/40">
+            <span className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
               <Camera className="h-5 w-5" />
             </span>
             <div>
-              <h3 className="font-editorial text-lg font-bold text-[#f8fafc]">
+              <h3 className="text-base font-bold text-white tracking-tight">
                 Update Agent Headshot
               </h3>
-              <p className="text-xs text-[#94a3b8]">{agentName}</p>
+              <p className="text-xs text-slate-400">{agentName}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#334155] transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-white/10 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -142,7 +142,7 @@ export const AgentHeadshotModal: React.FC<AgentHeadshotModalProps> = ({
         {/* Live Preview Avatar */}
         <div className="flex flex-col items-center justify-center space-y-3 py-2">
           <div className="relative group">
-            <div className="h-28 w-28 rounded-full overflow-hidden border-4 border-amber-500/40 bg-[#0f172a] shadow-xl flex items-center justify-center">
+            <div className="h-28 w-28 rounded-full overflow-hidden border-4 border-amber-500/40 bg-[#090d16] shadow-xl flex items-center justify-center">
               {previewUrl ? (
                 <img
                   src={previewUrl}
@@ -166,19 +166,19 @@ export const AgentHeadshotModal: React.FC<AgentHeadshotModalProps> = ({
               </button>
             )}
           </div>
-          <span className="text-[11px] text-[#94a3b8]">
+          <span className="text-[11px] text-slate-400">
             {previewUrl ? 'Previewing photo' : 'No photo uploaded — showing default monogram'}
           </span>
         </div>
 
         {/* Tab Controls: Upload File vs Image URL */}
-        <div className="flex rounded-xl bg-[#131826] p-1 border border-[#334155]">
+        <div className="flex rounded-xl bg-[#0d121f] p-1 border border-white/10">
           <button
             onClick={() => setActiveTab('upload')}
             className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'upload'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-                : 'text-[#94a3b8] hover:text-white'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             <Upload className="h-3.5 w-3.5" />
@@ -189,7 +189,7 @@ export const AgentHeadshotModal: React.FC<AgentHeadshotModalProps> = ({
             className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'url'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-                : 'text-[#94a3b8] hover:text-white'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             <LinkIcon className="h-3.5 w-3.5" />
@@ -209,15 +209,15 @@ export const AgentHeadshotModal: React.FC<AgentHeadshotModalProps> = ({
             />
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-[#334155] hover:border-amber-500/60 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-[#131826]/40 hover:bg-[#131826]/80 text-center"
+              className="border-2 border-dashed border-white/10 hover:border-amber-500/60 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors bg-[#0d121f]/40 hover:bg-[#0d121f]/80 text-center"
             >
               <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400">
                 <Camera className="h-6 w-6" />
               </div>
-              <p className="text-xs font-semibold text-[#f8fafc]">
+              <p className="text-xs font-semibold text-slate-100">
                 Click or drag & drop to choose photo
               </p>
-              <p className="text-[10px] text-[#94a3b8]">
+              <p className="text-[10px] text-slate-400">
                 PNG, JPG, or WEBP (auto-cropped to square headshot)
               </p>
             </div>
@@ -227,7 +227,7 @@ export const AgentHeadshotModal: React.FC<AgentHeadshotModalProps> = ({
         {/* Tab 2: Web Image Link */}
         {activeTab === 'url' && (
           <div className="space-y-2">
-            <label className="block text-xs font-semibold text-[#94a3b8]">
+            <label className="block text-xs font-semibold text-slate-400">
               Public Headshot URL
             </label>
             <div className="flex gap-2">
@@ -236,12 +236,12 @@ export const AgentHeadshotModal: React.FC<AgentHeadshotModalProps> = ({
                 value={customUrl}
                 onChange={(e) => setCustomUrl(e.target.value)}
                 placeholder="https://example.com/headshot.jpg"
-                className="flex-1 px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                className="flex-1 px-3 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
               />
               <button
                 type="button"
                 onClick={handleApplyUrl}
-                className="px-3 py-2 bg-[#334155] hover:bg-[#475569] text-xs font-bold text-white rounded-xl transition-colors"
+                className="px-3 py-2 bg-white/10 hover:bg-[#475569] text-xs font-bold text-white rounded-xl transition-colors"
               >
                 Preview
               </button>
@@ -264,11 +264,11 @@ export const AgentHeadshotModal: React.FC<AgentHeadshotModalProps> = ({
         )}
 
         {/* Actions Footer */}
-        <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#334155]">
+        <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/10">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-[#334155] hover:bg-[#475569] text-[#f8fafc] rounded-xl text-xs font-semibold transition-colors"
+            className="px-4 py-2 bg-white/10 hover:bg-[#475569] text-slate-100 rounded-xl text-xs font-semibold transition-colors"
           >
             Cancel
           </button>
@@ -276,10 +276,10 @@ export const AgentHeadshotModal: React.FC<AgentHeadshotModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={isProcessing}
-            className="px-5 py-2 bg-[#d97706] hover:bg-[#b45309] text-[#0f172a] rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
+            className="px-5 py-2 bg-amber-400 hover:bg-[#b45309] text-slate-950 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
           >
             {isProcessing ? (
-              <Loader2 className="h-4 w-4 animate-spin text-[#0f172a]" />
+              <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
             ) : (
               <Check className="h-4 w-4" />
             )}

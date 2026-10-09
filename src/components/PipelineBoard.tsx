@@ -35,48 +35,42 @@ export const PipelineBoard: React.FC = () => {
           return (
             <div
               key={stage}
-              className="w-80 sm:w-88 flex-shrink-0 flex flex-col bg-[#131826]/70 border border-[#334155]/70 rounded-2xl p-3.5 backdrop-blur-md shadow-lg"
+              className="w-80 sm:w-88 flex-shrink-0 flex flex-col bg-[#111726] border border-white/10 rounded-2xl p-4 shadow-xl"
             >
               {/* Stage Header */}
-              <div className="flex items-start justify-between pb-3 mb-3 border-b border-[#334155]/60">
+              <div className="flex items-start justify-between pb-3.5 mb-3.5 border-b border-white/10">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#1e293b] text-[#d97706] text-xs font-bold border border-[#334155]">
+                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#162035] text-amber-400 text-xs font-bold border border-white/10">
                       {stageConfig.step}
                     </span>
-                    <h3 className="font-editorial text-base font-semibold text-[#f8fafc]">
+                    <h3 className="text-sm font-bold text-slate-100">
                       {stageConfig.label}
                     </h3>
                   </div>
-                  <p className="text-[11px] text-[#94a3b8] mt-0.5 truncate max-w-[200px]">
+                  <p className="text-[11px] text-slate-400 mt-1 truncate max-w-[200px]">
                     {stageConfig.description}
                   </p>
                 </div>
 
                 <div className="text-right">
-                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-[#1e293b] text-[#f8fafc] border border-[#334155]">
+                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-[#162035] text-slate-200 border border-white/10 tabular-nums">
                     {stageTransactions.length}
                   </span>
-                  <p className="font-mono-code text-[11px] font-semibold text-[#d97706] mt-0.5">
+                  <p className="font-mono text-[11px] font-semibold text-amber-400 mt-1 tabular-nums">
                     {formatCurrency(stageVolume)}
                   </p>
                 </div>
               </div>
 
               {/* Stage Cards Container */}
-              <div className="flex flex-col gap-3.5 min-h-[420px] max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+              <div className="flex flex-col gap-3 min-h-[420px] max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
                 {stageTransactions.length === 0 ? (
-                  <div className="h-40 flex flex-col items-center justify-center text-center p-4 border border-dashed border-[#334155]/60 rounded-xl bg-[#0f172a]/40">
-                    <Layers className="h-6 w-6 text-[#94a3b8]/40 mb-2" />
-                    <p className="text-xs text-[#94a3b8] font-medium">No active files in this stage</p>
+                  <div className="h-40 flex flex-col items-center justify-center text-center p-4 border border-dashed border-white/10 rounded-xl bg-[#0d121f]/50">
+                    <Layers className="h-6 w-6 text-slate-600 mb-2" />
+                    <p className="text-xs text-slate-400 font-medium">No active files in this stage</p>
                     {stage === 'intake' && (
-                      <button
-                        onClick={() => setIsNewModalOpen(true)}
-                        className="mt-2 text-xs text-[#d97706] hover:underline flex items-center gap-1 font-semibold"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        <span>Add File</span>
-                      </button>
+                      <p className="mt-1 text-[11px] text-slate-500">New deals sync in from Sisu</p>
                     )}
                   </div>
                 ) : (

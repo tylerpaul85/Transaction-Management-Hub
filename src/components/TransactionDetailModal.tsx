@@ -154,13 +154,13 @@ export const TransactionDetailModal: React.FC = () => {
   ).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-5xl bg-[#1a2235] border border-[#334155] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 overflow-y-auto">
+      <div className="relative w-full max-w-5xl bg-[#111726] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto">
         {/* Modal Top Banner & Header */}
-        <div className="relative bg-[#131826] border-b border-[#334155] p-5 sm:p-6 flex-shrink-0">
+        <div className="relative bg-[#162035] border-b border-white/10 p-5 sm:p-6 flex-shrink-0">
           <button
             onClick={() => setSelectedTransactionId(null)}
-            className="absolute top-4 right-4 p-2 rounded-xl bg-[#1e293b] hover:bg-[#334155] text-[#94a3b8] hover:text-[#f8fafc] border border-[#334155] transition-all min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="absolute top-4 right-4 p-2 rounded-xl bg-[#111726] hover:bg-slate-700 text-slate-400 hover:text-slate-100 border border-white/10 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -168,27 +168,27 @@ export const TransactionDetailModal: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-12">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span className="font-mono-code text-xs font-bold text-[#d97706] bg-[#d97706]/15 border border-[#d97706]/30 px-2.5 py-0.5 rounded-full">
+                <span className="font-mono tabular-nums text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
                   {trx.fileNumber}
                 </span>
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                     trx.representation === 'Buyer'
                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      : 'bg-[#d97706]/15 text-[#d97706] border-[#d97706]/30'
+                      : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
                   }`}
                 >
                   {trx.representation} Representation
                 </span>
                 {trx.mlsId && (
-                  <span className="text-xs text-[#94a3b8] font-mono-code">MLS: {trx.mlsId}</span>
+                  <span className="text-xs text-slate-400 font-mono tabular-nums">MLS: {trx.mlsId}</span>
                 )}
               </div>
 
-              <h2 className="font-editorial text-xl sm:text-2xl font-bold text-[#f8fafc]">
+              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 {trx.address} {trx.unit ? `• ${trx.unit}` : ''}
               </h2>
-              <p className="text-xs sm:text-sm text-[#94a3b8]">
+              <p className="text-xs sm:text-sm text-slate-400">
                 {trx.city}, {trx.state} {trx.zip} • Client: {trx.clientNames.join(', ')}
               </p>
             </div>
@@ -196,17 +196,17 @@ export const TransactionDetailModal: React.FC = () => {
             {/* Quick Action & Price */}
             <div className="flex items-center gap-3 sm:text-right">
               <div>
-                <span className="text-[11px] text-[#94a3b8] uppercase tracking-wider block">
+                <span className="text-[11px] text-slate-400 uppercase tracking-wider block">
                   Contract Price
                 </span>
-                <span className="font-mono-code text-xl sm:text-2xl font-bold text-[#f8fafc]">
+                <span className="font-mono tabular-nums text-xl sm:text-2xl font-bold text-slate-100">
                   {formatCurrency(trx.contractPrice)}
                 </span>
               </div>
 
               <button
                 onClick={() => openCdaModal(trx)}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-semibold text-xs active:scale-[0.98] transition-all shadow-md min-h-[44px]"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-400 text-slate-950 hover:bg-amber-400/90 font-semibold text-xs active:scale-[0.98] transition-all shadow-md min-h-[44px]"
               >
                 <Printer className="h-4 w-4" />
                 <span>CDA Letterhead</span>
@@ -215,13 +215,13 @@ export const TransactionDetailModal: React.FC = () => {
           </div>
 
           {/* Stage Progress Bar / Selector */}
-          <div className="mt-4 pt-4 border-t border-[#334155]/60 flex flex-wrap items-center justify-between gap-3">
+          <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#94a3b8] font-medium">Stage:</span>
+              <span className="text-xs text-slate-400 font-medium">Stage:</span>
               <select
                 value={trx.stage}
                 onChange={(e) => updateTransactionStage(trx.id, e.target.value as TransactionStage)}
-                className="bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-1 text-sm font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706] cursor-pointer"
+                className="bg-[#111726] border border-white/10 rounded-lg px-3 py-1 text-sm font-semibold text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer"
               >
                 {STAGES.map((s) => (
                   <option key={s} value={s}>
@@ -231,15 +231,15 @@ export const TransactionDetailModal: React.FC = () => {
               </select>
             </div>
 
-            <div className="flex items-center gap-4 text-xs font-mono-code text-[#94a3b8]">
+            <div className="flex items-center gap-4 text-xs font-mono tabular-nums text-slate-400">
               <span>Mutual: {trx.mutualAcceptanceDate}</span>
-              <span className="text-[#f8fafc] font-semibold">Target Close: {trx.targetClosingDate}</span>
+              <span className="text-slate-100 font-semibold">Target Close: {trx.targetClosingDate}</span>
             </div>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center border-b border-[#334155] bg-[#131826] px-4 sm:px-6 overflow-x-auto no-scrollbar">
+        <div className="flex items-center border-b border-white/10 bg-[#0d121f] px-4 sm:px-6 overflow-x-auto no-scrollbar">
           {[
             { id: 'overview', label: 'Overview & Milestones', icon: Building },
             { id: 'documents', label: `Documents (${compliantDocs}/${trx.documents.length})`, icon: FileText },
@@ -255,8 +255,8 @@ export const TransactionDetailModal: React.FC = () => {
                 onClick={() => setActiveDetailTab(tab.id as any)}
                 className={`flex items-center gap-2 py-3.5 px-4 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap min-h-[44px] ${
                   isActive
-                    ? 'border-[#d97706] text-[#d97706] bg-[#1e293b]/40'
-                    : 'border-transparent text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#1e293b]/20'
+                    ? 'border-amber-400 text-amber-400 bg-[#111726]'
+                    : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-[#111726]'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -273,27 +273,27 @@ export const TransactionDetailModal: React.FC = () => {
             <div className="space-y-6">
               {/* Key Dates Strip */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 bg-[#1e293b] rounded-xl border border-[#334155]">
-                  <span className="text-[11px] text-[#94a3b8] block">Mutual Acceptance</span>
-                  <span className="font-mono-code text-sm font-bold text-[#f8fafc]">
+                <div className="p-3 bg-[#111726] rounded-xl border border-white/10">
+                  <span className="text-[11px] text-slate-400 block">Mutual Acceptance</span>
+                  <span className="font-mono tabular-nums text-sm font-bold text-slate-100">
                     {trx.mutualAcceptanceDate}
                   </span>
                 </div>
-                <div className="p-3 bg-[#1e293b] rounded-xl border border-[#334155]">
-                  <span className="text-[11px] text-[#94a3b8] block">Target Closing</span>
-                  <span className="font-mono-code text-sm font-bold text-[#d97706]">
+                <div className="p-3 bg-[#111726] rounded-xl border border-white/10">
+                  <span className="text-[11px] text-slate-400 block">Target Closing</span>
+                  <span className="font-mono tabular-nums text-sm font-bold text-amber-400">
                     {trx.targetClosingDate}
                   </span>
                 </div>
-                <div className="p-3 bg-[#1e293b] rounded-xl border border-[#334155]">
-                  <span className="text-[11px] text-[#94a3b8] block">Lead Broker</span>
-                  <span className="text-sm font-semibold text-[#f8fafc] block truncate">
+                <div className="p-3 bg-[#111726] rounded-xl border border-white/10">
+                  <span className="text-[11px] text-slate-400 block">Lead Broker</span>
+                  <span className="text-sm font-semibold text-slate-100 block truncate">
                     {trx.agentName}
                   </span>
                 </div>
-                <div className="p-3 bg-[#1e293b] rounded-xl border border-[#334155]">
-                  <span className="text-[11px] text-[#94a3b8] block">Coordinator (TC)</span>
-                  <span className="text-sm font-semibold text-[#f8fafc] block truncate">
+                <div className="p-3 bg-[#111726] rounded-xl border border-white/10">
+                  <span className="text-[11px] text-slate-400 block">Coordinator (TC)</span>
+                  <span className="text-sm font-semibold text-slate-100 block truncate">
                     {trx.tcName}
                   </span>
                 </div>
@@ -302,11 +302,11 @@ export const TransactionDetailModal: React.FC = () => {
               {/* Contingency Timeline & Status */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-editorial text-lg font-bold text-[#f8fafc] flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-[#d97706]" />
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-400" />
                     <span>Contract Contingencies</span>
                   </h3>
-                  <span className="text-xs text-[#94a3b8]">
+                  <span className="text-xs text-slate-400">
                     Click to toggle satisfaction status
                   </span>
                 </div>
@@ -315,7 +315,7 @@ export const TransactionDetailModal: React.FC = () => {
                   {trx.contingencies.map((contingency) => (
                     <div
                       key={contingency.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-[#1e293b] border border-[#334155] rounded-xl gap-3 hover:border-[#334155]/80 transition-all"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-[#111726] border border-white/10 rounded-xl gap-3 hover:border-white/10 transition-all"
                     >
                       <div className="flex items-start gap-3">
                         <button
@@ -326,10 +326,10 @@ export const TransactionDetailModal: React.FC = () => {
                           }}
                           className={`mt-0.5 h-5 w-5 rounded-md border flex items-center justify-center transition-all ${
                             contingency.status === 'satisfied'
-                              ? 'bg-emerald-500 text-[#0f172a] border-emerald-400'
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-400'
                               : contingency.status === 'waived'
-                              ? 'bg-sky-500 text-[#0f172a] border-sky-400'
-                              : 'border-[#334155] hover:border-[#d97706]'
+                              ? 'bg-sky-500 text-slate-950 border-sky-400'
+                              : 'border-white/10 hover:border-amber-400'
                           }`}
                         >
                           {(contingency.status === 'satisfied' ||
@@ -337,17 +337,17 @@ export const TransactionDetailModal: React.FC = () => {
                         </button>
 
                         <div>
-                          <span className="text-sm font-semibold text-[#f8fafc] block">
+                          <span className="text-sm font-semibold text-slate-100 block">
                             {contingency.name}
                           </span>
                           {contingency.notes && (
-                            <p className="text-xs text-[#94a3b8] mt-0.5">{contingency.notes}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">{contingency.notes}</p>
                           )}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 self-end sm:self-center">
-                        <span className="font-mono-code text-xs text-[#94a3b8]">
+                        <span className="font-mono tabular-nums text-xs text-slate-400">
                           Due: {contingency.dueDate}
                         </span>
                         <select
@@ -380,7 +380,7 @@ export const TransactionDetailModal: React.FC = () => {
 
               {/* Milestones Checklist */}
               <div>
-                <h3 className="font-editorial text-lg font-bold text-[#f8fafc] mb-3 flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-white mb-3 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                   <span>Escrow Milestone Tasks</span>
                 </h3>
@@ -392,15 +392,15 @@ export const TransactionDetailModal: React.FC = () => {
                       onClick={() => toggleMilestone(trx.id, m.id)}
                       className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                         m.completed
-                          ? 'bg-emerald-500/5 border-emerald-500/20 text-[#f8fafc]'
-                          : 'bg-[#1e293b] border-[#334155] text-[#94a3b8] hover:text-[#f8fafc]'
+                          ? 'bg-emerald-500/5 border-emerald-500/20 text-slate-100'
+                          : 'bg-[#111726] border-white/10 text-slate-400 hover:text-slate-100'
                       }`}
                     >
                       <div
                         className={`h-5 w-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ${
                           m.completed
-                            ? 'bg-emerald-500 text-[#0f172a] border-emerald-400'
-                            : 'border-[#334155]'
+                            ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                            : 'border-white/10'
                         }`}
                       >
                         {m.completed && <Check className="h-3.5 w-3.5 stroke-[3]" />}
@@ -408,13 +408,13 @@ export const TransactionDetailModal: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <span
                           className={`text-xs sm:text-sm font-medium block truncate ${
-                            m.completed ? 'line-through text-[#94a3b8]' : 'text-[#f8fafc]'
+                            m.completed ? 'line-through text-slate-400' : 'text-slate-100'
                           }`}
                         >
                           {m.title}
                         </span>
                         {m.completedAt && (
-                          <span className="text-[10px] text-emerald-400 font-mono-code block">
+                          <span className="text-[10px] text-emerald-400 font-mono tabular-nums block">
                             Completed {m.completedAt}
                           </span>
                         )}
@@ -426,13 +426,13 @@ export const TransactionDetailModal: React.FC = () => {
 
               {/* Sisu Custom Form Responses */}
               {trx.customFields && Object.keys(trx.customFields).length > 0 && (
-                <div className="p-4 bg-[#131826] border border-[#334155] rounded-xl space-y-3">
+                <div className="p-4 bg-[#162035] border border-white/10 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-editorial text-base font-bold text-[#f8fafc] flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-[#d97706]" />
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-amber-400" />
                       <span>Sisu Custom Form Responses</span>
                     </h3>
-                    <span className="text-[11px] font-mono-code text-[#94a3b8]">
+                    <span className="text-[11px] font-mono tabular-nums text-slate-400">
                       Live sync from Sisu forms
                     </span>
                   </div>
@@ -478,9 +478,9 @@ export const TransactionDetailModal: React.FC = () => {
                       return (
                         <div
                           key={key}
-                          className="flex items-center justify-between p-3 rounded-lg bg-[#1e293b] border border-[#334155]/80"
+                          className="flex items-center justify-between p-3 rounded-lg bg-[#111726] border border-white/10"
                         >
-                          <span className="text-xs text-[#f8fafc] font-medium pr-2 truncate">
+                          <span className="text-xs text-slate-100 font-medium pr-2 truncate">
                             {label}
                           </span>
                           {isYes ? (
@@ -488,11 +488,11 @@ export const TransactionDetailModal: React.FC = () => {
                               Yes
                             </span>
                           ) : isNo ? (
-                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-700/50 text-[#94a3b8] border border-[#334155] whitespace-nowrap">
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-700/50 text-slate-400 border border-white/10 whitespace-nowrap">
                               No
                             </span>
                           ) : (
-                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0f172a] text-[#94a3b8] border border-[#334155] whitespace-nowrap">
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#090d16] text-slate-400 border border-white/10 whitespace-nowrap">
                               {String(val ?? '—')}
                             </span>
                           )}
@@ -508,23 +508,23 @@ export const TransactionDetailModal: React.FC = () => {
           {/* TAB 2: DOCUMENT COMPLIANCE */}
           {activeDetailTab === 'documents' && (
             <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1e293b] p-4 rounded-xl border border-[#334155]">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-[#162035] p-4 rounded-xl border border-white/10">
                 <div>
-                  <h3 className="font-editorial text-base font-bold text-[#f8fafc]">
+                  <h3 className="text-sm sm:text-base font-bold text-white">
                     Real Estate Compliance Checklist
                   </h3>
-                  <p className="text-xs text-[#94a3b8]">
+                  <p className="text-xs text-slate-400">
                     Illinois Real Estate Board (MRED / Multi-Board 7.0) Mandatory File Checklist
                   </p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="font-mono-code text-xs px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">
+                  <span className="font-mono tabular-nums text-xs px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">
                     {compliantDocs} of {trx.documents.length} Compliant
                   </span>
                   <button
                     onClick={() => setIsAddingDoc(true)}
-                    className="px-3 py-1.5 bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-semibold rounded-lg text-xs flex items-center gap-1.5 min-h-[36px]"
+                    className="px-3 py-1.5 bg-amber-400 text-slate-950 hover:bg-amber-400/90 font-semibold rounded-lg text-xs flex items-center gap-1.5 min-h-[36px]"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Add Document</span>
@@ -536,9 +536,9 @@ export const TransactionDetailModal: React.FC = () => {
               {isAddingDoc && (
                 <form
                   onSubmit={handleAddDocument}
-                  className="bg-[#131826] p-4 rounded-xl border border-[#d97706]/40 space-y-3"
+                  className="bg-[#0d121f] p-4 rounded-xl border border-amber-400/40 space-y-3"
                 >
-                  <h4 className="text-xs font-bold text-[#d97706] uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
                     Add New Compliance Document
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -548,12 +548,12 @@ export const TransactionDetailModal: React.FC = () => {
                       value={newDocName}
                       onChange={(e) => setNewDocName(e.target.value)}
                       required
-                      className="sm:col-span-2 px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="sm:col-span-2 px-3 py-2 bg-[#111726] border border-white/10 rounded-lg text-base text-slate-100 focus:outline-none focus:border-amber-400"
                     />
                     <select
                       value={newDocCategory}
                       onChange={(e) => setNewDocCategory(e.target.value as DocumentCategory)}
-                      className="px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="px-3 py-2 bg-[#111726] border border-white/10 rounded-lg text-base text-slate-100 focus:outline-none focus:border-amber-400"
                     >
                       <option value="Contract">Contract</option>
                       <option value="Disclosures">Disclosures</option>
@@ -565,13 +565,13 @@ export const TransactionDetailModal: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setIsAddingDoc(false)}
-                      className="px-3 py-1.5 rounded-lg border border-[#334155] text-xs text-[#94a3b8] hover:text-[#f8fafc]"
+                      className="px-3 py-1.5 rounded-lg border border-white/10 text-xs text-slate-400 hover:text-slate-100"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-1.5 rounded-lg bg-[#d97706] text-[#0f172a] text-xs font-bold hover:bg-[#d97706]/90"
+                      className="px-4 py-1.5 rounded-lg bg-amber-400 text-slate-950 text-xs font-bold hover:bg-amber-400/90"
                     >
                       Save to File
                     </button>
@@ -584,15 +584,15 @@ export const TransactionDetailModal: React.FC = () => {
                 {trx.documents.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-[#1e293b] border border-[#334155] rounded-xl gap-3 hover:border-[#334155]/80 transition-all"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-[#111726] border border-white/10 rounded-xl gap-3 hover:border-white/10 transition-all"
                   >
                     <div className="flex items-start gap-3 min-w-0">
-                      <div className="p-2 rounded-lg bg-[#131826] border border-[#334155] text-[#94a3b8] flex-shrink-0">
-                        <FileText className="h-4 w-4 text-[#d97706]" />
+                      <div className="p-2 rounded-lg bg-[#0d121f] border border-white/10 text-slate-400 flex-shrink-0">
+                        <FileText className="h-4 w-4 text-amber-400" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-[#f8fafc] truncate">
+                          <span className="text-sm font-semibold text-slate-100 truncate">
                             {doc.name}
                           </span>
                           {doc.required && (
@@ -601,12 +601,12 @@ export const TransactionDetailModal: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-[#94a3b8] block mt-0.5">
+                        <span className="text-xs text-slate-400 block mt-0.5">
                           Category: {doc.category}{' '}
                           {doc.uploadedAt ? `• Uploaded ${doc.uploadedAt}` : '• Not uploaded yet'}
                         </span>
                         {doc.notes && (
-                          <p className="text-xs text-[#94a3b8] italic mt-1">{doc.notes}</p>
+                          <p className="text-xs text-slate-400 italic mt-1">{doc.notes}</p>
                         )}
                       </div>
                     </div>
@@ -645,17 +645,17 @@ export const TransactionDetailModal: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-editorial text-lg font-bold text-[#f8fafc]">
+                  <h3 className="text-base sm:text-lg font-bold text-white">
                     Transaction Directory & Contacts
                   </h3>
-                  <p className="text-xs text-[#94a3b8]">
+                  <p className="text-xs text-slate-400">
                     Buyers, Sellers, Co-op Brokerage, Escrow/Title Officers, and Lenders
                   </p>
                 </div>
 
                 <button
                   onClick={() => setIsAddingParty(true)}
-                  className="px-3 py-1.5 bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-semibold rounded-lg text-xs flex items-center gap-1.5 min-h-[36px]"
+                  className="px-3 py-1.5 bg-amber-400 text-slate-950 hover:bg-amber-400/90 font-semibold rounded-lg text-xs flex items-center gap-1.5 min-h-[36px]"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Add Contact</span>
@@ -666,16 +666,16 @@ export const TransactionDetailModal: React.FC = () => {
               {isAddingParty && (
                 <form
                   onSubmit={handleAddParty}
-                  className="bg-[#131826] p-4 rounded-xl border border-[#d97706]/40 space-y-3"
+                  className="bg-[#0d121f] p-4 rounded-xl border border-amber-400/40 space-y-3"
                 >
-                  <h4 className="text-xs font-bold text-[#d97706] uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
                     Add New Transaction Contact
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <select
                       value={newPartyRole}
                       onChange={(e) => setNewPartyRole(e.target.value as PartyContact['role'])}
-                      className="px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-base text-[#f8fafc]"
+                      className="px-3 py-2 bg-[#111726] border border-white/10 rounded-lg text-base text-slate-100"
                     >
                       <option value="Real Estate Attorney">Real Estate Attorney</option>
                       <option value="Title / Escrow Officer">Title / Escrow Officer</option>
@@ -691,7 +691,7 @@ export const TransactionDetailModal: React.FC = () => {
                       value={newPartyName}
                       onChange={(e) => setNewPartyName(e.target.value)}
                       required
-                      className="px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-base text-[#f8fafc]"
+                      className="px-3 py-2 bg-[#111726] border border-white/10 rounded-lg text-base text-slate-100"
                     />
                     <input
                       type="email"
@@ -699,34 +699,34 @@ export const TransactionDetailModal: React.FC = () => {
                       value={newPartyEmail}
                       onChange={(e) => setNewPartyEmail(e.target.value)}
                       required
-                      className="px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-base text-[#f8fafc]"
+                      className="px-3 py-2 bg-[#111726] border border-white/10 rounded-lg text-base text-slate-100"
                     />
                     <input
                       type="tel"
                       placeholder="Phone Number"
                       value={newPartyPhone}
                       onChange={(e) => setNewPartyPhone(e.target.value)}
-                      className="px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-base text-[#f8fafc]"
+                      className="px-3 py-2 bg-[#111726] border border-white/10 rounded-lg text-base text-slate-100"
                     />
                     <input
                       type="text"
                       placeholder="Company (Optional)"
                       value={newPartyCompany}
                       onChange={(e) => setNewPartyCompany(e.target.value)}
-                      className="sm:col-span-2 px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-base text-[#f8fafc]"
+                      className="sm:col-span-2 px-3 py-2 bg-[#111726] border border-white/10 rounded-lg text-base text-slate-100"
                     />
                   </div>
                   <div className="flex items-center justify-end gap-2 pt-2">
                     <button
                       type="button"
                       onClick={() => setIsAddingParty(false)}
-                      className="px-3 py-1.5 rounded-lg border border-[#334155] text-xs text-[#94a3b8] hover:text-[#f8fafc]"
+                      className="px-3 py-1.5 rounded-lg border border-white/10 text-xs text-slate-400 hover:text-slate-100"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-1.5 rounded-lg bg-[#d97706] text-[#0f172a] text-xs font-bold hover:bg-[#d97706]/90"
+                      className="px-4 py-1.5 rounded-lg bg-amber-400 text-slate-950 text-xs font-bold hover:bg-amber-400/90"
                     >
                       Save Contact
                     </button>
@@ -739,32 +739,32 @@ export const TransactionDetailModal: React.FC = () => {
                 {trx.parties.map((party) => (
                   <div
                     key={party.id}
-                    className="p-4 bg-[#1e293b] border border-[#334155] rounded-xl space-y-3"
+                    className="p-4 bg-[#111726] border border-white/10 rounded-xl space-y-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#131826] text-[#d97706] border border-[#334155]">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0d121f] text-amber-400 border border-white/10">
                           {party.role}
                         </span>
-                        <h4 className="text-base font-bold text-[#f8fafc] mt-1">{party.name}</h4>
+                        <h4 className="text-base font-bold text-slate-100 mt-1">{party.name}</h4>
                         {party.company && (
-                          <p className="text-xs text-[#94a3b8] font-medium">{party.company}</p>
+                          <p className="text-xs text-slate-400 font-medium">{party.company}</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="space-y-1.5 text-xs text-[#94a3b8] pt-1 border-t border-[#334155]/60">
+                    <div className="space-y-1.5 text-xs text-slate-400 pt-1 border-t border-white/10">
                       <div className="flex items-center justify-between">
                         <a
                           href={`mailto:${party.email}`}
-                          className="flex items-center gap-1.5 hover:text-[#d97706] transition-colors truncate"
+                          className="flex items-center gap-1.5 hover:text-amber-400 transition-colors truncate"
                         >
-                          <Mail className="h-3.5 w-3.5 text-[#d97706]" />
+                          <Mail className="h-3.5 w-3.5 text-amber-400" />
                           <span className="truncate">{party.email}</span>
                         </a>
                         <button
                           onClick={() => handleCopy(party.email, `email-${party.id}`)}
-                          className="p-1 hover:text-[#f8fafc]"
+                          className="p-1 hover:text-slate-100"
                           title="Copy Email"
                         >
                           {copiedId === `email-${party.id}` ? (
@@ -779,14 +779,14 @@ export const TransactionDetailModal: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <a
                             href={`tel:${party.phone}`}
-                            className="flex items-center gap-1.5 hover:text-[#d97706] transition-colors font-mono-code"
+                            className="flex items-center gap-1.5 hover:text-amber-400 transition-colors font-mono tabular-nums"
                           >
                             <Phone className="h-3.5 w-3.5 text-emerald-400" />
                             <span>{party.phone}</span>
                           </a>
                           <button
                             onClick={() => handleCopy(party.phone, `phone-${party.id}`)}
-                            className="p-1 hover:text-[#f8fafc]"
+                            className="p-1 hover:text-slate-100"
                             title="Copy Phone"
                           >
                             {copiedId === `phone-${party.id}` ? (
@@ -814,22 +814,22 @@ export const TransactionDetailModal: React.FC = () => {
           {/* TAB 4: FINANCIALS & COMMISSION DISBURSEMENT (CDA) */}
           {activeDetailTab === 'commission' && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#1e293b] p-5 rounded-2xl border border-[#334155]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#162035] p-5 rounded-2xl border border-white/10">
                 <div>
-                  <span className="font-mono-code text-xs text-[#d97706] font-bold block">
+                  <span className="font-mono tabular-nums text-xs text-amber-400 font-bold block">
                     {trx.commission.cdaNumber} • Status: {trx.commission.cdaStatus}
                   </span>
-                  <h3 className="font-editorial text-xl font-bold text-[#f8fafc]">
+                  <h3 className="text-lg sm:text-xl font-bold text-white">
                     Commission Disbursement Breakdown
                   </h3>
-                  <p className="text-xs text-[#94a3b8]">
+                  <p className="text-xs text-slate-400">
                     Official brokerage splits, coordinator deductions, and net payout calculation.
                   </p>
                 </div>
 
                 <button
                   onClick={() => openCdaModal(trx)}
-                  className="px-4 py-2.5 bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-bold rounded-xl text-sm active:scale-[0.98] transition-all flex items-center gap-2 shadow-lg min-h-[44px]"
+                  className="px-4 py-2.5 bg-amber-400 text-slate-950 hover:bg-amber-400/90 font-bold rounded-xl text-sm active:scale-[0.98] transition-all flex items-center gap-2 shadow-lg min-h-[44px]"
                 >
                   <Printer className="h-4 w-4" />
                   <span>Generate Official CDA</span>
@@ -838,45 +838,45 @@ export const TransactionDetailModal: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Financial Breakdown Card */}
-                <div className="p-5 bg-[#1e293b] border border-[#334155] rounded-2xl space-y-4">
-                  <h4 className="text-sm font-bold text-[#f8fafc] uppercase tracking-wider border-b border-[#334155] pb-2">
+                <div className="p-5 bg-[#111726] border border-white/10 rounded-2xl space-y-4">
+                  <h4 className="text-sm font-bold text-slate-100 uppercase tracking-wider border-b border-white/10 pb-2">
                     Gross Calculation
                   </h4>
 
                   <div className="space-y-2.5 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-[#94a3b8]">Purchase Price:</span>
-                      <span className="font-mono-code font-bold text-[#f8fafc]">
+                      <span className="text-slate-400">Purchase Price:</span>
+                      <span className="font-mono tabular-nums font-bold text-slate-100">
                         {formatCurrency(trx.commission.purchasePrice)}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-[#94a3b8]">Commission Rate:</span>
-                      <span className="font-mono-code font-semibold text-[#f8fafc]">
+                      <span className="text-slate-400">Commission Rate:</span>
+                      <span className="font-mono tabular-nums font-semibold text-slate-100">
                         {trx.commission.commissionRate}%
                       </span>
                     </div>
 
-                    <div className="flex justify-between pt-2 border-t border-[#334155]/60">
-                      <span className="font-semibold text-[#f8fafc]">Total Gross Commission:</span>
-                      <span className="font-mono-code font-bold text-[#d97706]">
+                    <div className="flex justify-between pt-2 border-t border-white/10">
+                      <span className="font-semibold text-slate-100">Total Gross Commission:</span>
+                      <span className="font-mono tabular-nums font-bold text-amber-400">
                         {formatCurrency(trx.commission.grossCommission)}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-[#94a3b8]">
+                      <span className="text-slate-400">
                         Agent Split ({trx.commission.agentSplitPercentage}%):
                       </span>
-                      <span className="font-mono-code font-semibold text-[#f8fafc]">
+                      <span className="font-mono tabular-nums font-semibold text-slate-100">
                         {formatCurrency(trx.commission.agentGrossPayout)}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-[#94a3b8]">Brokerage Retained:</span>
-                      <span className="font-mono-code font-semibold text-[#94a3b8]">
+                      <span className="text-slate-400">Brokerage Retained:</span>
+                      <span className="font-mono tabular-nums font-semibold text-slate-400">
                         {formatCurrency(trx.commission.brokerageGrossSplit)}
                       </span>
                     </div>
@@ -884,41 +884,41 @@ export const TransactionDetailModal: React.FC = () => {
                 </div>
 
                 {/* Deductions & Net Payout Card */}
-                <div className="p-5 bg-[#1e293b] border border-[#334155] rounded-2xl space-y-4">
-                  <h4 className="text-sm font-bold text-[#f8fafc] uppercase tracking-wider border-b border-[#334155] pb-2">
+                <div className="p-5 bg-[#111726] border border-white/10 rounded-2xl space-y-4">
+                  <h4 className="text-sm font-bold text-slate-100 uppercase tracking-wider border-b border-white/10 pb-2">
                     Deductions & Net Payout
                   </h4>
 
                   <div className="space-y-2.5 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-[#94a3b8]">Transaction Coordinator (TC) Fee:</span>
-                      <span className="font-mono-code text-rose-400">
+                      <span className="text-slate-400">Transaction Coordinator (TC) Fee:</span>
+                      <span className="font-mono tabular-nums text-rose-400">
                         -${trx.commission.transactionCoordinatorFee}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-[#94a3b8]">E&O Insurance Risk Fee:</span>
-                      <span className="font-mono-code text-rose-400">
+                      <span className="text-slate-400">E&O Insurance Risk Fee:</span>
+                      <span className="font-mono tabular-nums text-rose-400">
                         -${trx.commission.eoInsuranceFee}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-[#94a3b8]">Brokerage Admin File Fee:</span>
-                      <span className="font-mono-code text-rose-400">
+                      <span className="text-slate-400">Brokerage Admin File Fee:</span>
+                      <span className="font-mono tabular-nums text-rose-400">
                         -${trx.commission.adminFee}
                       </span>
                     </div>
 
-                    <div className="flex justify-between pt-3 border-t border-[#334155] bg-[#131826]/70 p-3 rounded-xl">
+                    <div className="flex justify-between pt-3 border-t border-white/10 bg-[#0d121f]/70 p-3 rounded-xl">
                       <div>
-                        <span className="text-xs uppercase tracking-wider text-[#94a3b8] block">
+                        <span className="text-xs uppercase tracking-wider text-slate-400 block">
                           Net Agent Payout
                         </span>
-                        <span className="text-xs text-[#94a3b8]">Direct Deposit / Check</span>
+                        <span className="text-xs text-slate-400">Direct Deposit / Check</span>
                       </div>
-                      <span className="font-mono-code text-xl font-bold text-[#d97706]">
+                      <span className="font-mono tabular-nums text-xl font-bold text-amber-400">
                         {formatCurrency(trx.commission.netAgentPayout)}
                       </span>
                     </div>
@@ -927,14 +927,14 @@ export const TransactionDetailModal: React.FC = () => {
               </div>
 
               {/* Escrow Disbursement Instructions */}
-              <div className="p-4 bg-[#131826] border border-[#334155] rounded-xl text-xs space-y-2">
-                <span className="font-bold text-[#d97706] uppercase tracking-wider">
+              <div className="p-4 bg-[#0d121f] border border-white/10 rounded-xl text-xs space-y-2">
+                <span className="font-bold text-amber-400 uppercase tracking-wider">
                   Escrow Settlement Instructions
                 </span>
-                <p className="text-[#94a3b8]">
+                <p className="text-slate-400">
                   Closing Officer:{' '}
-                  <strong className="text-[#f8fafc]">{trx.commission.escrowOfficer}</strong> at{' '}
-                  <strong className="text-[#f8fafc]">{trx.commission.escrowCompany}</strong> (
+                  <strong className="text-slate-100">{trx.commission.escrowOfficer}</strong> at{' '}
+                  <strong className="text-slate-100">{trx.commission.escrowCompany}</strong> (
                   {trx.commission.escrowEmail}). Disbursement authorized upon recording and escrow
                   receipt.
                 </p>
@@ -948,18 +948,18 @@ export const TransactionDetailModal: React.FC = () => {
               {/* Post Note Form */}
               <form
                 onSubmit={handleAddNote}
-                className="bg-[#1e293b] p-4 rounded-xl border border-[#334155] space-y-3"
+                className="bg-[#111726] p-4 rounded-xl border border-white/10 space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#f8fafc] uppercase tracking-wider">
+                  <span className="text-xs font-bold text-slate-100 uppercase tracking-wider">
                     Add Note or Activity Update
                   </span>
-                  <label className="flex items-center gap-2 text-xs text-[#94a3b8] cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isNotePinned}
                       onChange={(e) => setIsNotePinned(e.target.checked)}
-                      className="h-4 w-4 rounded border-[#334155] bg-[#131826] text-[#d97706]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#0d121f] text-amber-400"
                     />
                     <span>Pin to top</span>
                   </label>
@@ -971,13 +971,13 @@ export const TransactionDetailModal: React.FC = () => {
                   onChange={(e) => setNewNoteContent(e.target.value)}
                   placeholder="Record note, negotiation update, phone log or escrow memo..."
                   required
-                  className="w-full p-3 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-[#d97706]"
+                  className="w-full p-3 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-400"
                 />
 
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-semibold rounded-xl text-xs flex items-center gap-1.5 min-h-[36px]"
+                    className="px-4 py-2 bg-amber-400 text-slate-950 hover:bg-amber-400/90 font-semibold rounded-xl text-xs flex items-center gap-1.5 min-h-[36px]"
                   >
                     <Send className="h-3.5 w-3.5" />
                     <span>Post Activity</span>
@@ -992,27 +992,27 @@ export const TransactionDetailModal: React.FC = () => {
                     key={act.id}
                     className={`p-4 rounded-xl border transition-all ${
                       act.isPinned
-                        ? 'bg-[#d97706]/10 border-[#d97706]/40'
-                        : 'bg-[#1e293b] border-[#334155]'
+                        ? 'bg-amber-400/10 border-amber-400/40'
+                        : 'bg-[#111726] border-white/10'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#f8fafc]">{act.author}</span>
-                        <span className="text-[10px] text-[#94a3b8] bg-[#131826] px-2 py-0.5 rounded-full border border-[#334155]">
+                        <span className="text-xs font-bold text-slate-100">{act.author}</span>
+                        <span className="text-[10px] text-slate-400 bg-[#0d121f] px-2 py-0.5 rounded-full border border-white/10">
                           {act.role}
                         </span>
                         {act.isPinned && (
-                          <span className="text-[10px] text-[#d97706] font-bold uppercase tracking-wider">
+                          <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">
                             ★ Pinned
                           </span>
                         )}
                       </div>
-                      <span className="font-mono-code text-[11px] text-[#94a3b8]">
+                      <span className="font-mono tabular-nums text-[11px] text-slate-400">
                         {act.createdAt}
                       </span>
                     </div>
-                    <p className="text-xs sm:text-sm text-[#f8fafc] leading-relaxed">
+                    <p className="text-xs sm:text-sm text-slate-100 leading-relaxed">
                       {act.content}
                     </p>
                   </div>

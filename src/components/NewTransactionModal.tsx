@@ -234,7 +234,7 @@ export const NewTransactionModal: React.FC = () => {
         particleCount: 70,
         spread: 60,
         origin: { y: 0.6 },
-        colors: ['#d97706', '#10b981', '#f8fafc'],
+        colors: ['#f59e0b', '#10b981', '#f8fafc'],
       });
     } catch {
       // ignore
@@ -244,19 +244,19 @@ export const NewTransactionModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-[#1a2235] border border-[#334155] rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-[#111726] border border-white/10 rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-[#131826] border-b border-[#334155] p-5 sm:p-6 flex items-center justify-between">
+        <div className="bg-[#162035] border-b border-white/10 p-5 sm:p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#d97706]/15 border border-[#d97706]/30 text-[#d97706]">
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
               <Building className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-editorial text-lg sm:text-xl font-bold text-[#f8fafc]">
+              <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
                 New Transaction Intake
               </h3>
-              <p className="text-xs text-[#94a3b8]">
+              <p className="text-xs text-slate-400">
                 Setup contract file and auto-generate compliance timeline
               </p>
             </div>
@@ -264,7 +264,7 @@ export const NewTransactionModal: React.FC = () => {
 
           <button
             onClick={() => setIsNewModalOpen(false)}
-            className="p-2 rounded-xl bg-[#1e293b] hover:bg-[#334155] text-[#94a3b8] hover:text-[#f8fafc] border border-[#334155] transition-all min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="p-2 rounded-xl bg-[#111726] hover:bg-white/10 text-slate-400 hover:text-slate-100 border border-white/10 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="h-5 w-5" />
           </button>
@@ -274,70 +274,70 @@ export const NewTransactionModal: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
           {/* Section 1: Property Info */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-[#d97706] uppercase tracking-wider">
+            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
               1. Property Details
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2">
-                <label className="block text-xs text-[#94a3b8] mb-1">Street Address *</label>
+                <label className="block text-xs text-slate-400 mb-1">Street Address *</label>
                 <input
                   type="text"
                   placeholder="e.g. 1500 N Astor Street"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">Unit / Apt</label>
+                <label className="block text-xs text-slate-400 mb-1">Unit / Apt</label>
                 <input
                   type="text"
                   placeholder="Unit 12B"
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">City</label>
+                <label className="block text-xs text-slate-400 mb-1">City</label>
                 <input
                   type="text"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">State</label>
+                <label className="block text-xs text-slate-400 mb-1">State</label>
                 <input
                   type="text"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">Zip Code</label>
+                <label className="block text-xs text-slate-400 mb-1">Zip Code</label>
                 <input
                   type="text"
                   value={zip}
                   onChange={(e) => setZip(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">Property Type</label>
+                <label className="block text-xs text-slate-400 mb-1">Property Type</label>
                 <select
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value as PropertyType)}
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 >
                   <option value="Condo / Loft">Condo / Loft</option>
                   <option value="Single Family">Single Family</option>
@@ -348,30 +348,30 @@ export const NewTransactionModal: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">MLS # (Optional)</label>
+                <label className="block text-xs text-slate-400 mb-1">MLS # (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. 11988204"
                   value={mlsId}
                   onChange={(e) => setMlsId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
             </div>
           </div>
 
           {/* Section 2: Contract Financials & Representation */}
-          <div className="space-y-3 pt-3 border-t border-[#334155]">
-            <h4 className="text-xs font-bold text-[#d97706] uppercase tracking-wider">
+          <div className="space-y-3 pt-3 border-t border-white/10">
+            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
               2. Contract & Representation
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">Representation *</label>
+                <label className="block text-xs text-slate-400 mb-1">Representation *</label>
                 <select
                   value={representation}
                   onChange={(e) => setRepresentation(e.target.value as RepresentationType)}
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 >
                   <option value="Buyer">Buyer Representation</option>
                   <option value="Seller">Seller Representation</option>
@@ -380,76 +380,76 @@ export const NewTransactionModal: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">Contract Purchase Price ($) *</label>
+                <label className="block text-xs text-slate-400 mb-1">Contract Purchase Price ($) *</label>
                 <input
                   type="number"
                   placeholder="1250000"
                   value={contractPrice}
                   onChange={(e) => setContractPrice(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] font-mono-code focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 font-mono tabular-nums focus:outline-none focus:border-amber-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-[#94a3b8] mb-1">Client Name(s) *</label>
+              <label className="block text-xs text-slate-400 mb-1">Client Name(s) *</label>
               <input
                 type="text"
                 placeholder="e.g. John & Jennifer Smith"
                 value={clientNames}
                 onChange={(e) => setClientNames(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
               />
             </div>
           </div>
 
           {/* Section 3: Key Dates */}
-          <div className="space-y-3 pt-3 border-t border-[#334155]">
-            <h4 className="text-xs font-bold text-[#d97706] uppercase tracking-wider">
+          <div className="space-y-3 pt-3 border-t border-white/10">
+            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
               3. Contract Dates
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">Mutual Acceptance Date</label>
+                <label className="block text-xs text-slate-400 mb-1">Mutual Acceptance Date</label>
                 <input
                   type="date"
                   value={mutualAcceptanceDate}
                   onChange={(e) => setMutualAcceptanceDate(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">Target Closing Date</label>
+                <label className="block text-xs text-slate-400 mb-1">Target Closing Date</label>
                 <input
                   type="date"
                   value={targetClosingDate}
                   onChange={(e) => setTargetClosingDate(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 bg-[#1e293b] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#111726] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                 />
               </div>
             </div>
-            <p className="text-[11px] text-[#94a3b8] italic">
+            <p className="text-[11px] text-slate-400 italic">
               Contingency deadlines (EMD 3-day, Inspection 10-day, Appraisal 21-day, Loan 28-day)
               will be auto-calculated from these dates.
             </p>
           </div>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#334155]">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
             <button
               type="button"
               onClick={() => setIsNewModalOpen(false)}
-              className="px-4 py-2.5 rounded-xl border border-[#334155] text-sm font-semibold text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#1e293b] min-h-[44px]"
+              className="px-4 py-2.5 rounded-xl border border-white/10 text-sm font-semibold text-slate-400 hover:text-slate-100 hover:bg-[#111726] min-h-[44px]"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-all shadow-lg min-h-[44px]"
+              className="px-6 py-2.5 rounded-xl bg-amber-400 text-slate-950 hover:bg-amber-400/90 font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-all shadow-lg min-h-[44px]"
             >
               <Sparkles className="h-4 w-4" />
               <span>Create Transaction File</span>

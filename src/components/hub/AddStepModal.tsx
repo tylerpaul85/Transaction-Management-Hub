@@ -38,7 +38,7 @@ export const AddStepModal: React.FC<AddStepModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg bg-[#0e1726] border border-slate-800 rounded-3xl shadow-2xl overflow-hidden p-6 sm:p-7 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">

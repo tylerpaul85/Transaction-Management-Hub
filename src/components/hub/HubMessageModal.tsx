@@ -33,7 +33,7 @@ export const HubMessageModal: React.FC<HubMessageModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg bg-[#0e1726] border border-slate-800 rounded-3xl shadow-2xl overflow-hidden p-6 sm:p-7 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -80,7 +80,7 @@ export const HubMessageModal: React.FC<HubMessageModalProps> = ({
               {recipient.phone && (
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">Phone:</span>
-                  <span className="font-mono-code text-slate-300">{recipient.phone}</span>
+                  <span className="font-mono tabular-nums text-slate-300">{recipient.phone}</span>
                 </div>
               )}
               {recipient.email && (

@@ -10,7 +10,6 @@ import { TransactionHubView } from './routes/TransactionHubView';
 import { AdminTaskMappings } from './components/AdminTaskMappings';
 import { GoogleAuthGate } from './components/GoogleAuthGate';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
-import { NewTransactionModal } from './components/NewTransactionModal';
 import { CDAPrintModal } from './components/CDAPrintModal';
 import { Loader2 } from 'lucide-react';
 
@@ -18,8 +17,8 @@ import { Loader2 } from 'lucide-react';
    Loading Splash — shown while the Supabase session is being checked
    ───────────────────────────────────────────────────────────────────── */
 const LoadingSplash: React.FC = () => (
-  <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center gap-4">
-    <div className="h-16 w-16 rounded-2xl bg-[#1e293b] border border-[#334155] p-2 flex items-center justify-center shadow-inner">
+  <div className="min-h-screen bg-[#090d16] flex flex-col items-center justify-center gap-4">
+    <div className="h-14 w-14 rounded-2xl bg-[#131b2e] border border-white/10 p-2 flex items-center justify-center shadow-lg">
       <img
         src="/msreg-logo.png"
         alt="MSREG"
@@ -27,8 +26,8 @@ const LoadingSplash: React.FC = () => (
         onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
       />
     </div>
-    <Loader2 className="h-6 w-6 animate-spin text-[#d97706]" />
-    <p className="text-xs text-[#94a3b8] font-medium tracking-wide">Verifying session…</p>
+    <Loader2 className="h-6 w-6 animate-spin text-amber-400" />
+    <p className="text-xs text-slate-400 font-medium tracking-wide">Verifying session…</p>
   </div>
 );
 
@@ -101,7 +100,7 @@ const AuthenticatedLayout: React.FC = () => {
   }, [currentUser]);
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-[#f8fafc] flex flex-col selection:bg-[#d97706]/30 selection:text-[#f8fafc]">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col selection:bg-amber-500/25 selection:text-amber-100 antialiased">
       {/* Main Navbar */}
       <Navbar onNavigate={handleNavigate} currentPath={currentPath} />
 
@@ -154,7 +153,6 @@ const AuthenticatedLayout: React.FC = () => {
 
       {/* Modals */}
       <TransactionDetailModal />
-      <NewTransactionModal />
       <CDAPrintModal />
     </div>
   );

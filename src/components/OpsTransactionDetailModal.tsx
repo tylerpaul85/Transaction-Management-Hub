@@ -249,19 +249,19 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-5xl bg-[#1a2235] border border-[#334155] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 overflow-y-auto">
+      <div className="relative w-full max-w-5xl bg-[#111726] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto">
         {/* Modal Header */}
-        <div className="bg-[#131826] border-b border-[#334155] p-5 sm:p-6 flex-shrink-0">
+        <div className="bg-[#162035] border-b border-white/10 p-5 sm:p-6 flex-shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
                 {transaction.sisu_transaction_id ? (
-                  <span className="font-mono-code text-xs font-bold text-slate-300 bg-slate-800 border border-slate-700 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="font-mono tabular-nums text-xs font-bold text-slate-300 bg-slate-800 border border-slate-700 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                     <span>Sisu ID: {transaction.sisu_transaction_id}</span>
                   </span>
                 ) : (
-                  <span className="font-mono-code text-xs font-bold text-[#d97706] bg-[#d97706]/15 border border-[#d97706]/30 px-2.5 py-0.5 rounded-full">
+                  <span className="font-mono tabular-nums text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
                     Local Only
                   </span>
                 )}
@@ -269,18 +269,18 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                   className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase border ${
                     side === 'buyer'
                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      : 'bg-[#d97706]/15 text-[#d97706] border-[#d97706]/30'
+                      : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
                   }`}
                 >
                   {side} Side
                 </span>
               </div>
 
-              <h2 className="font-editorial text-xl sm:text-2xl font-bold text-[#f8fafc]">
+              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                 {address || 'Standardized Transaction Sheet'}
               </h2>
-              <p className="text-xs text-[#94a3b8]">
-                Assigned Agent: <strong className="text-[#f8fafc]">{agentName}</strong>{' '}
+              <p className="text-xs text-slate-400">
+                Assigned Agent: <strong className="text-slate-100">{agentName}</strong>{' '}
                 • Coordinator: <strong className="text-sky-400">{tcName}</strong>
               </p>
             </div>
@@ -294,12 +294,12 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                 className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all min-h-[44px] ${
                   flaggedForReview
                     ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-md'
-                    : 'bg-[#1e293b] text-[#94a3b8] border-[#334155] hover:text-[#f8fafc]'
+                    : 'bg-[#111726] text-slate-400 border-white/10 hover:text-slate-100'
                 }`}
               >
                 <Flag
                   className={`h-4 w-4 ${
-                    flaggedForReview ? 'fill-amber-400 text-amber-400' : 'text-[#94a3b8]'
+                    flaggedForReview ? 'fill-amber-400 text-amber-400' : 'text-slate-400'
                   }`}
                 />
                 <span>{flaggedForReview ? 'Flagged for Friday Review' : 'Mark Friday Verified'}</span>
@@ -328,7 +328,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
 
               <button
                 onClick={handleSaveAll}
-                className="px-5 py-2 rounded-xl bg-[#d97706] text-[#0f172a] hover:bg-[#d97706]/90 font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-all shadow-lg min-h-[44px]"
+                className="px-5 py-2 rounded-xl bg-amber-400 text-slate-950 hover:bg-amber-400/90 font-bold text-sm flex items-center gap-2 active:scale-[0.98] transition-all shadow-lg min-h-[44px]"
               >
                 <Save className="h-4 w-4" />
                 <span>{savedSuccess ? 'Saved!' : 'Save Sheet'}</span>
@@ -336,7 +336,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
 
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl bg-[#1e293b] hover:bg-[#334155] text-[#94a3b8] hover:text-[#f8fafc] border border-[#334155] transition-all min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2 rounded-xl bg-[#111726] hover:bg-white/10 text-slate-400 hover:text-slate-100 border border-white/10 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -344,13 +344,13 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-[#334155]/60 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/10 overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab('sheet')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all min-h-[40px] ${
                 activeTab === 'sheet'
-                  ? 'bg-[#1e293b] text-[#d97706] border border-[#d97706]/40 shadow-sm'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  ? 'bg-[#111726] text-amber-400 border border-amber-400/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-100'
               }`}
             >
               1. Core Sheet & Standardized Milestones ({milestones.length})
@@ -359,8 +359,8 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
               onClick={() => setActiveTab('other_agent')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all min-h-[40px] flex items-center gap-1.5 ${
                 activeTab === 'other_agent'
-                  ? 'bg-[#1e293b] text-[#d97706] border border-[#d97706]/40 shadow-sm'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  ? 'bg-[#111726] text-amber-400 border border-amber-400/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-100'
               }`}
             >
               <span>2. Other Agent & Brokerage Info</span>
@@ -374,46 +374,46 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
           {activeTab === 'sheet' && (
             <div className="space-y-6">
               {/* Section 1: Core Transaction Fields */}
-              <div className="bg-[#1e293b] p-5 rounded-2xl border border-[#334155] space-y-4">
-                <div className="flex items-center justify-between border-b border-[#334155] pb-2">
-                  <h3 className="font-editorial text-base font-bold text-[#f8fafc] flex items-center gap-2">
-                    <Building className="h-4 w-4 text-[#d97706]" />
+              <div className="bg-[#162035] p-5 rounded-2xl border border-white/10 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Building className="h-4 w-4 text-amber-400" />
                     <span>Core Transaction Fields</span>
                   </h3>
-                  <span className="text-[11px] text-[#94a3b8]">
+                  <span className="text-[11px] text-slate-400">
                     Live editable by TC & Operations
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs text-[#94a3b8] mb-1">Property Address</label>
+                    <label className="block text-xs text-slate-400 mb-1">Property Address</label>
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs text-[#94a3b8] mb-1">City</label>
+                    <label className="block text-xs text-slate-400 mb-1">City</label>
                     <input
                       type="text"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-xs text-[#94a3b8] mb-1">Status</label>
+                    <label className="block text-xs text-slate-400 mb-1">Status</label>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="w-full px-3 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                     >
                       <option value="Pending">Pending</option>
                       <option value="closed">Closed</option>
@@ -424,11 +424,11 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-[#94a3b8] mb-1">Side</label>
+                    <label className="block text-xs text-slate-400 mb-1">Side</label>
                     <select
                       value={side}
                       onChange={(e) => setSide(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="w-full px-3 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                     >
                       <option value="buyer">Buyer</option>
                       <option value="seller">Seller</option>
@@ -437,28 +437,28 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-[#94a3b8] mb-1">Contract Date</label>
+                    <label className="block text-xs text-slate-400 mb-1">Contract Date</label>
                     <input
                       type="date"
                       value={contractDate}
                       onChange={(e) => setContractDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="w-full px-3 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs text-[#94a3b8] mb-1">Client Name(s)</label>
+                    <label className="block text-xs text-slate-400 mb-1">Client Name(s)</label>
                     <input
                       type="text"
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="w-full px-3 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                     />
                   </div>
                 </div>
 
                 {/* Agent & TC Selection Dropdowns */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[#334155]/60">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-white/10">
                   <div>
                     <label className="block text-xs font-bold text-amber-400 mb-1 flex items-center gap-1.5">
                       <User className="h-3.5 w-3.5 text-amber-400" />
@@ -481,7 +481,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                           }
                         }
                       }}
-                      className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm font-semibold text-slate-100 focus:outline-none focus:border-amber-400"
                     >
                       <option value="unassigned">-- Unassigned Agent --</option>
                       {agentRoster.map((a) => (
@@ -519,7 +519,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                           }
                         }
                       }}
-                      className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-sm font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                      className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm font-semibold text-slate-100 focus:outline-none focus:border-amber-400"
                     >
                       <option value="unassigned">-- Unassigned TC --</option>
                       {tcRoster.map((t) => (
@@ -538,14 +538,14 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
               </div>
 
               {/* Section 2: Standardized Milestones Table */}
-              <div className="bg-[#1e293b] rounded-2xl border border-[#334155] overflow-hidden shadow-xl">
-                <div className="p-4 bg-[#131826] border-b border-[#334155] flex flex-wrap items-center justify-between gap-3">
+              <div className="bg-[#111726] rounded-2xl border border-white/10 overflow-hidden shadow-xl">
+                <div className="p-4 bg-[#162035] border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-editorial text-base font-bold text-[#f8fafc] flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-[#d97706]" />
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-amber-400" />
                       <span>Standardized Milestones & Contingencies</span>
                     </h3>
-                    <p className="text-xs text-[#94a3b8]">
+                    <p className="text-xs text-slate-400">
                       Inline editable target/actual dates, status, notes, and source provenance
                       badges.
                     </p>
@@ -563,7 +563,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs sm:text-sm">
-                    <thead className="bg-[#131826]/70 text-[11px] font-semibold text-[#94a3b8] uppercase tracking-wider border-b border-[#334155]">
+                    <thead className="bg-[#0d121f]/70 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-white/10">
                       <tr>
                         <th className="py-3 px-4">Milestone</th>
                         <th className="py-3 px-3">Target Date</th>
@@ -573,7 +573,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                         <th className="py-3 px-3 text-right">Source Provenance</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#334155]/60">
+                    <tbody className="divide-y divide-white/5">
                       {milestones.map((m) => {
                         const sideConfigs = getAllMilestonesConfig(side);
                         const config =
@@ -588,11 +588,11 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                         const isInProgress = m.status === 'in_progress' || m.status === 'notice_sent' || m.status === 'ordered';
 
                         return (
-                          <tr key={m.milestone_type} className={`hover:bg-[#131826]/40 transition-colors ${isNa ? 'opacity-50' : ''}`}>
+                          <tr key={m.milestone_type} className={`hover:bg-[#0d121f]/40 transition-colors ${isNa ? 'opacity-50' : ''}`}>
                             {/* Milestone Name */}
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
-                                <span className={`font-semibold block ${isNa ? 'text-slate-400 line-through' : 'text-[#f8fafc]'}`}>
+                                <span className={`font-semibold block ${isNa ? 'text-slate-400 line-through' : 'text-slate-100'}`}>
                                   {config.label}
                                 </span>
                                 {config.parentGroup && (
@@ -601,7 +601,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[11px] text-[#94a3b8]">
+                              <span className="text-[11px] text-slate-400">
                                 {config.description}
                               </span>
                             </td>
@@ -616,7 +616,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                                     target_date: e.target.value || null,
                                   })
                                 }
-                                className="w-36 px-2.5 py-1.5 bg-[#131826] border border-[#334155] rounded-lg text-xs font-mono-code text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                                className="w-36 px-2.5 py-1.5 bg-[#0d121f] border border-white/10 rounded-lg text-xs font-mono tabular-nums text-slate-100 focus:outline-none focus:border-amber-400"
                               />
                             </td>
 
@@ -630,7 +630,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                                     actual_date: e.target.value || null,
                                   })
                                 }
-                                className="w-36 px-2.5 py-1.5 bg-[#131826] border border-[#334155] rounded-lg text-xs font-mono-code text-emerald-400 focus:outline-none focus:border-emerald-400"
+                                className="w-36 px-2.5 py-1.5 bg-[#0d121f] border border-white/10 rounded-lg text-xs font-mono tabular-nums text-emerald-400 focus:outline-none focus:border-emerald-400"
                               />
                             </td>
 
@@ -672,7 +672,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                                     notes: e.target.value || null,
                                   })
                                 }
-                                className="w-48 px-2.5 py-1.5 bg-[#131826] border border-[#334155] rounded-lg text-xs text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                                className="w-48 px-2.5 py-1.5 bg-[#0d121f] border border-white/10 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-amber-400"
                               />
                             </td>
 
@@ -701,18 +701,18 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
 
               {/* Sisu Custom Form Responses Card */}
               {transaction.custom_fields && Object.keys(transaction.custom_fields).length > 0 && (
-                <div className="bg-[#1e293b] p-6 rounded-2xl border border-[#334155] space-y-4">
-                  <div className="flex items-center justify-between border-b border-[#334155] pb-3">
+                <div className="bg-[#162035] p-6 rounded-2xl border border-white/10 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
                     <div>
-                      <h3 className="font-editorial text-base font-bold text-[#f8fafc] flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-[#d97706]" />
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-amber-400" />
                         <span>Sisu Custom Form Responses</span>
                       </h3>
-                      <p className="text-xs text-[#94a3b8] mt-0.5">
+                      <p className="text-xs text-slate-400 mt-0.5">
                         Live snapshot of custom fields and questions answered on Sisu forms
                       </p>
                     </div>
-                    <span className="text-[11px] font-mono-code text-[#94a3b8] px-2.5 py-1 rounded-lg bg-[#131826] border border-[#334155]">
+                    <span className="text-[11px] font-mono tabular-nums text-slate-400 px-2.5 py-1 rounded-lg bg-[#0d121f] border border-white/10">
                       {Object.keys(transaction.custom_fields).length} Fields
                     </span>
                   </div>
@@ -758,9 +758,9 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                       return (
                         <div
                           key={key}
-                          className="flex items-center justify-between p-3 rounded-xl bg-[#131826] border border-[#334155]/80"
+                          className="flex items-center justify-between p-3 rounded-xl bg-[#0d121f] border border-white/10"
                         >
-                          <span className="text-xs text-[#f8fafc] font-medium pr-2 truncate">
+                          <span className="text-xs text-slate-100 font-medium pr-2 truncate">
                             {label}
                           </span>
                           {isYes ? (
@@ -768,11 +768,11 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                               Yes
                             </span>
                           ) : isNo ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-[#94a3b8] border border-[#334155] whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-white/10 whitespace-nowrap">
                               No
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#1e293b] text-[#94a3b8] border border-[#334155] whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#111726] text-slate-400 border border-white/10 whitespace-nowrap">
                               {String(val ?? '—')}
                             </span>
                           )}
@@ -787,14 +787,14 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
 
           {/* TAB 2: OTHER AGENT & BROKERAGE INFO */}
           {activeTab === 'other_agent' && (
-            <div className="bg-[#1e293b] p-6 rounded-2xl border border-[#334155] space-y-5">
-              <div className="border-b border-[#334155] pb-3">
+            <div className="bg-[#162035] p-6 rounded-2xl border border-white/10 space-y-5">
+              <div className="border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-editorial text-lg font-bold text-[#f8fafc]">
+                  <h3 className="text-base sm:text-lg font-bold text-white">
                     Other Party & Co-Op Agent Information
                   </h3>
                 </div>
-                <p className="text-xs text-[#94a3b8] mt-1 leading-relaxed">
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                   Co-op agent and brokerage contact details are auto-pulled from intake forms and Sisu,
                   and can also be reviewed or updated directly below.
                 </p>
@@ -802,7 +802,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#94a3b8] mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                     Other Party's Agent Name
                   </label>
                   <input
@@ -810,12 +810,12 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                     placeholder="e.g. Victoria Sterling"
                     value={otherPartyAgent}
                     onChange={(e) => setOtherPartyAgent(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#94a3b8] mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                     Other Party's Agent Phone
                   </label>
                   <input
@@ -823,12 +823,12 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                     placeholder="e.g. (312) 555-4478"
                     value={otherPartyPhone}
                     onChange={(e) => setOtherPartyPhone(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] font-mono-code focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 font-mono tabular-nums focus:outline-none focus:border-amber-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#94a3b8] mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                     Other Party's Agent Email
                   </label>
                   <input
@@ -836,12 +836,12 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                     placeholder="e.g. agent@coopbrokerage.com"
                     value={otherPartyEmail}
                     onChange={(e) => setOtherPartyEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#94a3b8] mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                     Co-Op Brokerage Company
                   </label>
                   <input
@@ -849,12 +849,12 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                     placeholder="e.g. Jameson Sotheby's International Realty"
                     value={otherPartyBrokerage}
                     onChange={(e) => setOtherPartyBrokerage(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#94a3b8] mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                     Other Party / Principal Name
                   </label>
                   <input
@@ -862,12 +862,12 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                     placeholder="e.g. Vanderbilt Trust"
                     value={otherPartyName}
                     onChange={(e) => setOtherPartyName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                    className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>
 
-              <div className="p-4 bg-[#131826] rounded-xl border border-sky-500/20 text-xs text-[#94a3b8] flex items-start gap-2.5">
+              <div className="p-4 bg-[#0d121f] rounded-xl border border-sky-500/20 text-xs text-slate-400 flex items-start gap-2.5">
                 <Info className="h-4 w-4 text-sky-400 flex-shrink-0 mt-0.5" />
                 <span>
                   All changes saved in this section are protected by MSREG Hub's Row-Level Security

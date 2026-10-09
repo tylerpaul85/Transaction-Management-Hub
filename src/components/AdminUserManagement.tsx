@@ -255,17 +255,17 @@ export const AdminUserManagement: React.FC = () => {
       )}
 
       {/* Header & Controls */}
-      <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+      <div className="bg-[#111726] border border-white/10 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-[#d97706]/15 border border-[#d97706]/30 text-[#d97706]">
+            <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
               <Shield className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="font-editorial text-xl sm:text-2xl font-bold text-[#f8fafc]">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight">
                 User Access & Allowlist Management
               </h2>
-              <p className="text-xs text-[#94a3b8]">
+              <p className="text-xs text-slate-400 mt-0.5">
                 Admin-only portal • Google Workspace authentication allowlist
               </p>
             </div>
@@ -273,7 +273,7 @@ export const AdminUserManagement: React.FC = () => {
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#d97706] hover:bg-[#d97706]/90 text-[#0f172a] font-bold rounded-xl text-sm shadow-lg active:scale-[0.98] transition-all min-h-[44px]"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-sm shadow-md active:scale-[0.98] transition-all min-h-[44px]"
           >
             <UserPlus className="h-4 w-4 stroke-[2.5]" />
             <span>Add User</span>
@@ -283,13 +283,13 @@ export const AdminUserManagement: React.FC = () => {
         {/* Search & Filter Bar */}
         <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
           <div className="relative flex-1 w-full">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search user name or workspace email..."
-              className="w-full pl-10 pr-4 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-[#d97706]"
+              className="w-full pl-10 pr-4 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
             />
           </div>
 
@@ -300,8 +300,8 @@ export const AdminUserManagement: React.FC = () => {
                 onClick={() => setRoleFilter(r)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap min-h-[38px] ${
                   roleFilter === r
-                    ? 'bg-[#d97706]/20 text-[#d97706] border border-[#d97706]/40'
-                    : 'bg-[#131826] text-[#94a3b8] border border-[#334155] hover:text-[#f8fafc]'
+                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                    : 'bg-[#162035] text-slate-400 border border-white/10 hover:text-white'
                 }`}
               >
                 {r === 'all' ? 'All Roles' : r.replace('_', ' ')}
@@ -312,11 +312,11 @@ export const AdminUserManagement: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-[#1e293b] border border-[#334155] rounded-3xl overflow-hidden shadow-xl">
+      <div className="bg-[#111726] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-[#131826] text-[#94a3b8] uppercase font-bold tracking-wider border-b border-[#334155]">
+              <tr className="bg-[#0d121f] text-slate-400 uppercase font-bold tracking-wider border-b border-white/10">
                 <th className="py-3.5 px-4 sm:px-6">Team Member</th>
                 <th className="py-3.5 px-4">Workspace Email</th>
                 <th className="py-3.5 px-4">Assigned Role</th>
@@ -324,10 +324,10 @@ export const AdminUserManagement: React.FC = () => {
                 <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#334155]/60">
+            <tbody className="divide-y divide-white/5">
               {filteredProfiles.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[#94a3b8]">
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
                     No provisioned users match the filter criteria.
                   </td>
                 </tr>
@@ -337,31 +337,31 @@ export const AdminUserManagement: React.FC = () => {
                     agent: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
                     tc: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
                     listing_coordinator: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
-                    admin: 'bg-[#d97706]/20 text-[#d97706] border-[#d97706]/40',
+                    admin: 'bg-amber-400/20 text-amber-400 border-amber-400/40',
                   };
 
                   return (
                     <tr
                       key={p.id}
-                      className={`hover:bg-[#131826]/40 transition-colors ${
-                        !p.active ? 'opacity-60 bg-[#131826]/20' : ''
+                      className={`hover:bg-[#0d121f]/40 transition-colors ${
+                        !p.active ? 'opacity-60 bg-[#0d121f]/20' : ''
                       }`}
                     >
-                      <td className="py-4 px-4 sm:px-6 font-semibold text-[#f8fafc]">
+                      <td className="py-4 px-4 sm:px-6 font-semibold text-slate-100">
                         <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-[#131826] border border-[#334155] flex items-center justify-center font-bold text-xs text-[#d97706]">
+                          <div className="h-8 w-8 rounded-full bg-[#0d121f] border border-white/10 flex items-center justify-center font-bold text-xs text-amber-400">
                             {(p.name || p.email)[0].toUpperCase()}
                           </div>
                           <div>
                             <span className="block text-sm">{p.name || p.full_name || 'Team Member'}</span>
-                            <span className="text-[10px] text-[#94a3b8] font-mono-code">ID: {p.id.slice(0, 8)}...</span>
+                            <span className="text-[10px] text-slate-400 font-mono tabular-nums">ID: {p.id.slice(0, 8)}...</span>
                           </div>
                         </div>
                       </td>
 
-                      <td className="py-4 px-4 font-mono-code text-[#94a3b8]">
+                      <td className="py-4 px-4 font-mono tabular-nums text-slate-400">
                         <div className="flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-[#94a3b8]" />
+                          <Mail className="h-3.5 w-3.5 text-slate-400" />
                           <span>{p.email}</span>
                         </div>
                       </td>
@@ -423,19 +423,19 @@ export const AdminUserManagement: React.FC = () => {
 
       {/* Add User Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-[#111726] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="p-5 sm:p-6 bg-[#131826] border-b border-[#334155] flex items-center justify-between">
+            <div className="p-5 sm:p-6 bg-[#0d121f] border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-[#d97706]/15 text-[#d97706] border border-[#d97706]/30">
+                <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
                   <UserPlus className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-editorial text-lg font-bold text-[#f8fafc]">
+                  <h3 className="text-base font-bold text-slate-100">
                     Provision Team Member
                   </h3>
-                  <p className="text-xs text-[#94a3b8]">
+                  <p className="text-xs text-slate-400">
                     Google Workspace Access Allowlist
                   </p>
                 </div>
@@ -443,7 +443,7 @@ export const AdminUserManagement: React.FC = () => {
 
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-2 text-[#94a3b8] hover:text-[#f8fafc] rounded-xl hover:bg-[#1e293b]"
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -452,7 +452,7 @@ export const AdminUserManagement: React.FC = () => {
             {/* Modal Form */}
             <form onSubmit={handleAddUserSubmit} className="p-5 sm:p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-[#94a3b8] mb-1">
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
                   Full Name *
                 </label>
                 <input
@@ -461,12 +461,12 @@ export const AdminUserManagement: React.FC = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Rachel Adams"
-                  className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-[#94a3b8] mb-1">
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
                   Google Workspace Email *
                 </label>
                 <input
@@ -475,21 +475,21 @@ export const AdminUserManagement: React.FC = () => {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="rachel.adams@msreg.com"
-                  className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
                 />
-                <p className="text-[11px] text-[#94a3b8] mt-1">
+                <p className="text-[11px] text-slate-400 mt-1">
                   Must belong to your Google Workspace organization (@{import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com'}).
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-[#94a3b8] mb-1">
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
                   System Role *
                 </label>
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as AppRole })}
-                  className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-[#d97706]"
+                  className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400 transition-colors"
                 >
                   <option value="agent">Agent (Read-only /my-deals access)</option>
                   <option value="tc">Transaction Coordinator (Full /ops editable sheet)</option>
@@ -499,26 +499,26 @@ export const AdminUserManagement: React.FC = () => {
               </div>
 
               {/* Notification note */}
-              <div className="p-3 bg-[#131826]/80 rounded-xl border border-[#334155] text-xs text-[#94a3b8] flex items-start gap-2">
-                <Send className="h-4 w-4 text-[#d97706] flex-shrink-0 mt-0.5" />
+              <div className="p-3 bg-[#0d121f] rounded-xl border border-white/10 text-xs text-slate-400 flex items-start gap-2">
+                <Send className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
                 <span>
                   Adding this user will immediately allowlist their Google account and trigger a welcome notification email via Resend. No passwords or tokens are required.
                 </span>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#334155]">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-[#94a3b8] hover:text-[#f8fafc] bg-[#131826] border border-[#334155]"
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-[#162035] border border-white/10 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#d97706] hover:bg-[#d97706]/90 text-[#0f172a] shadow-lg disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-md disabled:opacity-50 transition-colors"
                 >
                   {isSubmitting ? (
                     <>

@@ -727,36 +727,36 @@ export const OpsDashboard: React.FC = () => {
   if (!currentUser) return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Top Header & Coordinator Hub Bar */}
-      <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-6 shadow-2xl space-y-5">
+      <div className="bg-[#111726] border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xl space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="p-1.5 rounded-lg bg-[#d97706]/15 border border-[#d97706]/30 text-[#d97706]">
+              <span className="p-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400">
                 <ShieldCheck className="h-4 w-4" />
               </span>
-              <h1 className="font-editorial text-2xl sm:text-3xl font-bold text-[#f8fafc]">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
                 Transaction Coordination Command Center
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30 uppercase">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 uppercase">
                 TC Workspace
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#94a3b8]">
-              Manage contract-to-close Buyer and Seller escrows, audit Sisu sync, and track contract milestones in real time.
+            <p className="text-xs text-slate-400">
+              Contract-to-close pipeline management, Sisu integration audit, and milestone compliance tracking.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {/* Sisu Sync Button */}
             <button
               onClick={handleSyncSisu}
               disabled={isSyncing}
-              className="px-3.5 py-2 rounded-xl bg-[#131826] hover:bg-[#1e293b] text-[#f8fafc] border border-[#334155] text-xs font-bold transition-all flex items-center gap-2 min-h-[40px]"
+              className="px-3.5 py-1.5 rounded-xl bg-[#131b2e] hover:bg-[#182238] text-slate-200 border border-white/10 hover:border-white/20 text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
             >
-              <RefreshCw className={`h-3.5 w-3.5 text-[#d97706] ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Syncing...' : 'Sync Sisu API'}</span>
+              <RefreshCw className={`h-3.5 w-3.5 text-amber-400 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Syncing...' : 'Sync Sisu'}</span>
             </button>
 
             {/* Sisu Batch CSV/JSON Import Button */}
@@ -765,28 +765,16 @@ export const OpsDashboard: React.FC = () => {
                 setBatchImportSummary(null);
                 setIsBatchImportModalOpen(true);
               }}
-              className="px-3.5 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500 text-purple-300 hover:text-[#0f172a] border border-purple-500/40 text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px]"
+              className="px-3.5 py-1.5 rounded-xl bg-[#131b2e] hover:bg-[#182238] text-slate-200 border border-white/10 hover:border-white/20 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             >
-              <Upload className="h-3.5 w-3.5" />
-              <span>Import Sisu Batch (CSV/JSON)</span>
-            </button>
-
-            {/* Quick Add Escrow Button */}
-            <button
-              onClick={() => {
-                setNewEscrowSide(representationTab === 'seller' ? 'seller' : 'buyer');
-                setIsAddEscrowModalOpen(true);
-              }}
-              className="px-3.5 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500 text-sky-300 hover:text-[#0f172a] border border-sky-500/40 text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px]"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>+ Add Escrow Deal</span>
+              <Upload className="h-3.5 w-3.5 text-slate-400" />
+              <span>Import Batch</span>
             </button>
 
             {/* Dynamic Agent Update Email Button */}
             <button
               onClick={() => setIsEmailModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-[#0f172a] border border-emerald-500/40 text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px] shadow-sm active:scale-[0.98] cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-[#131b2e] hover:bg-[#182238] text-slate-200 border border-white/10 hover:border-white/20 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
               title={
                 agentFilter === 'All'
                   ? 'Send weekly file update email digests to all agents'
@@ -796,21 +784,21 @@ export const OpsDashboard: React.FC = () => {
               <Mail className="h-3.5 w-3.5 text-emerald-400" />
               <span>
                 {agentFilter === 'All'
-                  ? 'Send Email to All Agents'
-                  : `Send Email to ${agentFilter} (${selectedAgentDealCount})`}
+                  ? 'Email Digest'
+                  : `Email ${agentFilter} (${selectedAgentDealCount})`}
               </span>
             </button>
 
             {/* Friday Review Filter */}
             <button
               onClick={() => setReviewOnlyFilter(!reviewOnlyFilter)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all min-h-[40px] ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer shadow-sm ${
                 reviewOnlyFilter
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-md'
-                  : 'bg-[#131826] text-[#94a3b8] border-[#334155] hover:text-[#f8fafc]'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-[#131b2e] text-slate-300 border-white/10 hover:border-white/20'
               }`}
             >
-              <Flag className={`h-3.5 w-3.5 ${reviewOnlyFilter ? 'fill-amber-400 text-amber-400' : ''}`} />
+              <Flag className={`h-3.5 w-3.5 ${reviewOnlyFilter ? 'fill-amber-400 text-amber-400' : 'text-slate-400'}`} />
               <span>Friday Review ({metrics.needsReview})</span>
             </button>
           </div>
@@ -818,28 +806,28 @@ export const OpsDashboard: React.FC = () => {
 
         {/* Sync Status Banner */}
         {syncStatusText && (
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-400" />
             <span>{syncStatusText}</span>
           </div>
         )}
 
         {/* Workspace Tab Switcher Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#334155]">
-          <div className="flex flex-wrap items-center bg-[#131826] p-1.5 rounded-2xl border border-[#334155] gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.08]">
+          <div className="flex flex-wrap items-center bg-[#090d16] p-1 rounded-xl border border-white/10 gap-1 text-xs">
             {/* All Escrows Tab */}
             <button
               onClick={() => {
                 setActiveSection('escrows');
                 setRepresentationTab('all');
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                 activeSection === 'escrows' && representationTab === 'all'
-                  ? 'bg-sky-500 text-[#0f172a] shadow-lg'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  ? 'bg-[#182238] text-white font-semibold border border-white/10 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ShieldCheck className="h-4 w-4" />
+              <ShieldCheck className="h-3.5 w-3.5" />
               <span>All Escrows ({metrics.totalEscrows})</span>
             </button>
 
@@ -849,13 +837,13 @@ export const OpsDashboard: React.FC = () => {
                 setActiveSection('escrows');
                 setRepresentationTab('buyer');
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                 activeSection === 'escrows' && representationTab === 'buyer'
-                  ? 'bg-indigo-500 text-[#0f172a] shadow-lg'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  ? 'bg-[#182238] text-white font-semibold border border-white/10 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <User className="h-4 w-4" />
+              <User className="h-3.5 w-3.5" />
               <span>Buyer Files ({metrics.buyerEscrows})</span>
             </button>
 
@@ -865,26 +853,26 @@ export const OpsDashboard: React.FC = () => {
                 setActiveSection('escrows');
                 setRepresentationTab('seller');
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                 activeSection === 'escrows' && representationTab === 'seller'
-                  ? 'bg-[#d97706] text-[#0f172a] shadow-lg'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  ? 'bg-[#182238] text-white font-semibold border border-white/10 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Home className="h-4 w-4" />
+              <Home className="h-3.5 w-3.5" />
               <span>Seller Files ({metrics.sellerEscrows})</span>
             </button>
 
             {/* Agent Roster & Directory */}
             <button
               onClick={() => setActiveSection('roster')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                 activeSection === 'roster'
-                  ? 'bg-purple-500 text-[#0f172a] shadow-lg'
-                  : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                  ? 'bg-[#182238] text-white font-semibold border border-white/10 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Users className="h-4 w-4" />
+              <Users className="h-3.5 w-3.5" />
               <span>Agent Roster ({allAgentProfiles.length})</span>
             </button>
 
@@ -892,14 +880,14 @@ export const OpsDashboard: React.FC = () => {
             {currentUser.role === 'admin' && (
               <button
                 onClick={() => setActiveSection('users')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                   activeSection === 'users'
-                    ? 'bg-emerald-500 text-[#0f172a] shadow-lg'
-                    : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                    ? 'bg-[#182238] text-white font-semibold border border-white/10 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <ShieldCheck className="h-4 w-4" />
-                <span>User Allowlist & Access</span>
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>User Allowlist</span>
               </button>
             )}
 
@@ -907,58 +895,58 @@ export const OpsDashboard: React.FC = () => {
             {currentUser.role === 'admin' && (
               <button
                 onClick={() => setActiveSection('tasks')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                   activeSection === 'tasks'
-                    ? 'bg-amber-500 text-[#0f172a] shadow-lg'
-                    : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                    ? 'bg-[#182238] text-white font-semibold border border-white/10 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <ListChecks className="h-4 w-4" />
+                <ListChecks className="h-3.5 w-3.5" />
                 <span>Sisu Task Mappings</span>
               </button>
             )}
           </div>
 
-          <div className="text-xs text-[#94a3b8] flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Real-Time Supabase Active</span>
+          <div className="text-xs text-slate-400 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Real-Time Sync Active</span>
           </div>
         </div>
 
         {/* Quick KPI Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-[#334155]/60">
-          <div className="p-3 bg-[#131826] rounded-xl border border-[#334155]">
-            <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 border-t border-white/[0.08]">
+          <div className="p-3 bg-[#090d16] rounded-xl border border-white/[0.08]">
+            <span className="text-[11px] text-slate-400 block font-medium">
               Total Active Escrows
             </span>
-            <span className="font-mono-code text-base sm:text-lg font-bold text-sky-400">
+            <span className="font-mono text-base sm:text-lg font-bold text-white tabular-nums">
               {metrics.totalEscrows} Files
             </span>
           </div>
 
-          <div className="p-3 bg-[#131826] rounded-xl border border-[#334155]">
-            <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
+          <div className="p-3 bg-[#090d16] rounded-xl border border-white/[0.08]">
+            <span className="text-[11px] text-slate-400 block font-medium">
               Buyer Files
             </span>
-            <span className="font-mono-code text-base sm:text-lg font-bold text-indigo-400">
+            <span className="font-mono text-base sm:text-lg font-bold text-sky-400 tabular-nums">
               {metrics.buyerEscrows} Files
             </span>
           </div>
 
-          <div className="p-3 bg-[#131826] rounded-xl border border-[#334155]">
-            <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
-              Seller Files (Pending Listings)
+          <div className="p-3 bg-[#090d16] rounded-xl border border-white/[0.08]">
+            <span className="text-[11px] text-slate-400 block font-medium">
+              Seller Files
             </span>
-            <span className="font-mono-code text-base sm:text-lg font-bold text-[#d97706]">
+            <span className="font-mono text-base sm:text-lg font-bold text-amber-400 tabular-nums">
               {metrics.sellerEscrows} Files
             </span>
           </div>
 
-          <div className="p-3 bg-[#131826] rounded-xl border border-[#334155]">
-            <span className="text-[11px] text-[#94a3b8] block font-medium uppercase tracking-wider">
+          <div className="p-3 bg-[#090d16] rounded-xl border border-white/[0.08]">
+            <span className="text-[11px] text-slate-400 block font-medium">
               Friday Review Flags
             </span>
-            <span className="font-mono-code text-base sm:text-lg font-bold text-amber-400">
+            <span className="font-mono text-base sm:text-lg font-bold text-amber-300 tabular-nums">
               {metrics.needsReview} Flagged
             </span>
           </div>
@@ -980,16 +968,16 @@ export const OpsDashboard: React.FC = () => {
       ) : (
         <>
           {/* Search & Filter Toolbar */}
-          <div className="bg-[#1e293b] p-4 rounded-2xl border border-[#334155] flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div className="bg-[#111726] p-3.5 rounded-2xl border border-white/[0.08] flex flex-wrap items-center justify-between gap-3 shadow-sm">
             {/* Search */}
             <div className="relative flex-1 min-w-[240px] max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search address, client, Sisu ID, agent..."
-                className="w-full pl-10 pr-4 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] placeholder-[#94a3b8] focus:outline-none focus:border-[#d97706]"
+                className="w-full pl-9 pr-4 py-2 bg-[#090d16] border border-white/10 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-500/60 transition-all"
               />
             </div>
 
@@ -998,7 +986,7 @@ export const OpsDashboard: React.FC = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706] cursor-pointer"
+                className="px-3 py-1.5 bg-[#090d16] border border-white/10 rounded-xl text-xs font-medium text-slate-300 focus:outline-none focus:border-amber-500/60 cursor-pointer"
               >
                 <option value="All">All Statuses ({allStatusOptions.length})</option>
                 {allStatusOptions.map((st) => (
@@ -1011,7 +999,7 @@ export const OpsDashboard: React.FC = () => {
               <select
                 value={tcFilter}
                 onChange={(e) => setTcFilter(e.target.value)}
-                className="px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706] cursor-pointer"
+                className="px-3 py-1.5 bg-[#090d16] border border-white/10 rounded-xl text-xs font-medium text-slate-300 focus:outline-none focus:border-amber-500/60 cursor-pointer"
               >
                 <option value="All">All Coordinators</option>
                 {tcOptions.map((tc) => (
@@ -1024,7 +1012,7 @@ export const OpsDashboard: React.FC = () => {
               <select
                 value={agentFilter}
                 onChange={(e) => setAgentFilter(e.target.value)}
-                className="px-3 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-[#d97706] cursor-pointer"
+                className="px-3 py-1.5 bg-[#090d16] border border-white/10 rounded-xl text-xs font-medium text-slate-300 focus:outline-none focus:border-amber-500/60 cursor-pointer"
               >
                 <option value="All">All Agents</option>
                 {agentOptions.map((a) => (
@@ -1033,30 +1021,14 @@ export const OpsDashboard: React.FC = () => {
                   </option>
                 ))}
               </select>
-
-              {/* Quick-action email button beside agent filter */}
-              <button
-                onClick={() => setIsEmailModalOpen(true)}
-                className="px-3 py-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
-                title={
-                  agentFilter === 'All'
-                    ? 'Send weekly file updates to all agents'
-                    : `Send weekly file update to ${agentFilter}`
-                }
-              >
-                <Mail className="h-3.5 w-3.5 text-emerald-400" />
-                <span>
-                  {agentFilter === 'All' ? 'Email All' : `Email ${agentFilter}`}
-                </span>
-              </button>
             </div>
           </div>
 
           {/* Main Content Container with Cards / Table View Toggle */}
           <div className="space-y-4">
-            <div className="bg-[#1e293b] p-4 rounded-2xl border border-[#334155] flex items-center justify-between shadow-md">
+            <div className="bg-[#111726] p-3.5 rounded-2xl border border-white/[0.08] flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-2">
-                <h2 className="font-editorial text-lg font-bold text-[#f8fafc]">
+                <h2 className="text-sm font-bold text-white">
                   {representationTab === 'all' && `All Active Escrows (${displayList.length})`}
                   {representationTab === 'buyer' && `Buyer Escrow Files (${displayList.length})`}
                   {representationTab === 'seller' && `Seller Escrows / Pending Listings (${displayList.length})`}
@@ -1064,13 +1036,13 @@ export const OpsDashboard: React.FC = () => {
               </div>
 
               {/* View Switcher: Cards vs Table */}
-              <div className="flex items-center gap-1 bg-[#131826] p-1 rounded-xl border border-[#334155]">
+              <div className="flex items-center gap-1 bg-[#090d16] p-1 rounded-xl border border-white/10 text-xs font-medium">
                 <button
                   onClick={() => setViewMode('cards')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                     viewMode === 'cards'
-                      ? 'bg-[#d97706] text-[#0f172a] shadow-md'
-                      : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                      ? 'bg-[#182238] text-white font-semibold border border-white/10 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
@@ -1078,10 +1050,10 @@ export const OpsDashboard: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setViewMode('table')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                     viewMode === 'table'
-                      ? 'bg-[#d97706] text-[#0f172a] shadow-md'
-                      : 'text-[#94a3b8] hover:text-[#f8fafc]'
+                      ? 'bg-[#182238] text-white font-semibold border border-white/10 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <Table className="h-3.5 w-3.5" />
@@ -1091,45 +1063,33 @@ export const OpsDashboard: React.FC = () => {
             </div>
 
             {displayList.length === 0 ? (
-              <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-12 text-center text-[#94a3b8] space-y-4 shadow-xl">
-                <Building className="h-12 w-12 mx-auto text-[#94a3b8]/30" />
-                <p className="font-bold text-[#f8fafc] text-lg">No active files found</p>
-                <p className="text-xs text-[#94a3b8] max-w-md mx-auto">
+              <div className="bg-[#111726] border border-white/[0.08] rounded-2xl p-12 text-center text-slate-400 space-y-4 shadow-xl">
+                <Building className="h-10 w-10 mx-auto text-slate-600" />
+                <p className="font-bold text-white text-base">No active files found</p>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
                   {representationTab === 'seller'
-                    ? 'No pending seller listings match your current filters. Click below to add an escrow deal or adjust your filters.'
+                    ? 'No pending seller listings match your current filters.'
                     : representationTab === 'buyer'
-                    ? 'No pending buyer files match your current filters. Click below to add an escrow deal or adjust your filters.'
-                    : 'No active contract-to-close escrow files match your current filters. Click below to add an escrow deal.'}
+                    ? 'No pending buyer files match your current filters.'
+                    : 'No active contract-to-close escrow files match your current filters.'}{' '}
+                  New deals sync in automatically from Sisu.
                 </p>
-                <div className="flex items-center justify-center gap-3 pt-2">
-                  <button
-                    onClick={() => {
-                      setNewEscrowSide(representationTab === 'seller' ? 'seller' : 'buyer');
-                      setIsAddEscrowModalOpen(true);
-                    }}
-                    className="px-5 py-2.5 bg-[#d97706] text-[#0f172a] rounded-xl font-bold text-xs hover:bg-[#b45309] transition-all shadow-md"
-                  >
-                    + Add New Escrow File
-                  </button>
-                </div>
               </div>
             ) : viewMode === 'cards' ? (
               /* CARDS GRID VIEW */
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {displayList.map((tx) => {
-                  const isUnderContract = tx.status === 'under_contract' || tx.status === 'pending';
-
                   return (
                     <div
                       key={tx.id}
                       onClick={() => setSelectedTx(tx)}
-                      className="bg-[#1e293b] border border-[#334155] hover:border-[#d97706]/60 rounded-3xl p-5 shadow-xl hover:shadow-2xl transition-all cursor-pointer group flex flex-col justify-between space-y-4 relative overflow-hidden"
+                      className="bg-[#111726] border border-white/[0.08] hover:border-amber-500/40 rounded-2xl p-5 shadow-lg transition-all cursor-pointer group flex flex-col justify-between space-y-3.5"
                     >
                       {/* Top Header Strip */}
-                      <div className="flex items-start justify-between gap-2 border-b border-[#334155]/60 pb-3">
-                        <div className="space-y-1">
+                      <div className="flex items-start justify-between gap-2 border-b border-white/[0.06] pb-3">
+                        <div className="space-y-0.5">
                           <span
-                            className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+                            className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm ${
                               tx.side === 'seller'
                                 ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                                 : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
@@ -1137,7 +1097,7 @@ export const OpsDashboard: React.FC = () => {
                           >
                             PENDING • {tx.side.toUpperCase()} REP
                           </span>
-                          <span className="text-[11px] text-[#94a3b8] font-mono-code block">
+                          <span className="text-[11px] text-slate-400 font-mono tabular-nums block">
                             File ID: {tx.sisu_transaction_id || tx.id.substring(0, 8)}
                           </span>
                         </div>
@@ -1146,70 +1106,70 @@ export const OpsDashboard: React.FC = () => {
                         <button
                           onClick={(e) => handleToggleReviewFlag(tx.id, e)}
                           title={tx.flagged_for_review ? 'Flagged for Friday Review' : 'Flag for Friday Review'}
-                          className={`p-2 rounded-xl border transition-all ${
+                          className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                             tx.flagged_for_review
                               ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm'
-                              : 'bg-[#131826] text-slate-500 border-[#334155] hover:text-amber-400'
+                              : 'bg-[#090d16] text-slate-500 border-white/10 hover:text-amber-400'
                           }`}
                         >
-                          <Flag className={`h-4 w-4 ${tx.flagged_for_review ? 'fill-amber-400 text-amber-400' : ''}`} />
+                          <Flag className={`h-3.5 w-3.5 ${tx.flagged_for_review ? 'fill-amber-400 text-amber-400' : ''}`} />
                         </button>
                       </div>
 
                       {/* Main Address Headline */}
-                      <div className="space-y-1">
-                        <h3 className="font-editorial text-lg font-bold text-[#f8fafc] group-hover:text-[#d97706] transition-colors line-clamp-2">
+                      <div className="space-y-0.5">
+                        <h3 className="font-semibold text-sm text-white group-hover:text-amber-400 transition-colors line-clamp-2">
                           {tx.property_address}
                         </h3>
-                        <p className="text-xs text-[#94a3b8] font-medium">
+                        <p className="text-xs text-slate-400">
                           {tx.city}, {tx.state} {tx.zip}
                         </p>
                       </div>
 
                       {/* Client Info Block */}
-                      <div className="bg-[#131826] p-3 rounded-2xl border border-[#334155]/60 space-y-1.5 text-xs">
+                      <div className="bg-[#090d16] p-3 rounded-xl border border-white/[0.06] space-y-1 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-[#94a3b8] font-medium">Client:</span>
-                          <span className="font-bold text-[#f8fafc]">{tx.client_name}</span>
+                          <span className="text-slate-400 font-medium">Client:</span>
+                          <span className="font-semibold text-white">{tx.client_name}</span>
                         </div>
                         {tx.client_phone && (
                           <div className="flex items-center justify-between">
-                            <span className="text-[#94a3b8] font-medium">Phone:</span>
+                            <span className="text-slate-400 font-medium">Phone:</span>
                             <a
                               href={`tel:${tx.client_phone}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="font-mono-code text-sky-400 hover:underline flex items-center gap-1"
+                              className="font-mono text-sky-400 hover:underline flex items-center gap-1 tabular-nums"
                             >
                               <Phone className="h-3 w-3" />
                               <span>{tx.client_phone}</span>
                             </a>
                           </div>
                         )}
-                        <div className="flex items-center justify-between pt-1 border-t border-[#334155]/40 text-[11px]">
-                          <span className="text-sky-400 font-semibold">TC: {tx.tc_name}</span>
-                          <span className="text-[#94a3b8] font-medium">Agent: {tx.agent_name}</span>
+                        <div className="flex items-center justify-between pt-1 border-t border-white/[0.06] text-[11px]">
+                          <span className="text-sky-300 font-medium">TC: {tx.tc_name}</span>
+                          <span className="text-slate-400">Agent: {tx.agent_name}</span>
                         </div>
                       </div>
 
                       {/* Milestones Strip */}
-                      <div className="space-y-1.5 pt-1">
-                        <span className="text-[10px] text-[#94a3b8] font-bold uppercase tracking-wider block">
-                          Escrow Milestone Progress:
+                      <div className="space-y-1 pt-0.5">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+                          Milestone Track:
                         </span>
                         <MilestoneDotSequence milestones={tx.milestones} side={tx.side} onMilestoneClick={() => setSelectedTx(tx)} />
                       </div>
 
                       {/* Footer Actions */}
-                      <div className="pt-2 border-t border-[#334155]/60 flex items-center justify-between gap-2">
-                        <span className="text-xs text-[#94a3b8] font-mono-code">
+                      <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-2">
+                        <span className="text-xs text-slate-400 font-mono tabular-nums">
                           {tx.target_closing_date ? `Close: ${tx.target_closing_date}` : tx.contract_date ? `Contract: ${tx.contract_date}` : 'Active File'}
                         </span>
                         <button
                           onClick={() => setSelectedTx(tx)}
-                          className="px-3.5 py-1.5 rounded-xl bg-[#d97706]/15 hover:bg-[#d97706] text-[#d97706] hover:text-[#0f172a] border border-[#d97706]/30 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+                          className="px-3 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/30 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                         >
                           <Eye className="h-3.5 w-3.5" />
-                          <span>Inspect File</span>
+                          <span>Inspect</span>
                         </button>
                       </div>
                     </div>
@@ -1218,72 +1178,72 @@ export const OpsDashboard: React.FC = () => {
               </div>
             ) : (
               /* TABLE VIEW */
-              <div className="bg-[#1e293b] border border-[#334155] rounded-2xl overflow-hidden shadow-xl">
+              <div className="bg-[#111726] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs sm:text-sm">
-                    <thead className="bg-[#131826] text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider border-b border-[#334155]">
+                  <table className="w-full text-left text-xs whitespace-nowrap">
+                    <thead className="bg-[#0e1422] text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-white/[0.08]">
                       <tr>
-                        <th className="py-3.5 px-3 text-center">Review</th>
-                        <th className="py-3.5 px-4">Property Address</th>
-                        <th className="py-3.5 px-4">Client</th>
-                        <th className="py-3.5 px-3">Status / Side</th>
-                        <th className="py-3.5 px-4">Milestones</th>
-                        <th className="py-3.5 px-4">Assigned TC / Agent</th>
-                        <th className="py-3.5 px-4 text-right">Action</th>
+                        <th className="py-3 px-3 text-center">Review</th>
+                        <th className="py-3 px-4">Property Address</th>
+                        <th className="py-3 px-4">Client</th>
+                        <th className="py-3 px-3">Status / Side</th>
+                        <th className="py-3 px-4">Milestones</th>
+                        <th className="py-3 px-4">TC / Agent</th>
+                        <th className="py-3 px-4 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#334155]/60">
+                    <tbody className="divide-y divide-white/[0.05]">
                       {displayList.map((tx) => (
                         <tr
                           key={tx.id}
                           onClick={() => setSelectedTx(tx)}
-                          className="hover:bg-[#131826]/60 cursor-pointer transition-colors group"
+                          className="hover:bg-white/[0.03] cursor-pointer transition-colors group"
                         >
-                          <td className="py-3.5 px-3 text-center" onClick={(e) => handleToggleReviewFlag(tx.id, e)}>
+                          <td className="py-3 px-3 text-center" onClick={(e) => handleToggleReviewFlag(tx.id, e)}>
                             <button
-                              className={`p-1.5 rounded-lg border transition-all ${
+                              className={`p-1 rounded-md border transition-all cursor-pointer ${
                                 tx.flagged_for_review
                                   ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm'
-                                  : 'bg-[#131826] text-slate-500 border-[#334155] hover:text-amber-400'
+                                  : 'bg-[#090d16] text-slate-500 border-white/10 hover:text-amber-400'
                               }`}
                             >
-                              <Flag className={`h-4 w-4 ${tx.flagged_for_review ? 'fill-amber-400 text-amber-400' : ''}`} />
+                              <Flag className={`h-3.5 w-3.5 ${tx.flagged_for_review ? 'fill-amber-400 text-amber-400' : ''}`} />
                             </button>
                           </td>
 
-                          <td className="py-3.5 px-4">
-                            <span className="font-editorial font-bold text-sm text-[#f8fafc] group-hover:text-[#d97706] transition-colors block">
+                          <td className="py-3 px-4">
+                            <span className="font-medium text-xs text-white group-hover:text-amber-400 transition-colors block">
                               {tx.property_address}
                             </span>
-                            <span className="text-xs text-[#94a3b8]">
-                              {tx.city}, {tx.state} • <strong className="text-slate-400 font-mono-code">{tx.sisu_transaction_id || tx.id.substring(0, 8)}</strong>
+                            <span className="text-[11px] text-slate-400">
+                              {tx.city}, {tx.state} • <strong className="text-slate-300 font-mono tabular-nums">{tx.sisu_transaction_id || tx.id.substring(0, 8)}</strong>
                             </span>
                           </td>
 
-                          <td className="py-3.5 px-4">
-                            <span className="font-medium text-[#f8fafc] block">{tx.client_name}</span>
-                            {tx.client_phone && <span className="text-xs text-[#94a3b8] font-mono-code">{tx.client_phone}</span>}
+                          <td className="py-3 px-4">
+                            <span className="font-medium text-white block">{tx.client_name}</span>
+                            {tx.client_phone && <span className="text-[11px] text-slate-400 font-mono tabular-nums">{tx.client_phone}</span>}
                           </td>
 
-                          <td className="py-3.5 px-3">
-                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-amber-500/10 text-amber-400 border-amber-500/30">
+                          <td className="py-3 px-3">
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase border bg-amber-500/10 text-amber-300 border-amber-500/30">
                               {tx.status.replace(/_/g, ' ').toUpperCase()} ({tx.side.toUpperCase()})
                             </span>
                           </td>
 
-                          <td className="py-3.5 px-4">
+                          <td className="py-3 px-4">
                             <MilestoneDotSequence milestones={tx.milestones} side={tx.side} onMilestoneClick={() => setSelectedTx(tx)} />
                           </td>
 
-                          <td className="py-3.5 px-4 text-xs">
-                            <span className="text-sky-400 font-bold block">TC: {tx.tc_name}</span>
-                            <span className="text-[#94a3b8] block">Agent: {tx.agent_name}</span>
+                          <td className="py-3 px-4 text-xs">
+                            <span className="text-sky-300 font-medium block">TC: {tx.tc_name}</span>
+                            <span className="text-slate-400 block">Agent: {tx.agent_name}</span>
                           </td>
 
-                          <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => setSelectedTx(tx)}
-                              className="px-3 py-1.5 rounded-xl bg-[#d97706]/15 hover:bg-[#d97706] text-[#d97706] hover:text-[#0f172a] border border-[#d97706]/30 text-xs font-bold transition-all ml-auto"
+                              className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/30 text-xs font-semibold transition-all ml-auto cursor-pointer"
                             >
                               Inspect
                             </button>
@@ -1302,24 +1262,24 @@ export const OpsDashboard: React.FC = () => {
       {/* Add Escrow Deal Modal (TC) */}
       {isAddEscrowModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-3xl w-full max-w-xl p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-[#334155] pb-4">
+          <div className="bg-[#111726] border border-white/10 rounded-2xl w-full max-w-xl p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/40">
+                <span className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
                   <ShieldCheck className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="font-editorial text-xl font-bold text-[#f8fafc]">
+                  <h3 className="text-lg font-bold text-white">
                     New Escrow Deal Intake (TC)
                   </h3>
-                  <p className="text-xs text-[#94a3b8]">
+                  <p className="text-xs text-slate-400">
                     Add a contract-to-close file with automatic milestone timeline generation.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsAddEscrowModalOpen(false)}
-                className="p-1 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#334155]"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-white/10"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1327,7 +1287,7 @@ export const OpsDashboard: React.FC = () => {
 
             <form onSubmit={handleCreateEscrow} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
                   Property Address *
                 </label>
                 <input
@@ -1336,28 +1296,28 @@ export const OpsDashboard: React.FC = () => {
                   value={newEscrowAddress}
                   onChange={(e) => setNewEscrowAddress(e.target.value)}
                   placeholder="e.g. 500 N Michigan Ave, Unit 1204"
-                  className="w-full px-3.5 py-2.5 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                  className="w-full px-3.5 py-2.5 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-sky-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">City</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">City</label>
                   <input
                     type="text"
                     value={newEscrowCity}
                     onChange={(e) => setNewEscrowCity(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
                     Representation Side
                   </label>
                   <select
                     value={newEscrowSide}
                     onChange={(e) => setNewEscrowSide(e.target.value as any)}
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-bold text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-xs font-bold text-slate-100 focus:outline-none focus:border-sky-500"
                   >
                     <option value="buyer">Buyer Representation</option>
                     <option value="seller">Seller Representation</option>
@@ -1367,7 +1327,7 @@ export const OpsDashboard: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
                     Client Name
                   </label>
                   <input
@@ -1375,11 +1335,11 @@ export const OpsDashboard: React.FC = () => {
                     value={newEscrowClient}
                     onChange={(e) => setNewEscrowClient(e.target.value)}
                     placeholder="e.g. John Doe"
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
                     Client Phone
                   </label>
                   <input
@@ -1387,32 +1347,32 @@ export const OpsDashboard: React.FC = () => {
                     value={newEscrowClientPhone}
                     onChange={(e) => setNewEscrowClientPhone(e.target.value)}
                     placeholder="(312) 555-0100"
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-base text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-base text-slate-100 focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
                     Contract Date
                   </label>
                   <input
                     type="date"
                     value={newEscrowContractDate}
                     onChange={(e) => setNewEscrowContractDate(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
                     Target Closing Date
                   </label>
                   <input
                     type="date"
                     value={newEscrowClosingDate}
                     onChange={(e) => setNewEscrowClosingDate(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -1425,7 +1385,7 @@ export const OpsDashboard: React.FC = () => {
                   <select
                     value={newEscrowAgent}
                     onChange={(e) => setNewEscrowAgent(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-sky-500"
                   >
                     <option value="">-- Select Team Agent --</option>
                     {allAgentProfiles.map((a) => (
@@ -1442,7 +1402,7 @@ export const OpsDashboard: React.FC = () => {
                   <select
                     value={newEscrowTc}
                     onChange={(e) => setNewEscrowTc(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-[#131826] border border-[#334155] rounded-xl text-xs font-semibold text-[#f8fafc] focus:outline-none focus:border-sky-500"
+                    className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-sky-500"
                   >
                     <option value="">-- Unassigned TC --</option>
                     {allOpsUsers.map((t) => (
@@ -1454,18 +1414,18 @@ export const OpsDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#334155]">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsAddEscrowModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#94a3b8] hover:text-[#f8fafc]"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-[#0f172a] text-xs font-bold transition-all shadow-lg"
+                  className="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition-all shadow-lg"
                 >
                   {isSubmitting ? 'Saving...' : 'Create Escrow Deal'}
                 </button>
@@ -1480,25 +1440,25 @@ export const OpsDashboard: React.FC = () => {
       {/* Sisu Batch CSV/JSON Import Modal */}
       {isBatchImportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-3xl p-6 w-full max-w-2xl shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#334155]">
+          <div className="bg-[#111726] border border-white/10 rounded-3xl p-6 w-full max-w-2xl shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <span className="p-2 rounded-xl bg-purple-500/20 text-purple-400">
                   <Upload className="h-5 w-5" />
                 </span>
-                <h3 className="text-lg font-bold text-[#f8fafc]">
+                <h3 className="text-lg font-bold text-slate-100">
                   Import Sisu Batch (CSV or JSON)
                 </h3>
               </div>
               <button
                 onClick={() => setIsBatchImportModalOpen(false)}
-                className="p-1 rounded-lg text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#334155]"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-white/10"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="text-xs text-[#94a3b8]">
+            <p className="text-xs text-slate-400">
               Paste your raw Sisu JSON payload, webhooks payload, or CSV exported rows below. The system will automatically normalize property addresses, client contacts, assigned team members, and status codes.
             </p>
 
@@ -1510,7 +1470,7 @@ export const OpsDashboard: React.FC = () => {
             )}
 
             <div>
-              <label className="block text-xs font-bold text-[#94a3b8] uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
                 CSV Lines or JSON Payload *
               </label>
               <textarea
@@ -1518,15 +1478,15 @@ export const OpsDashboard: React.FC = () => {
                 value={batchImportText}
                 onChange={(e) => setBatchImportText(e.target.value)}
                 placeholder={`Example CSV:\nproperty_address,client_name,city,status\n101 Oak Street,John Doe,Waynesville,under_contract\n\nOr paste Sisu JSON array...`}
-                className="w-full p-3 bg-[#131826] border border-[#334155] rounded-xl text-xs font-mono text-[#f8fafc] focus:outline-none focus:border-purple-500"
+                className="w-full p-3 bg-[#0d121f] border border-white/10 rounded-xl text-xs font-mono text-slate-100 focus:outline-none focus:border-purple-500"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#334155]">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
               <button
                 type="button"
                 onClick={() => setIsBatchImportModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-[#94a3b8] hover:text-[#f8fafc]"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-100"
               >
                 Close
               </button>

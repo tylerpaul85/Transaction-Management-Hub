@@ -2,74 +2,114 @@
 
 @layer base {
   :root {
-    --canvas-bg: #0f172a;
-    --canvas-darker: #131826;
-    --card-surface: #1e293b;
-    --card-surface-subtle: #1a2235;
-    --card-border: #334155;
-    --card-border-subtle: #2a354c;
-    --accent-gold: #d97706;
-    --accent-copper: #c86d3b;
+    /* Surfaces */
+    --canvas-base: #090d16;
+    --canvas-subsurface: #0e1422;
+    --surface-default: #131b2e;
+    --surface-elevated: #182238;
+    --surface-overlay: #1e2b46;
+
+    /* Borders */
+    --border-subtle: rgba(255, 255, 255, 0.07);
+    --border-default: rgba(255, 255, 255, 0.12);
+    --border-hover: rgba(255, 255, 255, 0.18);
+    --border-focus: rgba(245, 158, 11, 0.5);
+
+    /* Text */
     --text-primary: #f8fafc;
-    --text-muted: #94a3b8;
-    --font-outfit: "Outfit", sans-serif;
-    --font-fraunces: "Fraunces", serif;
-    --font-jetbrains: "JetBrains Mono", monospace;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-subtle: #475569;
+
+    /* Brand Accent */
+    --accent-amber: #f59e0b;
+    --accent-amber-hover: #d97706;
+    --accent-amber-subtle: rgba(245, 158, 11, 0.12);
+
+    /* Status Colors */
+    --status-success: #10b981;
+    --status-info: #0284c7;
+    --status-warning: #f59e0b;
+    --status-danger: #f43f5e;
+
+    /* Typography */
+    --font-sans: "Inter", "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   body {
-    background-color: #0f172a;
-    color: #f8fafc;
-    font-family: var(--font-outfit);
+    background-color: var(--canvas-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  /* Prevent iOS Safari auto-zoom by enforcing >= 16px font size on all inputs */
+  /* Enforce tabular figures for all data, currency, dates, numbers */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Prevent iOS Safari auto-zoom by enforcing >= 16px font size on inputs */
   input, select, textarea, button {
-    font-size: 16px;
+    font-size: 14px;
+  }
+  @media (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px;
+    }
+  }
+
+  /* Focus ring standards */
+  *:focus-visible {
+    outline: 2px solid rgba(245, 158, 11, 0.45);
+    outline-offset: 2px;
   }
 }
 
-/* Custom scrollbars */
+/* Custom Scrollbar - Minimal, native feel */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: rgba(148, 163, 184, 0.2);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: rgba(148, 163, 184, 0.35);
 }
 
-.font-editorial {
-  font-family: var(--font-fraunces);
-}
-
-.font-mono-code {
-  font-family: var(--font-jetbrains);
-}
-
-.glass-card {
-  background: rgba(30, 41, 59, 0.7);
+/* Subtle glass surface for popovers / modals */
+.surface-glass {
+  background: rgba(19, 27, 46, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(51, 65, 85, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.glass-modal {
-  background: rgba(26, 34, 53, 0.95);
+.surface-glass-modal {
+  background: rgba(14, 20, 34, 0.94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(51, 65, 85, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Dark mode autofill fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #131b2e inset !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Print specific styles for CDA */
