@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { AppRole, DbProfile } from '../types/database.types';
 import {
@@ -20,6 +20,11 @@ import {
   UserCog,
   Check,
   Building,
+  Clock,
+  Sparkles,
+  ArrowUpDown,
+  Radio,
+  Calendar,
 } from 'lucide-react';
 
 const ROLE_CONFIG: Record<
@@ -57,12 +62,109 @@ const ROLE_CONFIG: Record<
   },
 };
 
+/**
+ * Calculates human-friendly relative activity format with rich badge data
+ */
+export function formatUserLastActive(dateStr?: string | null): {
+  label: string;
+  sublabel: string;
+  isOnline: boolean;
+  statusType: 'online' | 'today' | 'recent' | 'days' | 'older' | 'never';
+  badgeClass: string;
+} {
+  if (!dateStr) {
+    return {
+      label: 'Pending Login',
+      sublabel: 'Invited / Never logged in',
+      isOnline: false,
+      statusType: 'never',
+      badgeClass: 'bg-slate-700/40 text-slate-400 border-slate-600/50',
+    };
+  }
+
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    return {
+      label: 'Pending Login',
+      sublabel: 'Invited / Never logged in',
+      isOnline: false,
+      statusType: 'never',
+      badgeClass: 'bg-slate-700/40 text-slate-400 border-slate-600/50',
+    };
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 10) {
+    return {
+      label: 'Active Now',
+      sublabel: 'Online right now',
+      isOnline: true,
+      statusType: 'online',
+      badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]',
+    };
+  }
+
+  if (diffMinutes < 60) {
+    return {
+      label: `${diffMinutes}m ago`,
+      sublabel: `Today at ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
+      isOnline: false,
+      statusType: 'today',
+      badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
+    };
+  }
+
+  if (diffHours < 24) {
+    return {
+      label: `${diffHours}h ago`,
+      sublabel: `Today at ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
+      isOnline: false,
+      statusType: 'today',
+      badgeClass: 'bg-sky-500/10 text-sky-400 border-sky-500/25',
+    };
+  }
+
+  if (diffDays === 1) {
+    return {
+      label: 'Yesterday',
+      sublabel: date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      isOnline: false,
+      statusType: 'recent',
+      badgeClass: 'bg-slate-800 text-slate-300 border-slate-700',
+    };
+  }
+
+  if (diffDays < 7) {
+    return {
+      label: `${diffDays} days ago`,
+      sublabel: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      isOnline: false,
+      statusType: 'days',
+      badgeClass: 'bg-slate-800/60 text-slate-400 border-slate-700/60',
+    };
+  }
+
+  return {
+    label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    sublabel: 'Previous session',
+    isOnline: false,
+    statusType: 'older',
+    badgeClass: 'bg-slate-800/40 text-slate-500 border-slate-700/40',
+  };
+}
+
 export const AdminUserManagement: React.FC = () => {
   const [profiles, setProfiles] = useState<DbProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | AppRole>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deactivated' | 'online_today'>('all');
+  const [sortBy, setSortBy] = useState<'recent_active' | 'name' | 'role' | 'newest'>('recent_active');
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Modals state
@@ -479,27 +581,65 @@ export const AdminUserManagement: React.FC = () => {
     }
   };
 
-  // Filtered List
-  const filteredProfiles = profiles.filter((p) => {
-    if (roleFilter !== 'all' && p.role !== roleFilter) return false;
-    if (statusFilter === 'active' && !p.active) return false;
-    if (statusFilter === 'deactivated' && p.active) return false;
+  // Filtered & Sorted List
+  const processedProfiles = useMemo(() => {
+    let list = profiles.filter((p) => {
+      if (roleFilter !== 'all' && p.role !== roleFilter) return false;
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = (p.name || p.full_name || '').toLowerCase().includes(q);
-      const matchEmail = p.email.toLowerCase().includes(q);
-      const matchId = p.id.toLowerCase().includes(q);
-      return matchName || matchEmail || matchId;
-    }
-    return true;
-  });
+      const activeDate = p.last_active_at || p.updated_at || p.created_at;
+      const actInfo = formatUserLastActive(activeDate);
+
+      if (statusFilter === 'active' && !p.active) return false;
+      if (statusFilter === 'deactivated' && p.active) return false;
+      if (statusFilter === 'online_today') {
+        if (!p.active || (actInfo.statusType !== 'online' && actInfo.statusType !== 'today')) return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = (p.name || p.full_name || '').toLowerCase().includes(q);
+        const matchEmail = p.email.toLowerCase().includes(q);
+        const matchId = p.id.toLowerCase().includes(q);
+        return matchName || matchEmail || matchId;
+      }
+      return true;
+    });
+
+    // Sorting
+    list.sort((a, b) => {
+      if (sortBy === 'recent_active') {
+        const dateA = new Date(a.last_active_at || a.updated_at || a.created_at || 0).getTime();
+        const dateB = new Date(b.last_active_at || b.updated_at || b.created_at || 0).getTime();
+        return dateB - dateA;
+      }
+      if (sortBy === 'name') {
+        const nameA = (a.name || a.full_name || a.email).toLowerCase();
+        const nameB = (b.name || b.full_name || b.email).toLowerCase();
+        return nameA.localeCompare(nameB);
+      }
+      if (sortBy === 'role') {
+        return a.role.localeCompare(b.role);
+      }
+      if (sortBy === 'newest') {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      }
+      return 0;
+    });
+
+    return list;
+  }, [profiles, roleFilter, statusFilter, searchQuery, sortBy]);
 
   // Statistics
   const totalUsers = profiles.length;
   const activeAgents = profiles.filter((p) => p.role === 'agent' && p.active).length;
   const activeOps = profiles.filter((p) => (p.role === 'tc' || p.role === 'listing_coordinator') && p.active).length;
   const activeAdmins = profiles.filter((p) => p.role === 'admin' && p.active).length;
+  const activeTodayCount = profiles.filter((p) => {
+    const act = formatUserLastActive(p.last_active_at || p.updated_at || p.created_at);
+    return p.active && (act.statusType === 'online' || act.statusType === 'today');
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -537,7 +677,7 @@ export const AdminUserManagement: React.FC = () => {
           </div>
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
-              Total Users
+              Total Roster
             </span>
             <span className="text-xl font-bold text-white font-mono tabular-nums">
               {totalUsers}
@@ -546,15 +686,16 @@ export const AdminUserManagement: React.FC = () => {
         </div>
 
         <div className="bg-[#111726] border border-white/10 rounded-2xl p-4 shadow-lg flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-            <UserCheck className="h-5 w-5" />
+          <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 relative">
+            <Radio className="h-5 w-5" />
+            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
           </div>
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
-              Active Agents
+              Active Today
             </span>
             <span className="text-xl font-bold text-emerald-400 font-mono tabular-nums">
-              {activeAgents}
+              {activeTodayCount}
             </span>
           </div>
         </div>
@@ -600,7 +741,7 @@ export const AdminUserManagement: React.FC = () => {
                 User Roster & Access Control
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Manage system roles, send invite instructions, delete profiles, and provision Google Workspace allowlist accounts
+                Manage system roles, track last active logins, send invite instructions, and provision Google Workspace allowlist accounts
               </p>
             </div>
           </div>
@@ -614,15 +755,16 @@ export const AdminUserManagement: React.FC = () => {
           </button>
         </div>
 
-        {/* Search & Filter Bar */}
+        {/* Search, Filter & Sort Bar */}
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 pt-2">
+          {/* Search Box */}
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, email, or user ID..."
+              placeholder="Search by name, workspace email, or ID..."
               className="w-full pl-10 pr-4 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
             />
           </div>
@@ -644,17 +786,33 @@ export const AdminUserManagement: React.FC = () => {
             ))}
           </div>
 
-          {/* Status Filter */}
-          <div className="flex items-center gap-1.5">
+          {/* Activity / Status Filter */}
+          <div className="flex items-center gap-2">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
               className="px-3 py-2 bg-[#162035] border border-white/10 rounded-xl text-xs font-semibold text-slate-300 focus:outline-none focus:border-amber-400"
             >
-              <option value="all">All Status</option>
+              <option value="all">All Statuses</option>
+              <option value="online_today">🟢 Active Today / Online</option>
               <option value="active">Active Only</option>
               <option value="deactivated">Deactivated Only</option>
             </select>
+
+            {/* Sort Selector */}
+            <div className="flex items-center gap-1 bg-[#162035] border border-white/10 rounded-xl px-2.5 py-1.5">
+              <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-transparent text-xs font-semibold text-slate-300 focus:outline-none cursor-pointer"
+              >
+                <option value="recent_active" className="bg-[#111726]">Recently Active</option>
+                <option value="name" className="bg-[#111726]">Name (A-Z)</option>
+                <option value="role" className="bg-[#111726]">System Role</option>
+                <option value="newest" className="bg-[#111726]">Newest Added</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -668,6 +826,7 @@ export const AdminUserManagement: React.FC = () => {
                 <th className="py-3.5 px-4 sm:px-6">Team Member</th>
                 <th className="py-3.5 px-4">Workspace Email</th>
                 <th className="py-3.5 px-4">System Role</th>
+                <th className="py-3.5 px-4">Last Active</th>
                 <th className="py-3.5 px-4">Access Status</th>
                 <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
               </tr>
@@ -675,24 +834,28 @@ export const AdminUserManagement: React.FC = () => {
             <tbody className="divide-y divide-white/5">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="h-5 w-5 animate-spin text-amber-400" />
                       <span>Loading authorized team members...</span>
                     </div>
                   </td>
                 </tr>
-              ) : filteredProfiles.length === 0 ? (
+              ) : processedProfiles.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
                     No provisioned users match the search and filter criteria.
                   </td>
                 </tr>
               ) : (
-                filteredProfiles.map((p) => {
+                processedProfiles.map((p) => {
                   const roleConfig = ROLE_CONFIG[p.role] || ROLE_CONFIG.agent;
                   const isUpdating = isUpdatingRole === p.id;
                   const isInviting = isSendingInvite === p.id;
+
+                  // Evaluate activity timestamp
+                  const activityDate = p.last_active_at || p.updated_at || p.created_at;
+                  const activityInfo = formatUserLastActive(activityDate);
 
                   return (
                     <tr
@@ -701,18 +864,33 @@ export const AdminUserManagement: React.FC = () => {
                         !p.active ? 'opacity-60 bg-[#0d121f]/20' : ''
                       }`}
                     >
-                      {/* Name & Avatar */}
+                      {/* Name & Avatar with Active Status Indicator */}
                       <td className="py-4 px-4 sm:px-6 font-semibold text-slate-100">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-9 w-9 rounded-full bg-[#0d121f] border border-white/10 flex items-center justify-center font-bold text-xs text-amber-400 overflow-hidden flex-shrink-0">
-                            {p.avatar_url ? (
-                              <img
-                                src={p.avatar_url}
-                                alt={p.name || p.email}
-                                className="h-full w-full object-cover"
+                        <div className="flex items-center gap-3">
+                          <div className="relative flex-shrink-0">
+                            <div className="h-10 w-10 rounded-full bg-[#0d121f] border border-white/10 flex items-center justify-center font-bold text-xs text-amber-400 overflow-hidden shadow-inner">
+                              {p.avatar_url ? (
+                                <img
+                                  src={p.avatar_url}
+                                  alt={p.name || p.email}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                (p.name || p.email)[0].toUpperCase()
+                              )}
+                            </div>
+                            {/* Live Presence Indicator */}
+                            {p.active && (
+                              <span
+                                className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#111726] ${
+                                  activityInfo.isOnline
+                                    ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                                    : activityInfo.statusType === 'today'
+                                    ? 'bg-emerald-500'
+                                    : 'bg-slate-500'
+                                }`}
+                                title={activityInfo.sublabel}
                               />
-                            ) : (
-                              (p.name || p.email)[0].toUpperCase()
                             )}
                           </div>
                           <div>
@@ -730,7 +908,7 @@ export const AdminUserManagement: React.FC = () => {
                       <td className="py-4 px-4 font-mono tabular-nums text-slate-300">
                         <div className="flex items-center gap-1.5">
                           <Mail className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                          <span className="truncate max-w-[220px]">{p.email}</span>
+                          <span className="truncate max-w-[200px]">{p.email}</span>
                         </div>
                       </td>
 
@@ -762,6 +940,25 @@ export const AdminUserManagement: React.FC = () => {
                           {isUpdating && (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
                           )}
+                        </div>
+                      </td>
+
+                      {/* Last Active Column with Rich Formatting */}
+                      <td className="py-4 px-4">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${activityInfo.badgeClass}`}
+                            >
+                              {activityInfo.isOnline && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              )}
+                              <span>{activityInfo.label}</span>
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-mono block pl-0.5">
+                            {activityInfo.sublabel}
+                          </span>
                         </div>
                       </td>
 

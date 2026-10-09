@@ -72,6 +72,16 @@ async function hydrateUserFromProfile(email: string): Promise<AuthUser | null> {
   }
 
   if (p && p.active !== false) {
+    // Touch activity timestamp asynchronously
+    try {
+      (supabase.from('profiles') as any)
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', p.id)
+        .then();
+    } catch {
+      // ignore
+    }
+
     return {
       id: p.id,
       email: p.email,

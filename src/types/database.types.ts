@@ -53,6 +53,8 @@ export interface Database {
           ops_user_id: string | null;
           avatar_url?: string | null;
           active: boolean;
+          last_active_at?: string | null;
+          last_sign_in_at?: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -66,6 +68,8 @@ export interface Database {
           ops_user_id?: string | null;
           avatar_url?: string | null;
           active?: boolean;
+          last_active_at?: string | null;
+          last_sign_in_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -79,6 +83,8 @@ export interface Database {
           ops_user_id?: string | null;
           avatar_url?: string | null;
           active?: boolean;
+          last_active_at?: string | null;
+          last_sign_in_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
