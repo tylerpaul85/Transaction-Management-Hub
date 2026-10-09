@@ -20,7 +20,6 @@ import {
   UserCog,
   Check,
   Building,
-  Filter,
 } from 'lucide-react';
 
 const ROLE_CONFIG: Record<
@@ -102,6 +101,7 @@ export const AdminUserManagement: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingRole, setIsUpdatingRole] = useState<string | null>(null);
+  const [isSendingInvite, setIsSendingInvite] = useState<string | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ type, text });
@@ -131,6 +131,33 @@ export const AdminUserManagement: React.FC = () => {
   useEffect(() => {
     loadProfiles();
   }, []);
+
+  // Resend Invite to Transaction Hub Handler
+  const handleResendInvite = async (profile: DbProfile) => {
+    setIsSendingInvite(profile.id);
+    const targetEmail = profile.email.toLowerCase().trim();
+    const targetName = profile.name || profile.full_name || 'Team Member';
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-user-welcome', {
+        body: {
+          name: targetName,
+          email: targetEmail,
+          role: profile.role || 'agent',
+          appBaseUrl: window.location.origin,
+          googleDomain: import.meta.env.VITE_GOOGLE_WORKSPACE_DOMAIN || 'mattsmithrealestategroup.com',
+        },
+      });
+
+      if (error) throw error;
+      showToast(`Invitation email resent to ${targetEmail}!`);
+    } catch (err: any) {
+      console.error('Error resending invite:', err);
+      showToast(err.message || 'Failed to dispatch invitation email.', 'error');
+    } finally {
+      setIsSendingInvite(null);
+    }
+  };
 
   // Quick Role Change Handler
   const handleQuickRoleChange = async (profile: DbProfile, newRole: AppRole) => {
@@ -433,7 +460,7 @@ export const AdminUserManagement: React.FC = () => {
 
       await loadProfiles();
 
-      showToast(`User ${formData.name.trim()} provisioned and saved!`);
+      showToast(`User ${formData.name.trim()} provisioned and invite sent!`);
 
       // Reset form
       setFormData({
@@ -573,7 +600,7 @@ export const AdminUserManagement: React.FC = () => {
                 User Roster & Access Control
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Manage system roles, delete profiles, and provision Google Workspace allowlist accounts
+                Manage system roles, send invite instructions, delete profiles, and provision Google Workspace allowlist accounts
               </p>
             </div>
           </div>
@@ -665,6 +692,7 @@ export const AdminUserManagement: React.FC = () => {
                 filteredProfiles.map((p) => {
                   const roleConfig = ROLE_CONFIG[p.role] || ROLE_CONFIG.agent;
                   const isUpdating = isUpdatingRole === p.id;
+                  const isInviting = isSendingInvite === p.id;
 
                   return (
                     <tr
@@ -754,7 +782,28 @@ export const AdminUserManagement: React.FC = () => {
 
                       {/* Actions */}
                       <td className="py-4 px-4 sm:px-6 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Resend Invite Button */}
+                          <button
+                            type="button"
+                            disabled={isInviting}
+                            onClick={() => handleResendInvite(p)}
+                            title="Resend welcome email & sign-in instructions"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold transition-all shadow-sm active:scale-[0.98] disabled:opacity-50"
+                          >
+                            {isInviting ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                                <span>Sending...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-3.5 w-3.5" />
+                                <span>Resend Invite</span>
+                              </>
+                            )}
+                          </button>
+
                           {/* Edit Details Button */}
                           <button
                             type="button"
@@ -880,6 +929,26 @@ export const AdminUserManagement: React.FC = () => {
                 <label htmlFor="edit_active_toggle" className="text-xs font-medium text-slate-300 cursor-pointer">
                   Account is Active & Allowed to Sign In
                 </label>
+              </div>
+
+              {/* Modal Resend Invite Quick Action */}
+              <div className="p-3 bg-[#0d121f] rounded-xl border border-white/10 flex items-center justify-between gap-3">
+                <div className="text-xs text-slate-400">
+                  Need to send sign-in instructions to this user?
+                </div>
+                <button
+                  type="button"
+                  disabled={isSendingInvite === editingProfile.id}
+                  onClick={() => handleResendInvite(editingProfile)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  {isSendingInvite === editingProfile.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  <span>Resend Invite</span>
+                </button>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">

@@ -36,7 +36,7 @@ serve(async (req: Request) => {
       Deno.env.get('RESEND_FROM_EMAIL') || 'MSREG Operations <operations@msreg.com>';
     const roleLabel = ROLE_DISPLAY_NAMES[role] || role || 'User';
 
-    const subject = `Welcome to MSREG Marketing Hub — Your Account is Ready`;
+    const subject = `Welcome to MSREG Transaction Hub — Access & Sign In Instructions`;
 
     const html = `
 <!DOCTYPE html>
@@ -55,13 +55,13 @@ serve(async (req: Request) => {
           <tr>
             <td style="padding: 28px 24px; background: linear-gradient(180deg, #1e293b 0%, #131826 100%); border-bottom: 1px solid #334155;">
               <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #d97706; margin-bottom: 6px;">
-                MSREG Marketing Hub
+                MSREG Transaction Management Hub
               </div>
               <h1 style="margin: 0 0 6px 0; font-size: 22px; font-weight: 700; color: #f8fafc; font-family: Georgia, serif;">
-                Account Provisioned
+                Your Hub Access is Ready
               </h1>
               <p style="margin: 0; font-size: 13px; color: #94a3b8;">
-                Hello ${name || 'Team Member'}, you have been granted access to the MSREG Transaction Management system.
+                Hello ${name || 'Team Member'}, here is your official invitation and sign-in link to the MSREG Transaction Management Hub.
               </p>
             </td>
           </tr>
