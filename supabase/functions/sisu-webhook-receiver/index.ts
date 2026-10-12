@@ -886,7 +886,10 @@ serve(async (req: Request) => {
 
       // Only update status if explicitly provided in this payload
       if (rawStatus && typeof rawStatus === 'string' && rawStatus.trim() !== '') {
-        txUpdates.status = rawStatus.trim();
+        const sLower = rawStatus.toLowerCase().trim();
+        const isPending = sLower.includes('contract') || sLower.includes('pending') || sLower.includes('escrow') || sLower.includes('closing') || sLower.includes('clear to close');
+        const isClosed = !isPending && (sLower.includes('closed') || sLower === 'closed');
+        txUpdates.status = isClosed ? 'Closed' : (isPending ? 'Pending' : rawStatus.trim());
       }
 
       // Only update side if explicitly resolved
@@ -946,6 +949,8 @@ serve(async (req: Request) => {
       }
       if (closingTargetDate) {
         txUpdates.target_closing_date = closingTargetDate;
+      } else if (closedDate && txUpdates.status === 'Pending') {
+        txUpdates.target_closing_date = closedDate;
       }
       if (contractDate && typeof contractDate === 'string' && contractDate.trim() !== '') {
         txUpdates.contract_date = contractDate.trim();
@@ -954,12 +959,21 @@ serve(async (req: Request) => {
         txUpdates.price = Number(rawPrice);
       }
 
+      const effectiveStatus = txUpdates.status || existingTx.status || '';
+      const isTxClosed = effectiveStatus.toLowerCase().includes('closed') && !effectiveStatus.toLowerCase().includes('pending');
+
+      if (isTxClosed) {
+        if (closedDate) txUpdates.closed_date = closedDate;
+      } else {
+        txUpdates.closed_date = null;
+      }
+
       txUpdates.custom_fields = {
         ...(existingTx.custom_fields || {}),
         gross_agent_paid_income: grossAgentIncome,
         gci: gciNum,
         commission_rate: commRate,
-        closed_date: closedDate,
+        closed_date: isTxClosed ? closedDate : null,
         price: txUpdates.price,
       };
 
@@ -1012,9 +1026,7 @@ serve(async (req: Request) => {
         normInsertStatus.includes('closing') ||
         normInsertStatus.includes('clear to close');
       const isClosed =
-        normInsertStatus.includes('closed') ||
-        normInsertStatus === 'closed' ||
-        Boolean(closedDate);
+        !isPending && (normInsertStatus.includes('closed') || normInsertStatus === 'closed');
 
       if (!isPending && !isClosed) {
         console.log(`[Sisu Webhook] Skipping insertion of transaction ${finalSisuId} because status '${insertStatus}' is neither pending nor closed.`);
@@ -1063,7 +1075,7 @@ serve(async (req: Request) => {
             lender_phone: (lenderPhone && typeof lenderPhone === 'string' && lenderPhone.trim()) || null,
             loan_type: (loanType && typeof loanType === 'string' && loanType.trim()) || null,
             title_company: (titleCompany && typeof titleCompany === 'string' && titleCompany.trim()) || null,
-            target_closing_date: closingTargetDate || null,
+            target_closing_date: closingTargetDate || (!isClosed ? closedDate : null),
             listing_agent_id: listingAgentId,
             selling_agent_id: sellingAgentId,
             assigned_tc_id: assignedTcId,
@@ -1072,12 +1084,12 @@ serve(async (req: Request) => {
             gross_agent_paid_income: grossAgentIncome,
             gci: gciNum,
             commission_rate: commRate,
-            closed_date: closedDate,
+            closed_date: isClosed ? closedDate : null,
             custom_fields: {
               gross_agent_paid_income: grossAgentIncome,
               gci: gciNum,
               commission_rate: commRate,
-              closed_date: closedDate,
+              closed_date: isClosed ? closedDate : null,
               price: (rawPrice !== null && rawPrice !== undefined && !isNaN(Number(rawPrice))) ? Number(rawPrice) : null,
             },
           },

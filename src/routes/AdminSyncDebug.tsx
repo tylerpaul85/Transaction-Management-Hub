@@ -401,12 +401,16 @@ export const AdminSyncDebug: React.FC = () => {
         const rawClosedDate = getVal(cleanRow, ['closed (settlement) date', 'closed date', 'settlement date', 'closed_dt', 'closing_date', 'close date']);
         const closedDate = rawClosedDate ? rawClosedDate.slice(0, 10) : null;
 
-        if (status.toLowerCase().includes('closed') || closedDate) {
-          status = 'Closed';
-        }
-
         const rawTargetDate = getVal(cleanRow, ['forecasted closed date', 'forecast (projected) closed date', 'projected close date', 'target closing date']);
-        const targetClosingDate = rawTargetDate ? rawTargetDate.slice(0, 10) : null;
+        let targetClosingDate = rawTargetDate ? rawTargetDate.slice(0, 10) : null;
+
+        const sLower = status.toLowerCase();
+        const isPending = sLower.includes('contract') || sLower.includes('pending') || sLower.includes('escrow') || sLower.includes('closing') || sLower.includes('clear to close');
+        const isClosed = !isPending && (sLower.includes('closed') || sLower === 'closed');
+        status = isClosed ? 'Closed' : (isPending ? 'Pending' : status);
+        if (!isClosed && !targetClosingDate && closedDate) {
+          targetClosingDate = closedDate;
+        }
 
         const rawContractDate = getVal(cleanRow, ['under contract date', 'contract date', 'uc date', 'uc_dt']);
         const contractDate = rawContractDate ? rawContractDate.slice(0, 10) : null;
@@ -479,8 +483,14 @@ export const AdminSyncDebug: React.FC = () => {
             gci,
             price,
             commission_rate: commRate,
-            closed_date: closedDate,
+            closed_date: isClosed ? closedDate : null,
           };
+
+          if (isClosed) {
+            updateData.closed_date = closedDate;
+          } else {
+            updateData.closed_date = null;
+          }
 
           if (agentId) {
             if (side === 'seller') updateData.listing_agent_id = agentId;
@@ -506,6 +516,7 @@ export const AdminSyncDebug: React.FC = () => {
             selling_agent_id: side === 'buyer' ? agentId : null,
             price,
             target_closing_date: targetClosingDate,
+            closed_date: isClosed ? closedDate : null,
             contract_date: contractDate,
             other_party_agent: otherPartyAgent || null,
             other_party_phone: otherPartyPhone || null,
@@ -516,7 +527,7 @@ export const AdminSyncDebug: React.FC = () => {
               gci,
               price,
               commission_rate: commRate,
-              closed_date: closedDate,
+              closed_date: isClosed ? closedDate : null,
             },
           });
         }

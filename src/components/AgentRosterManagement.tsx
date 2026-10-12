@@ -22,10 +22,12 @@ import {
   X,
   Loader2,
   Camera,
+  Award,
 } from 'lucide-react';
 import { syncGoogleRosterToSupabase, GOOGLE_ROSTER_SHEET_URL } from '../utils/googleRosterSync';
 import { AgentHeadshotModal } from './AgentHeadshotModal';
 import { getStoredAvatar } from '../utils/avatarStorage';
+import { AGENT_LEVELS, getAgentLevelConfig } from '../data/agentLevels';
 
 export interface AgentRecord {
   id: string;
@@ -36,6 +38,7 @@ export interface AgentRecord {
   role: string | null;
   category: string | null;
   avatar_url?: string | null;
+  level?: number | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -67,6 +70,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
     phone: '',
     role: '',
     category: 'Buyer Specialist',
+    level: 1,
     active: true,
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -157,6 +161,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
       phone: '',
       role: 'STR Agent',
       category: 'Buyer Specialist',
+      level: 1,
       active: true,
     });
     setIsModalOpen(true);
@@ -171,6 +176,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
       phone: agent.phone || '',
       role: agent.role || '',
       category: agent.category || 'Buyer Specialist',
+      level: agent.level || 1,
       active: agent.active,
     });
     setIsModalOpen(true);
@@ -194,6 +200,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
           phone: formData.phone.trim() || null,
           role: formData.role.trim() || null,
           category: formData.category,
+          level: Number(formData.level) || 1,
           active: formData.active,
         }).select().single();
 
@@ -208,12 +215,26 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
             phone: formData.phone.trim() || null,
             role: formData.role.trim() || null,
             category: formData.category,
+            level: Number(formData.level) || 1,
             active: formData.active,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingAgent.id);
 
         if (error) throw error;
+
+        // Sync profiles table as well
+        try {
+          await (supabase.from('profiles') as any)
+            .update({
+              level: Number(formData.level) || 1,
+              updated_at: new Date().toISOString(),
+            })
+            .or(`agent_id.eq.${editingAgent.id},email.ilike.${emailNorm}`);
+        } catch (profErr) {
+          console.warn('Could not sync profile level:', profErr);
+        }
+
         showToast(`Agent "${formData.name}" updated successfully.`);
 
         setAgents((prev) =>
@@ -226,6 +247,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                   phone: formData.phone.trim() || null,
                   role: formData.role.trim() || null,
                   category: formData.category,
+                  level: Number(formData.level) || 1,
                   active: formData.active,
                 }
               : a
@@ -511,6 +533,7 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                   <th className="px-5 py-3.5">Agent Name</th>
                   <th className="px-5 py-3.5">Verified Email (Recipient)</th>
                   <th className="px-5 py-3.5">Role / Department</th>
+                  <th className="px-5 py-3.5 text-center">Agent Level</th>
                   <th className="px-5 py-3.5">Phone</th>
                   <th className="px-5 py-3.5 text-center">Active Deals</th>
                   <th className="px-5 py-3.5 text-center">Status</th>
@@ -587,6 +610,22 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#0d121f] border border-white/10 text-slate-400">
                           {agent.role || 'Agent'}
                         </span>
+                      </td>
+
+                      {/* Agent Level */}
+                      <td className="px-5 py-3.5 text-center">
+                        {(() => {
+                          const lvlCfg = getAgentLevelConfig(agent.level);
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold border ${lvlCfg.badgeStyle.bg} ${lvlCfg.badgeStyle.text} ${lvlCfg.badgeStyle.border} ${lvlCfg.badgeStyle.glow}`}
+                              title={`${lvlCfg.closingsPerMonth} • ${lvlCfg.commissionBuyer} Buyer / ${lvlCfg.commissionSeller} Seller`}
+                            >
+                              <Award className={`h-3 w-3 ${lvlCfg.badgeStyle.iconColor}`} />
+                              <span>Level {agent.level || 1}</span>
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Phone */}
@@ -751,15 +790,36 @@ export const AgentRosterManagement: React.FC<AgentRosterManagementProps> = ({ on
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[#cbd5e1] mb-1">Cell Phone</label>
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="e.g. 573-555-1234"
-                  className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#cbd5e1] mb-1">Cell Phone</label>
+                  <input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="e.g. 573-555-1234"
+                    className="w-full px-3.5 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#cbd5e1] mb-1">
+                    Agent Level (Tiers 1–7)
+                  </label>
+                  <select
+                    value={formData.level}
+                    onChange={(e) => setFormData({ ...formData, level: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-[#0d121f] border border-white/10 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-amber-400 cursor-pointer font-medium"
+                  >
+                    <option value={1}>Level 1 (0 - 1 closings/mo)</option>
+                    <option value={2}>Level 2 (1.1 - 2 closings/mo)</option>
+                    <option value={3}>Level 3 (2.1 - 3 closings/mo)</option>
+                    <option value={4}>Level 4 (3.1 - 4.5 closings/mo)</option>
+                    <option value={5}>Level 5 (4.6 - 5.5 closings/mo)</option>
+                    <option value={6}>Level 6 (5.6 - 6.5 closings/mo)</option>
+                    <option value={7}>Level 7 (6.6+ closings/mo)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-2">

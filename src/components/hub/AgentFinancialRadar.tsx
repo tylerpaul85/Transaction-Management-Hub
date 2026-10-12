@@ -145,7 +145,9 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
 
     transactions.forEach((tx) => {
       const income = getGrossIncome(tx);
-      const isClosed = String(tx.status).toLowerCase().trim() === 'closed' || Boolean(tx.closed_date);
+      const rawStat = String(tx.status || '').toLowerCase().trim();
+      const isPending = rawStat.includes('pending') || rawStat.includes('contract') || rawStat.includes('escrow');
+      const isClosed = !isPending && (rawStat === 'closed' || rawStat.includes('closed') || (Boolean(tx.closed_date) && (tx.closed_date ?? '') <= new Date().toISOString().slice(0, 10)));
       const { year, month } = getDealDate(tx);
 
       if (year && monthlyData[year] && month !== null && month >= 0 && month <= 11) {
@@ -243,7 +245,9 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
   // Filtered Deal Ledger Table
   const filteredDeals = useMemo(() => {
     return transactions.filter((tx) => {
-      const isClosed = String(tx.status).toLowerCase().trim() === 'closed' || Boolean(tx.closed_date);
+      const rawStat = String(tx.status || '').toLowerCase().trim();
+      const isPending = rawStat.includes('pending') || rawStat.includes('contract') || rawStat.includes('escrow');
+      const isClosed = !isPending && (rawStat === 'closed' || rawStat.includes('closed') || (Boolean(tx.closed_date) && (tx.closed_date ?? '') <= new Date().toISOString().slice(0, 10)));
       if (statusFilter === 'closed' && !isClosed) return false;
       if (statusFilter === 'pending' && isClosed) return false;
 
@@ -1009,7 +1013,9 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
                 </tr>
               ) : (
                 filteredDeals.map((tx) => {
-                  const isClosed = String(tx.status).toLowerCase().trim() === 'closed' || Boolean(tx.closed_date);
+                  const rawStat = String(tx.status || '').toLowerCase().trim();
+                  const isPending = rawStat.includes('pending') || rawStat.includes('contract') || rawStat.includes('escrow');
+                  const isClosed = !isPending && (rawStat === 'closed' || rawStat.includes('closed') || (Boolean(tx.closed_date) && (tx.closed_date ?? '') <= new Date().toISOString().slice(0, 10)));
                   const income = getGrossIncome(tx);
                   const splitPercent = (tx.commission_rate && tx.commission_rate >= 10) ? tx.commission_rate : 70;
                   const gciVal = tx.gci || (income / (splitPercent / 100));

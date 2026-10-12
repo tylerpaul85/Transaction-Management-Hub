@@ -894,9 +894,16 @@ export const AdminUserManagement: React.FC = () => {
                             )}
                           </div>
                           <div>
-                            <span className="block text-sm text-slate-100 font-bold">
-                              {p.name || p.full_name || 'Team Member'}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="block text-sm text-slate-100 font-bold">
+                                {p.name || p.full_name || 'Team Member'}
+                              </span>
+                              {p.role === 'agent' && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                  Level {p.level || 1}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[10px] text-slate-500 font-mono tabular-nums">
                               ID: {p.id.slice(0, 8)}...
                             </span>

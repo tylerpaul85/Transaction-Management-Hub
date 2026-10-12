@@ -52,6 +52,7 @@ export interface Database {
           agent_id: string | null;
           ops_user_id: string | null;
           avatar_url?: string | null;
+          level?: number | null;
           active: boolean;
           last_active_at?: string | null;
           last_sign_in_at?: string | null;
@@ -67,6 +68,7 @@ export interface Database {
           agent_id?: string | null;
           ops_user_id?: string | null;
           avatar_url?: string | null;
+          level?: number | null;
           active?: boolean;
           last_active_at?: string | null;
           last_sign_in_at?: string | null;
@@ -82,6 +84,7 @@ export interface Database {
           agent_id?: string | null;
           ops_user_id?: string | null;
           avatar_url?: string | null;
+          level?: number | null;
           active?: boolean;
           last_active_at?: string | null;
           last_sign_in_at?: string | null;
@@ -99,6 +102,7 @@ export interface Database {
           role: string | null;
           category: string | null;
           avatar_url?: string | null;
+          level?: number | null;
           sisu_agent_id: string | null;
           active: boolean;
           created_at: string;
@@ -113,6 +117,7 @@ export interface Database {
           role?: string | null;
           category?: string | null;
           avatar_url?: string | null;
+          level?: number | null;
           sisu_agent_id?: string | null;
           active?: boolean;
           created_at?: string;
@@ -127,6 +132,7 @@ export interface Database {
           role?: string | null;
           category?: string | null;
           avatar_url?: string | null;
+          level?: number | null;
           sisu_agent_id?: string | null;
           active?: boolean;
           created_at?: string;

@@ -404,8 +404,8 @@ serve(async (req: Request) => {
         client_phone: clientPhone,
         client_email: clientEmail,
         contract_date: contractDate,
-        closed_date: closedDate,
-        target_closing_date: targetClosingDate,
+        closed_date: status === 'Closed' ? closedDate : null,
+        target_closing_date: targetClosingDate || (status !== 'Closed' ? closedDate : null),
         price: priceNum,
         gross_agent_paid_income: grossAgentIncome,
         gci: gciNum,
@@ -421,7 +421,7 @@ serve(async (req: Request) => {
           gross_agent_paid_income: grossAgentIncome,
           gci: gciNum,
           commission_rate: commRate,
-          closed_date: closedDate,
+          closed_date: status === 'Closed' ? closedDate : null,
           price: priceNum,
         },
       });
@@ -857,7 +857,7 @@ serve(async (req: Request) => {
         if (status && status.trim() !== '') {
           const sLower = status.toLowerCase();
           const isPending = sLower.includes('contract') || sLower.includes('pending') || sLower.includes('escrow') || sLower.includes('closing') || sLower.includes('clear to close');
-          const isClosed = sLower.includes('closed') || sLower === 'closed' || Boolean(closedDate);
+          const isClosed = !isPending && (sLower.includes('closed') || sLower === 'closed');
           txUpdates.status = isClosed ? 'Closed' : (isPending ? 'Pending' : status.trim());
         }
 
@@ -906,6 +906,8 @@ serve(async (req: Request) => {
         }
         if (closingTargetDate) {
           txUpdates.target_closing_date = closingTargetDate;
+        } else if (closedDate && txUpdates.status === 'Pending') {
+          txUpdates.target_closing_date = closedDate;
         }
         if (contractDate && typeof contractDate === 'string' && contractDate.trim() !== '') {
           txUpdates.contract_date = contractDate.trim();
@@ -915,7 +917,15 @@ serve(async (req: Request) => {
         if (gciNum !== null) txUpdates.gci = gciNum;
         if (commRate !== null) txUpdates.commission_rate = commRate;
         if (priceNum !== null) txUpdates.price = priceNum;
-        if (closedDate) txUpdates.closed_date = closedDate;
+
+        const effectiveStatus = txUpdates.status || existingTx.status || '';
+        const isTxClosed = effectiveStatus.toLowerCase().includes('closed') && !effectiveStatus.toLowerCase().includes('pending');
+
+        if (isTxClosed) {
+          if (closedDate) txUpdates.closed_date = closedDate;
+        } else {
+          txUpdates.closed_date = null;
+        }
 
         if (matchedAgentId) {
           if (side === 'seller') txUpdates.listing_agent_id = matchedAgentId;
@@ -928,7 +938,7 @@ serve(async (req: Request) => {
           gci: gciNum,
           commission_rate: commRate,
           price: priceNum,
-          closed_date: closedDate,
+          closed_date: isTxClosed ? closedDate : null,
         };
 
         if (!existingTx.assigned_tc_id) {
@@ -965,9 +975,7 @@ serve(async (req: Request) => {
           normInsertStatus.includes('closing') ||
           normInsertStatus.includes('clear to close');
         const isClosed =
-          normInsertStatus.includes('closed') ||
-          normInsertStatus === 'closed' ||
-          Boolean(closedDate);
+          !isPending && (normInsertStatus.includes('closed') || normInsertStatus === 'closed');
 
         if (!isPending && !isClosed) {
           console.log(`[Reconciliation] Skipping deal ${sisuTxId} because status '${insertStatus}' is neither pending nor closed.`);
@@ -1014,7 +1022,7 @@ serve(async (req: Request) => {
               lender_phone: lenderPhone || null,
               loan_type: loanType || null,
               title_company: titleCompany || null,
-              target_closing_date: closingTargetDate || null,
+              target_closing_date: closingTargetDate || (!isClosed ? closedDate : null),
               contract_date: contractDate || null,
               assigned_tc_id: assignedTcId,
               listing_agent_id: insertSide === 'seller' ? matchedAgentId : null,
@@ -1022,13 +1030,13 @@ serve(async (req: Request) => {
               gross_agent_paid_income: grossAgentIncome,
               gci: gciNum,
               commission_rate: commRate,
-              closed_date: closedDate,
+              closed_date: isClosed ? closedDate : null,
               price: priceNum,
               custom_fields: {
                 gross_agent_paid_income: grossAgentIncome,
                 gci: gciNum,
                 commission_rate: commRate,
-                closed_date: closedDate,
+                closed_date: isClosed ? closedDate : null,
                 price: priceNum,
               },
             },

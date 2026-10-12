@@ -17,6 +17,8 @@ import { GuidesContent } from '../components/hub/GuidesContent';
 import { AgentHeadshotModal } from '../components/AgentHeadshotModal';
 import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
 import { AgentFinancialRadar } from '../components/hub/AgentFinancialRadar';
+import { AgentLevelModal } from '../components/AgentLevelModal';
+import { getAgentLevelConfig } from '../data/agentLevels';
 import { getStoredAvatar } from '../utils/avatarStorage';
 import {
   Building,
@@ -48,6 +50,8 @@ import {
   Check,
   LayoutGrid,
   List,
+  Award,
+  Edit3,
 } from 'lucide-react';
 import { HubRoadmapStep, RoadmapTabType, StepStatus } from '../types/hub';
 
@@ -76,7 +80,9 @@ export const MyDealsView: React.FC = () => {
     role?: string | null;
     category?: string | null;
     avatar_url?: string | null;
+    level?: number | null;
   }[]>([]);
+  const [isLevelModalOpen, setIsLevelModalOpen] = useState(false);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>(() => {
     return sessionStorage.getItem('mydeals_agent_filter') || 'All';
   });
@@ -121,7 +127,7 @@ export const MyDealsView: React.FC = () => {
     async function loadLiveAgentDeals() {
       try {
         const { data: dbAgents } = await (supabase.from('agents') as any)
-          .select('id, name, email, phone, role, category')
+          .select('id, name, email, phone, role, category, avatar_url, level')
           .order('name');
         if (dbAgents) {
           setAgentRoster(dbAgents);
@@ -186,13 +192,15 @@ export const MyDealsView: React.FC = () => {
             }
 
             // Deal must be either closed (for financial analytics) OR pending / under contract (for active escrow files)
-            const isClosed = s === 'closed' || s.includes('closed') || Boolean(t.custom_fields?.closed_date);
             const isPending =
               s.includes('under contract') ||
               s.includes('pending') ||
               s.includes('escrow') ||
               s.includes('closing') ||
               s.includes('clear to close');
+
+            const isClosed =
+              !isPending && (s === 'closed' || s.includes('closed') || (Boolean(t.closed_date) && t.closed_date <= new Date().toISOString().slice(0, 10)));
 
             return isClosed || isPending;
           });
@@ -205,7 +213,14 @@ export const MyDealsView: React.FC = () => {
             const tcName = t.assigned_tc?.name || (t.tc_name && t.tc_name !== 'Unassigned TC' ? t.tc_name : fallbackTc.tc_name);
             const tcEmail = normalizeTcEmailFromAllowlist(t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email);
 
-            const isClosed = String(t.status).toLowerCase().trim() === 'closed' || Boolean(t.custom_fields?.closed_date);
+            const rawStat = String(t.status || '').toLowerCase().trim();
+            const dealIsPending =
+              rawStat.includes('under contract') ||
+              rawStat.includes('pending') ||
+              rawStat.includes('escrow') ||
+              rawStat.includes('closing') ||
+              rawStat.includes('clear to close');
+            const isClosed = !dealIsPending && (rawStat === 'closed' || rawStat.includes('closed') || (Boolean(t.closed_date) && t.closed_date <= new Date().toISOString().slice(0, 10)));
 
             return {
               id: t.id,
@@ -303,26 +318,38 @@ export const MyDealsView: React.FC = () => {
   // Current viewed agent object
   const currentAgentObj = useMemo(() => {
     if (selectedAgentFilter !== 'All') {
-      return (
-        agentRoster.find((a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase()) || {
-          id: currentUser?.agent_id || currentUser?.id || '',
-          name: selectedAgentFilter,
-          email: currentUser?.email || '',
-          phone: '(573) 261-3113',
-          role: 'Sales Specialist',
-          category: 'Matt Smith Real Estate Group',
-          avatar_url: null,
-        }
-      );
+      const found = agentRoster.find((a) => a.name.toLowerCase() === selectedAgentFilter.toLowerCase());
+      if (found) {
+        return {
+          ...found,
+          level: Number(found.level) || 1,
+        };
+      }
+      return {
+        id: currentUser?.agent_id || currentUser?.id || '',
+        name: selectedAgentFilter,
+        email: currentUser?.email || '',
+        phone: '(573) 261-3113',
+        role: 'Sales Specialist',
+        category: 'Matt Smith Real Estate Group',
+        avatar_url: null,
+        level: 1,
+      };
     }
+    const myMatch = agentRoster.find(
+      (a) =>
+        (currentUser?.email && a.email?.toLowerCase() === currentUser.email.toLowerCase()) ||
+        a.name.toLowerCase() === currentUser?.fullName?.toLowerCase()
+    );
     return {
-      id: currentUser?.id || '',
-      name: currentUser?.fullName || 'Matt Smith Team Agent',
-      email: currentUser?.email || 'agent@mattsmithrealestategroup.com',
-      phone: '(573) 261-3113',
-      role: isOps ? 'Operations Team' : 'Lead Specialist',
-      category: 'Matt Smith Real Estate Group',
-      avatar_url: null,
+      id: myMatch?.id || currentUser?.agent_id || currentUser?.id || '',
+      name: myMatch?.name || currentUser?.fullName || 'Matt Smith Team Agent',
+      email: myMatch?.email || currentUser?.email || 'agent@mattsmithrealestategroup.com',
+      phone: myMatch?.phone || '(573) 261-3113',
+      role: isOps ? 'Operations Team' : (myMatch?.role || 'Lead Specialist'),
+      category: myMatch?.category || 'Matt Smith Real Estate Group',
+      avatar_url: myMatch?.avatar_url || null,
+      level: Number(myMatch?.level) || 1,
     };
   }, [selectedAgentFilter, agentRoster, currentUser, isOps]);
 
@@ -1105,7 +1132,7 @@ export const MyDealsView: React.FC = () => {
                 </div>
 
                 {/* Agent Bio & Details */}
-                <div className="space-y-1 min-w-0">
+                <div className="space-y-1.5 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-lg sm:text-xl font-bold text-white truncate">
                       {currentAgentObj.name}
@@ -1113,6 +1140,37 @@ export const MyDealsView: React.FC = () => {
                     <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
                       Verified Agent
                     </span>
+
+                    {/* Agent Level Badge */}
+                    {(() => {
+                      const levelCfg = getAgentLevelConfig(currentAgentObj.level);
+                      return (
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setIsLevelModalOpen(true)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${levelCfg.badgeStyle.bg} ${levelCfg.badgeStyle.text} ${levelCfg.badgeStyle.border} ${levelCfg.badgeStyle.glow} hover:scale-105 active:scale-95`}
+                            title="Click to view Agent Level details, commission splits & unlocked perks"
+                          >
+                            <Award className={`h-3.5 w-3.5 ${levelCfg.badgeStyle.iconColor}`} />
+                            <span>Level {currentAgentObj.level || 1}</span>
+                            <span className="text-[10px] opacity-75 hidden sm:inline">• {levelCfg.closingsPerMonth}</span>
+                          </button>
+
+                          {(isOps || isAdmin) && (
+                            <button
+                              type="button"
+                              onClick={() => setIsLevelModalOpen(true)}
+                              className="px-1.5 py-0.5 rounded-md text-[10px] font-bold text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 transition-all border border-amber-500/30 cursor-pointer flex items-center gap-1"
+                              title="Update Agent Level"
+                            >
+                              <Edit3 className="h-2.5 w-2.5" />
+                              <span className="hidden md:inline">Change</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <p className="text-xs text-slate-400 flex items-center gap-1.5">
@@ -1982,6 +2040,27 @@ export const MyDealsView: React.FC = () => {
           onRequestChangesByTc={handleRequestChangesByTc}
         />
       )}
+
+      {/* Agent Level Perks & Management Modal */}
+      <AgentLevelModal
+        isOpen={isLevelModalOpen}
+        onClose={() => setIsLevelModalOpen(false)}
+        agentId={currentAgentObj.id}
+        agentName={currentAgentObj.name}
+        currentLevel={currentAgentObj.level || 1}
+        canEdit={Boolean(isOps || isAdmin)}
+        onLevelUpdated={(newLevel) => {
+          setAgentRoster((prev) =>
+            prev.map((a) =>
+              a.id === currentAgentObj.id || a.name.toLowerCase() === currentAgentObj.name.toLowerCase()
+                ? { ...a, level: newLevel }
+                : a
+            )
+          );
+          setActionSuccessMessage(`Successfully updated ${currentAgentObj.name} to Level ${newLevel}!`);
+          setTimeout(() => setActionSuccessMessage(null), 4000);
+        }}
+      />
 
       {/* Floating Action Success Toast */}
       {actionSuccessMessage && (
