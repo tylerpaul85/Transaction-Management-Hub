@@ -100,7 +100,6 @@ export const AGENT_LEVELS: Record<number, AgentLevelTier> = {
     perks: [
       'Commission tier increase: 50% buyer side / 35% seller side (+10% Legacy)',
       'Priority ISA appointment distribution',
-      '$250 fashion investment & swag rewards',
       'Advanced production coaching & leadership council eligibility',
     ],
     badgeStyle: {
