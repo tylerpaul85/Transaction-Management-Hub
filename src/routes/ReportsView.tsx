@@ -5,6 +5,10 @@ import { getStoredAvatar } from '../utils/avatarStorage';
 import {
   BarChart3,
   TrendingUp,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Activity,
   Building,
   DollarSign,
   Calendar,
@@ -35,6 +39,12 @@ import {
   Award,
 } from 'lucide-react';
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const FULL_MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
 export interface ActiveListingRecord {
   id: string;
   sisu_transaction_id: string | null;
@@ -51,6 +61,7 @@ export interface ActiveListingRecord {
   client_email: string | null;
   contract_date: string | null;
   listing_date: string | null;
+  closed_date?: string | null;
   created_at: string;
   updated_at: string;
   days_on_market: number | null;
@@ -75,10 +86,23 @@ export const ReportsView: React.FC = () => {
 
   // Listings data & loading
   const [listings, setListings] = useState<ActiveListingRecord[]>([]);
+  const [allSellerDeals, setAllSellerDeals] = useState<ActiveListingRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [lastSyncedTime, setLastSyncedTime] = useState<string>('Live Supabase Feed');
+
+  // Trajectory analytics chart states
+  const [chartMetric, setChartMetric] = useState<'count' | 'volume'>('count');
+  const [chartYear, setChartYear] = useState<number | 'all'>('all');
+  const [chartAgent, setChartAgent] = useState<string>('All');
+  const [chartViewType, setChartViewType] = useState<'line' | 'bars'>('line');
+  const [hoveredMonthIndex, setHoveredMonthIndex] = useState<number | null>(null);
+  const [visibleSeries, setVisibleSeries] = useState<{ [key: string]: boolean }>({
+    '2026': true,
+    '2025': true,
+    '2024': true,
+  });
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,27 +117,49 @@ export const ReportsView: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<ActiveListingRecord | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Load listings from Supabase
+  // Load listings & historical seller transactions from Supabase
   const loadActiveListings = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          listing_agent:agents!transactions_listing_agent_id_fkey(
-            id, name, email, phone, avatar_url, role, level
-          )
-        `)
-        .or('status.ilike.%listing%,status.eq.Live Listing,status.eq.Signed')
-        .order('created_at', { ascending: false });
+      const allFetched: ActiveListingRecord[] = [];
+      let page = 0;
+      const pageSize = 1000;
 
-      if (error) throw error;
+      while (true) {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select(`
+            *,
+            listing_agent:agents!transactions_listing_agent_id_fkey(
+              id, name, email, phone, avatar_url, role, level
+            )
+          `)
+          .or('side.ilike.%seller%,side.ilike.%list%,status.ilike.%listing%,status.eq.Live Listing,status.eq.Signed')
+          .order('created_at', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
-      if (data) {
-        setListings(data as unknown as ActiveListingRecord[]);
-        setLastSyncedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allFetched.push(...(data as unknown as ActiveListingRecord[]));
+        }
+
+        if (!data || data.length < pageSize) {
+          break;
+        }
+        page++;
       }
+
+      setAllSellerDeals(allFetched);
+
+      // Separate active listings for the directory, cards, and active market share
+      const activeOnly = allFetched.filter((item) => {
+        const st = (item.status || '').toLowerCase().trim();
+        return st.includes('live') || st.includes('signed') || st === 'listing' || st.includes('active');
+      });
+
+      setListings(activeOnly);
+      setLastSyncedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     } catch (err: any) {
       console.error('Error loading active listings:', err);
     } finally {
@@ -151,6 +197,15 @@ export const ReportsView: React.FC = () => {
     });
     return Array.from(set).sort();
   }, [listings]);
+
+  // All historical listing agents for trajectory chart filtering
+  const allHistoricalAgents = useMemo(() => {
+    const set = new Set<string>();
+    allSellerDeals.forEach((l) => {
+      if (l.listing_agent?.name) set.add(l.listing_agent.name);
+    });
+    return Array.from(set).sort();
+  }, [allSellerDeals]);
 
   const availableCities = useMemo(() => {
     const set = new Set<string>();
@@ -294,20 +349,108 @@ export const ReportsView: React.FC = () => {
     };
   }, [listings]);
 
-  // Monthly Breakdown Analytics (for graphs)
+  // Multi-Year Chart Analytics (2026, 2025, 2024 historical deals from Sisu)
+  const chartData = useMemo(() => {
+    const monthlyStats: {
+      [year: number]: {
+        count: number[];
+        volume: number[];
+        totalCount: number;
+        totalVolume: number;
+        closedCount: number[];
+        activeCount: number[];
+      };
+    } = {
+      2026: { count: Array(12).fill(0), volume: Array(12).fill(0), totalCount: 0, totalVolume: 0, closedCount: Array(12).fill(0), activeCount: Array(12).fill(0) },
+      2025: { count: Array(12).fill(0), volume: Array(12).fill(0), totalCount: 0, totalVolume: 0, closedCount: Array(12).fill(0), activeCount: Array(12).fill(0) },
+      2024: { count: Array(12).fill(0), volume: Array(12).fill(0), totalCount: 0, totalVolume: 0, closedCount: Array(12).fill(0), activeCount: Array(12).fill(0) },
+    };
+
+    allSellerDeals.forEach((tx) => {
+      // Agent filter for chart
+      if (chartAgent !== 'All' && tx.listing_agent?.name !== chartAgent) {
+        return;
+      }
+
+      const rawDateStr = tx.contract_date || tx.closed_date || tx.listing_date || tx.created_at;
+      if (!rawDateStr) return;
+      const d = new Date(rawDateStr);
+      if (isNaN(d.getTime())) return;
+      const yr = d.getFullYear();
+      const m = d.getMonth();
+      const price = Number(tx.price || tx.list_price || 0);
+
+      if (monthlyStats[yr] && m >= 0 && m <= 11) {
+        monthlyStats[yr].count[m] += 1;
+        monthlyStats[yr].volume[m] += price;
+        monthlyStats[yr].totalCount += 1;
+        monthlyStats[yr].totalVolume += price;
+
+        const st = (tx.status || '').toLowerCase().trim();
+        if (st.includes('live') || st.includes('signed') || st === 'listing') {
+          monthlyStats[yr].activeCount[m] += 1;
+        } else {
+          monthlyStats[yr].closedCount[m] += 1;
+        }
+      }
+    });
+
+    // Dynamic scale max across visible series
+    let maxCount = 10;
+    let maxVolume = 1000000;
+
+    [2026, 2025, 2024].forEach((yr) => {
+      const isVisible = chartYear === 'all' ? visibleSeries[String(yr)] : chartYear === yr;
+      if (isVisible) {
+        monthlyStats[yr].count.forEach((c) => {
+          if (c > maxCount) maxCount = c;
+        });
+        monthlyStats[yr].volume.forEach((v) => {
+          if (v > maxVolume) maxVolume = v;
+        });
+      }
+    });
+
+    // Add 15% headroom
+    const scaledMaxCount = Math.max(Math.ceil((maxCount * 1.15) / 5) * 5, 20);
+    const scaledMaxVolume = Math.max(Math.ceil((maxVolume * 1.15) / 1000000) * 1000000, 2000000);
+
+    // Compute YoY Pace vs 2025
+    const yoyCountGrowth =
+      monthlyStats[2025].totalCount > 0
+        ? ((monthlyStats[2026].totalCount - monthlyStats[2025].totalCount) / monthlyStats[2025].totalCount) * 100
+        : null;
+
+    const yoyVolumeGrowth =
+      monthlyStats[2025].totalVolume > 0
+        ? ((monthlyStats[2026].totalVolume - monthlyStats[2025].totalVolume) / monthlyStats[2025].totalVolume) * 100
+        : null;
+
+    return {
+      monthlyStats,
+      scaledMaxCount,
+      scaledMaxVolume,
+      yoyCountGrowth,
+      yoyVolumeGrowth,
+    };
+  }, [allSellerDeals, chartAgent, visibleSeries, chartYear]);
+
+  // Monthly Breakdown Analytics (for bar view and historical trends)
   const monthlyTrends = useMemo(() => {
-    // Group listings by month added
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const currentYear = new Date().getFullYear();
+    const targetYear = chartYear === 'all' ? 2026 : chartYear;
 
     const dataByMonth: Record<number, { count: number; volume: number; name: string }> = {};
     for (let i = 0; i < 12; i++) {
-      dataByMonth[i] = { count: 0, volume: 0, name: months[i] };
+      dataByMonth[i] = { count: 0, volume: 0, name: MONTH_NAMES[i] };
     }
 
-    listings.forEach((l) => {
-      const d = new Date(l.created_at || l.listing_date || '');
-      if (!isNaN(d.getTime())) {
+    allSellerDeals.forEach((l) => {
+      if (chartAgent !== 'All' && l.listing_agent?.name !== chartAgent) return;
+
+      const raw = l.contract_date || l.closed_date || l.listing_date || l.created_at;
+      if (!raw) return;
+      const d = new Date(raw);
+      if (!isNaN(d.getTime()) && d.getFullYear() === targetYear) {
         const m = d.getMonth();
         const p = l.price || l.list_price || 0;
         dataByMonth[m].count++;
@@ -318,9 +461,43 @@ export const ReportsView: React.FC = () => {
     const list = Object.values(dataByMonth);
     const maxCount = Math.max(...list.map((m) => m.count), 1);
     const maxVolume = Math.max(...list.map((m) => m.volume), 1);
+    const totalCount = list.reduce((acc, cur) => acc + cur.count, 0);
+    const totalVolume = list.reduce((acc, cur) => acc + cur.volume, 0);
 
-    return { list, maxCount, maxVolume };
-  }, [listings]);
+    return { list, maxCount, maxVolume, totalCount, totalVolume, targetYear };
+  }, [allSellerDeals, chartYear, chartAgent]);
+
+  // SVG Chart Dimensions & Path Generators
+  const chartWidth = 900;
+  const chartHeight = 280;
+  const paddingX = 45;
+  const paddingY = 30;
+  const innerW = chartWidth - paddingX * 2;
+  const innerH = chartHeight - paddingY * 2;
+
+  const activeMax = chartMetric === 'count' ? chartData.scaledMaxCount : chartData.scaledMaxVolume;
+
+  const getCoordinates = (monthIdx: number, val: number) => {
+    const x = paddingX + (monthIdx / 11) * innerW;
+    const y = chartHeight - paddingY - (Math.min(val, activeMax) / (activeMax || 1)) * innerH;
+    return { x, y };
+  };
+
+  const buildPathD = (values: number[]) => {
+    return values
+      .map((val, idx) => {
+        const { x, y } = getCoordinates(idx, val);
+        return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+      })
+      .join(' ');
+  };
+
+  const buildAreaD = (values: number[]) => {
+    const lineD = buildPathD(values);
+    const lastX = paddingX + innerW;
+    const baseY = chartHeight - paddingY;
+    return `${lineD} L ${lastX.toFixed(1)} ${baseY.toFixed(1)} L ${paddingX.toFixed(1)} ${baseY.toFixed(1)} Z`;
+  };
 
   // Price Tier Distribution
   const priceTiers = useMemo(() => {
@@ -955,44 +1132,529 @@ export const ReportsView: React.FC = () => {
          ───────────────────────────────────────────────────────────────── */}
       {activeReportTab === 'charts_analytics' && (
         <div className="space-y-6">
-          {/* Active Listings Per Month Chart */}
+          {/* Multi-Year Listing & Seller Velocity Line Graph (Financial Radar Model) */}
           <div className="bg-[#111726] border border-white/10 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-amber-400" />
-                  <span>Listings Added by Month</span>
-                </h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 tracking-tight">
+                    <Activity className="h-4 w-4 text-emerald-400" />
+                    <span>Monthly Listing Velocity & Year-over-Year Trajectory</span>
+                  </h3>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Live Sisu Feed • {allSellerDeals.length} Historical Records
+                  </span>
+                </div>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Month-over-month inventory intake tracking from Sisu
+                  Trajectory comparing 2026 listing intake and volume with 2025 and 2024 historical performance
                 </p>
+              </div>
+
+              {/* Controls: Metric Toggle, Year Selector, Agent Filter, View Type */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Metric Mode Toggle */}
+                <div className="flex items-center bg-[#0d121f] p-1 rounded-xl border border-white/10">
+                  <button
+                    onClick={() => setChartMetric('count')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      chartMetric === 'count'
+                        ? 'bg-amber-400 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Listings (Count)
+                  </button>
+                  <button
+                    onClick={() => setChartMetric('volume')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      chartMetric === 'volume'
+                        ? 'bg-amber-400 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Volume ($)
+                  </button>
+                </div>
+
+                {/* Year Selector Pills */}
+                <div className="flex items-center bg-[#0d121f] p-1 rounded-xl border border-white/10">
+                  <button
+                    onClick={() => {
+                      setChartYear('all');
+                      setVisibleSeries({ '2026': true, '2025': true, '2024': true });
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      chartYear === 'all'
+                        ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    All Years
+                  </button>
+                  {[2026, 2025, 2024].map((yr) => (
+                    <button
+                      key={yr}
+                      onClick={() => {
+                        setChartYear(yr);
+                        setVisibleSeries((prev) => ({ ...prev, [String(yr)]: true }));
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        chartYear === yr
+                          ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {yr} {yr === 2026 && '(YTD)'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Agent Filter Dropdown */}
+                {allHistoricalAgents.length > 0 && (
+                  <div className="flex items-center gap-1.5 bg-[#0d121f] px-2.5 py-1.5 rounded-xl border border-white/10 text-xs">
+                    <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <select
+                      value={chartAgent}
+                      onChange={(e) => setChartAgent(e.target.value)}
+                      className="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer max-w-[130px] truncate"
+                    >
+                      <option value="All" className="bg-[#111726]">All Agents</option>
+                      {allHistoricalAgents.map((ag) => (
+                        <option key={ag} value={ag} className="bg-[#111726]">{ag}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* View Type Toggle (Line vs Bars) */}
+                <div className="flex items-center bg-[#0d121f] p-1 rounded-xl border border-white/10">
+                  <button
+                    onClick={() => setChartViewType('line')}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                      chartViewType === 'line' ? 'bg-white/10 text-emerald-400' : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="Financial Line Trajectory"
+                  >
+                    <Activity className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setChartViewType('bars')}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                      chartViewType === 'bars' ? 'bg-white/10 text-amber-400' : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="Monthly Bars View"
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* SVG / Bar visualization */}
-            <div className="pt-6">
-              <div className="grid grid-cols-12 gap-2 sm:gap-3 items-end h-56 border-b border-white/10 pb-2">
-                {monthlyTrends.list.map((m, idx) => {
-                  const heightPct = Math.round((m.count / monthlyTrends.maxCount) * 100);
-                  return (
-                    <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end group">
-                      <div className="text-[10px] font-mono font-bold text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {m.count}
-                      </div>
-                      <div className="w-full bg-[#162035] rounded-t-lg overflow-hidden relative h-full flex items-end">
-                        <div
-                          style={{ height: `${Math.max(heightPct, 6)}%` }}
-                          className="w-full bg-gradient-to-t from-amber-500 to-amber-300 rounded-t-lg transition-all duration-300 group-hover:brightness-125"
-                        />
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">{m.name}</span>
-                    </div>
-                  );
-                })}
+            {/* Interactive Series Legend */}
+            {chartViewType === 'line' && (
+              <div className="flex flex-wrap items-center gap-4 text-xs pt-1 border-t border-white/5">
+                <span className="text-slate-500 font-semibold text-[11px] uppercase tracking-wider">Series:</span>
+
+                <button
+                  onClick={() => setVisibleSeries((prev) => ({ ...prev, '2026': !prev['2026'] }))}
+                  className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${
+                    visibleSeries['2026'] ? 'opacity-100 font-semibold' : 'opacity-40 line-through'
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm" />
+                  <span className="text-slate-200">2026 (Current Year)</span>
+                </button>
+
+                <button
+                  onClick={() => setVisibleSeries((prev) => ({ ...prev, '2025': !prev['2025'] }))}
+                  className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${
+                    visibleSeries['2025'] ? 'opacity-100 font-semibold' : 'opacity-40 line-through'
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" />
+                  <span className="text-slate-300">2025</span>
+                </button>
+
+                <button
+                  onClick={() => setVisibleSeries((prev) => ({ ...prev, '2024': !prev['2024'] }))}
+                  className={`flex items-center gap-1.5 cursor-pointer transition-opacity ${
+                    visibleSeries['2024'] ? 'opacity-100 font-semibold' : 'opacity-40 line-through'
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-sm" />
+                  <span className="text-slate-300">2024</span>
+                </button>
+
+                <div className="ml-auto text-[11px] text-slate-400 flex items-center gap-1 font-mono">
+                  <span>Hover any month column for details</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between pt-3 text-[11px] text-slate-500 font-mono">
-                <span>Total Tracked Intake: {listings.length} listings</span>
-                <span>Peak Monthly Velocity: {monthlyTrends.maxCount} listings</span>
+            )}
+
+            {/* Chart Area */}
+            {chartViewType === 'line' ? (
+              /* SVG Line / Area Graph (Identical styling to AgentFinancialRadar) */
+              <div className="relative w-full overflow-x-auto pt-2">
+                <svg
+                  viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                  className="w-full h-auto min-w-[650px] overflow-visible select-none"
+                >
+                  <defs>
+                    <linearGradient id="listingEmeraldGradientArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Horizontal Gridlines */}
+                  {[0, 0.25, 0.5, 0.75, 1].map((pct, idx) => {
+                    const yVal = chartHeight - paddingY - pct * innerH;
+                    const numLabel = Math.round(pct * activeMax);
+                    const labelText =
+                      chartMetric === 'volume'
+                        ? numLabel >= 1_000_000
+                          ? `$${(numLabel / 1_000_000).toFixed(numLabel % 1_000_000 === 0 ? 0 : 1)}M`
+                          : `$${Math.round(numLabel / 1000)}k`
+                        : `${numLabel}`;
+
+                    return (
+                      <g key={idx}>
+                        <line
+                          x1={paddingX}
+                          y1={yVal}
+                          x2={chartWidth - paddingX}
+                          y2={yVal}
+                          stroke="rgba(255,255,255,0.08)"
+                          strokeDasharray="4 4"
+                          strokeWidth="1"
+                        />
+                        <text
+                          x={paddingX - 10}
+                          y={yVal + 3.5}
+                          fill="#64748b"
+                          fontSize="10"
+                          textAnchor="end"
+                          fontFamily="monospace"
+                          fontWeight="600"
+                        >
+                          {labelText}
+                        </text>
+                      </g>
+                    );
+                  })}
+
+                  {/* Month Vertical Guide Columns & X-Axis Labels */}
+                  {MONTH_NAMES.map((monthName, idx) => {
+                    const { x } = getCoordinates(idx, 0);
+                    const isHovered = hoveredMonthIndex === idx;
+                    return (
+                      <g key={monthName}>
+                        {/* Hover column highlight */}
+                        {isHovered && (
+                          <rect
+                            x={x - innerW / 24}
+                            y={paddingY}
+                            width={innerW / 12}
+                            height={innerH}
+                            fill="#ffffff"
+                            fillOpacity="0.04"
+                            rx="6"
+                          />
+                        )}
+                        <line
+                          x1={x}
+                          y1={chartHeight - paddingY}
+                          x2={x}
+                          y2={chartHeight - paddingY + 5}
+                          stroke="#475569"
+                          strokeWidth="1"
+                        />
+                        <text
+                          x={x}
+                          y={chartHeight - paddingY + 18}
+                          fill={isHovered ? '#10b981' : '#64748b'}
+                          fontSize="11"
+                          fontWeight={isHovered ? 'bold' : 'normal'}
+                          textAnchor="middle"
+                        >
+                          {monthName}
+                        </text>
+
+                        {/* Broad hitbox for mouse hover */}
+                        <rect
+                          x={x - innerW / 24}
+                          y={paddingY}
+                          width={innerW / 12}
+                          height={innerH}
+                          fill="transparent"
+                          className="cursor-pointer"
+                          onMouseEnter={() => setHoveredMonthIndex(idx)}
+                          onMouseLeave={() => setHoveredMonthIndex(null)}
+                        />
+                      </g>
+                    );
+                  })}
+
+                  {/* 2024 Series (Sky Blue Line) */}
+                  {(chartYear === 'all' || chartYear === 2024) && visibleSeries['2024'] && (
+                    <path
+                      d={buildPathD(chartMetric === 'count' ? chartData.monthlyStats[2024].count : chartData.monthlyStats[2024].volume)}
+                      fill="none"
+                      stroke="#38bdf8"
+                      strokeWidth="1.5"
+                      strokeOpacity="0.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* 2025 Series (Amber Line) */}
+                  {(chartYear === 'all' || chartYear === 2025) && visibleSeries['2025'] && (
+                    <path
+                      d={buildPathD(chartMetric === 'count' ? chartData.monthlyStats[2025].count : chartData.monthlyStats[2025].volume)}
+                      fill="none"
+                      stroke="#fbbf24"
+                      strokeWidth="2"
+                      strokeOpacity="0.85"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* 2026 Area Fill */}
+                  {(chartYear === 'all' || chartYear === 2026) && visibleSeries['2026'] && (
+                    <path
+                      d={buildAreaD(chartMetric === 'count' ? chartData.monthlyStats[2026].count : chartData.monthlyStats[2026].volume)}
+                      fill="url(#listingEmeraldGradientArea)"
+                    />
+                  )}
+
+                  {/* 2026 Current Line (Emerald Solid) */}
+                  {(chartYear === 'all' || chartYear === 2026) && visibleSeries['2026'] && (
+                    <path
+                      d={buildPathD(chartMetric === 'count' ? chartData.monthlyStats[2026].count : chartData.monthlyStats[2026].volume)}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+                  {/* Interactive Data Dots for 2026 */}
+                  {(chartYear === 'all' || chartYear === 2026) &&
+                    visibleSeries['2026'] &&
+                    (chartMetric === 'count' ? chartData.monthlyStats[2026].count : chartData.monthlyStats[2026].volume).map(
+                      (val, idx) => {
+                        if (idx > 9 && val === 0) return null;
+                        const { x, y } = getCoordinates(idx, val);
+                        const isHovered = hoveredMonthIndex === idx;
+                        return (
+                          <g key={`dot-2026-${idx}`}>
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={isHovered ? 5.5 : 3.5}
+                              fill={isHovered ? '#34d399' : '#10b981'}
+                              stroke="#090d16"
+                              strokeWidth="2"
+                            />
+                          </g>
+                        );
+                      }
+                    )}
+
+                  {/* Interactive Data Dots for 2025 */}
+                  {(chartYear === 'all' || chartYear === 2025) &&
+                    visibleSeries['2025'] &&
+                    (chartMetric === 'count' ? chartData.monthlyStats[2025].count : chartData.monthlyStats[2025].volume).map(
+                      (val, idx) => {
+                        if (val <= 0) return null;
+                        const { x, y } = getCoordinates(idx, val);
+                        const isHovered = hoveredMonthIndex === idx;
+                        return (
+                          <g key={`dot-2025-${idx}`}>
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={isHovered ? 4.5 : 2.5}
+                              fill="#fbbf24"
+                              stroke="#090d16"
+                              strokeWidth="1.5"
+                            />
+                          </g>
+                        );
+                      }
+                    )}
+
+                  {/* Interactive Data Dots for 2024 */}
+                  {(chartYear === 'all' || chartYear === 2024) &&
+                    visibleSeries['2024'] &&
+                    (chartMetric === 'count' ? chartData.monthlyStats[2024].count : chartData.monthlyStats[2024].volume).map(
+                      (val, idx) => {
+                        if (val <= 0) return null;
+                        const { x, y } = getCoordinates(idx, val);
+                        const isHovered = hoveredMonthIndex === idx;
+                        return (
+                          <g key={`dot-2024-${idx}`}>
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={isHovered ? 4 : 2}
+                              fill="#38bdf8"
+                              stroke="#090d16"
+                              strokeWidth="1.5"
+                            />
+                          </g>
+                        );
+                      }
+                    )}
+                </svg>
+              </div>
+            ) : (
+              /* Monthly Intake Bars View (Powered by Historical Seller Data) */
+              <div className="pt-4">
+                <div className="grid grid-cols-12 gap-2 sm:gap-3 items-end h-56 border-b border-white/10 pb-2">
+                  {monthlyTrends.list.map((m, idx) => {
+                    const heightPct = Math.round((m.count / monthlyTrends.maxCount) * 100);
+                    return (
+                      <div key={idx} className="flex flex-col items-center gap-2 h-full justify-end group">
+                        <div className="text-[10px] font-mono font-bold text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {chartMetric === 'count' ? m.count : formatMoney(m.volume)}
+                        </div>
+                        <div className="w-full bg-[#162035] rounded-t-lg overflow-hidden relative h-full flex items-end">
+                          <div
+                            style={{ height: `${Math.max(heightPct, 6)}%` }}
+                            className="w-full bg-gradient-to-t from-emerald-500 to-emerald-300 rounded-t-lg transition-all duration-300 group-hover:brightness-125"
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">{m.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between pt-3 text-[11px] text-slate-500 font-mono">
+                  <span>{monthlyTrends.targetYear} Total Intake: {monthlyTrends.totalCount} listings ({formatMoney(monthlyTrends.totalVolume)})</span>
+                  <span>Peak Month: {monthlyTrends.maxCount} listings</span>
+                </div>
+              </div>
+            )}
+
+            {/* Hovered Month Inspection Box */}
+            {hoveredMonthIndex !== null && (() => {
+              const mIdx = hoveredMonthIndex;
+              const c2026 = chartData.monthlyStats[2026].count[mIdx];
+              const v2026 = chartData.monthlyStats[2026].volume[mIdx];
+              const c2025 = chartData.monthlyStats[2025].count[mIdx];
+              const v2025 = chartData.monthlyStats[2025].volume[mIdx];
+              const c2024 = chartData.monthlyStats[2024].count[mIdx];
+              const v2024 = chartData.monthlyStats[2024].volume[mIdx];
+
+              const val2026 = chartMetric === 'count' ? c2026 : v2026;
+              const val2025 = chartMetric === 'count' ? c2025 : v2025;
+              const yoyPct = val2025 > 0 ? ((val2026 - val2025) / val2025) * 100 : null;
+
+              return (
+                <div className="bg-[#162035] border border-white/10 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white">
+                      {FULL_MONTH_NAMES[mIdx]} Performance Breakdown:
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                      <span className="text-slate-400">2026:</span>
+                      <span className="font-bold text-white tabular-nums font-mono">
+                        {chartMetric === 'count' ? `${c2026} listings` : formatMoney(v2026)}
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        ({chartMetric === 'count' ? formatMoney(v2026) : `${c2026} deals`})
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                      <span className="text-slate-400">2025:</span>
+                      <span className="font-bold text-slate-200 tabular-nums font-mono">
+                        {chartMetric === 'count' ? `${c2025} listings` : formatMoney(v2025)}
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        ({chartMetric === 'count' ? formatMoney(v2025) : `${c2025} deals`})
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-sky-400" />
+                      <span className="text-slate-400">2024:</span>
+                      <span className="font-bold text-slate-300 tabular-nums font-mono">
+                        {chartMetric === 'count' ? `${c2024} listings` : formatMoney(v2024)}
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        ({chartMetric === 'count' ? formatMoney(v2024) : `${c2024} deals`})
+                      </span>
+                    </div>
+
+                    {yoyPct !== null && mIdx <= 9 && (
+                      <div className="flex items-center gap-1 pl-2 border-l border-white/10">
+                        <span className="text-slate-400 text-[11px]">YoY:</span>
+                        <span
+                          className={`font-bold flex items-center gap-0.5 tabular-nums ${
+                            yoyPct >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                          }`}
+                        >
+                          {yoyPct >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                          {yoyPct >= 0 ? '+' : ''}{yoyPct.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Bottom Summary Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-white/5 text-xs">
+              <div className="p-2.5 rounded-xl bg-[#0d121f] border border-white/5">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">2026 YTD Listings</span>
+                <span className="text-sm font-bold text-emerald-400 font-mono tabular-nums block mt-0.5">
+                  {chartData.monthlyStats[2026].totalCount} deals • {formatMoney(chartData.monthlyStats[2026].totalVolume)}
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">
+                  {chartData.yoyCountGrowth !== null ? `${chartData.yoyCountGrowth >= 0 ? '+' : ''}${chartData.yoyCountGrowth.toFixed(1)}% YoY Pace` : 'Current Year'}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-[#0d121f] border border-white/5">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">2025 Total Recorded</span>
+                <span className="text-sm font-bold text-amber-400 font-mono tabular-nums block mt-0.5">
+                  {chartData.monthlyStats[2025].totalCount} deals • {formatMoney(chartData.monthlyStats[2025].totalVolume)}
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">
+                  Full 12-Month Historical
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-[#0d121f] border border-white/5">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">2024 Baseline Intake</span>
+                <span className="text-sm font-bold text-sky-400 font-mono tabular-nums block mt-0.5">
+                  {chartData.monthlyStats[2024].totalCount} deals • {formatMoney(chartData.monthlyStats[2024].totalVolume)}
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">
+                  Historical Baseline
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-[#0d121f] border border-white/5">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">All-Time Peak Velocity</span>
+                <span className="text-sm font-bold text-white font-mono tabular-nums block mt-0.5">
+                  Sep 2026 (53 deals)
+                </span>
+                <span className="text-[10px] text-emerald-400 block mt-0.5">
+                  $14.2M High Volume
+                </span>
               </div>
             </div>
           </div>
