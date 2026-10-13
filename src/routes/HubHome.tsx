@@ -189,6 +189,25 @@ export const HubHome: React.FC<HubHomeProps> = ({ onNavigate }) => {
             </div>
           </button>
         )}
+
+        {/* Reports & Active Listings — visible to all */}
+        <button
+          onClick={() => onNavigate('/reports')}
+          className="group text-left p-5 bg-[#111726] border border-white/10 rounded-xl hover:border-amber-500/40 transition-all space-y-2.5 shadow-sm cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <div className="h-9 w-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <BarChart3 className="h-4 w-4" />
+            </div>
+            <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-1 transition-all" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors">Reports & Active Listings</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Live Sisu inventory tracking, market territory analytics, and agent listing volume.
+            </p>
+          </div>
+        </button>
       </div>
 
       {/* Recent Deals Summary */}

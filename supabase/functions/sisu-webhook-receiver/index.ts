@@ -887,9 +887,16 @@ serve(async (req: Request) => {
       // Only update status if explicitly provided in this payload
       if (rawStatus && typeof rawStatus === 'string' && rawStatus.trim() !== '') {
         const sLower = rawStatus.toLowerCase().trim();
+        const isListing = sLower.includes('listing') || sLower === 'live listing' || sLower === 'signed' || sLower === 'active';
         const isPending = sLower.includes('contract') || sLower.includes('pending') || sLower.includes('escrow') || sLower.includes('closing') || sLower.includes('clear to close');
         const isClosed = !isPending && (sLower.includes('closed') || sLower === 'closed');
-        txUpdates.status = isClosed ? 'Closed' : (isPending ? 'Pending' : rawStatus.trim());
+        txUpdates.status = isClosed
+          ? 'Closed'
+          : isPending
+          ? 'Pending'
+          : isListing
+          ? (sLower.includes('signed') ? 'Signed' : 'Live Listing')
+          : rawStatus.trim();
       }
 
       // Only update side if explicitly resolved
@@ -1019,6 +1026,11 @@ serve(async (req: Request) => {
       const insertClientName = (rawClientName && typeof rawClientName === 'string' && rawClientName.trim()) || 'Unnamed Client';
       const insertStatus = (rawStatus && typeof rawStatus === 'string' && rawStatus.trim()) || 'pending';
       const normInsertStatus = insertStatus.toLowerCase();
+      const isListing =
+        normInsertStatus.includes('listing') ||
+        normInsertStatus === 'live listing' ||
+        normInsertStatus === 'signed' ||
+        normInsertStatus === 'active';
       const isPending =
         normInsertStatus.includes('under contract') ||
         normInsertStatus.includes('pending') ||
@@ -1028,13 +1040,13 @@ serve(async (req: Request) => {
       const isClosed =
         !isPending && (normInsertStatus.includes('closed') || normInsertStatus === 'closed');
 
-      if (!isPending && !isClosed) {
-        console.log(`[Sisu Webhook] Skipping insertion of transaction ${finalSisuId} because status '${insertStatus}' is neither pending nor closed.`);
+      if (!isPending && !isClosed && !isListing) {
+        console.log(`[Sisu Webhook] Skipping insertion of transaction ${finalSisuId} because status '${insertStatus}' is neither listing, pending nor closed.`);
         return new Response(
           JSON.stringify({
             success: true,
-            action: 'skipped_non_pending',
-            message: `Transaction ${finalSisuId} status '${insertStatus}' is neither pending nor closed. Escrow Hub only tracks active and closed deals.`,
+            action: 'skipped_non_listing_or_pending',
+            message: `Transaction ${finalSisuId} status '${insertStatus}' is neither listing, pending nor closed.`,
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1047,9 +1059,15 @@ serve(async (req: Request) => {
       if (insertCity === 'Chicago') insertCity = 'Waynesville';
       let insertState = (rawState && typeof rawState === 'string' && rawState.trim()) || 'MO';
       if (insertState === 'IL') insertState = 'MO';
-      const insertSide = resolvedSide || 'buyer';
+      const insertSide = resolvedSide || (isListing ? 'seller' : 'buyer');
 
-      const finalInsertStatus = isClosed ? 'Closed' : (isPending ? 'Pending' : insertStatus);
+      const finalInsertStatus = isClosed
+        ? 'Closed'
+        : isPending
+        ? 'Pending'
+        : isListing
+        ? (normInsertStatus.includes('signed') ? 'Signed' : 'Live Listing')
+        : insertStatus;
 
       const { data: newTx, error: insertErr } = await supabase
         .from('transactions')

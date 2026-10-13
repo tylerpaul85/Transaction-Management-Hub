@@ -10,6 +10,7 @@ import {
   Layers,
   Bug,
   Compass,
+  BarChart3,
 } from 'lucide-react';
 import { getStoredAvatar } from '../utils/avatarStorage';
 
@@ -103,6 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
     { label: 'Transaction Hub', path: '/hub', icon: <Compass className="h-4 w-4" />, show: isOps || isAdmin },
     { label: 'Escrows', path: '/ops', icon: <Layers className="h-4 w-4" />, show: isOps },
     { label: 'My Deals', path: '/my-deals', icon: <Briefcase className="h-4 w-4" />, show: true },
+    { label: 'Reports', path: '/reports', icon: <BarChart3 className="h-4 w-4" />, show: true },
     { label: 'Sync Debug', path: '/admin/sync-debug', icon: <Bug className="h-4 w-4" />, show: isAdmin },
   ];
 

@@ -856,9 +856,16 @@ serve(async (req: Request) => {
 
         if (status && status.trim() !== '') {
           const sLower = status.toLowerCase();
+          const isListing = sLower.includes('listing') || sLower === 'live listing' || sLower === 'signed' || sLower === 'active';
           const isPending = sLower.includes('contract') || sLower.includes('pending') || sLower.includes('escrow') || sLower.includes('closing') || sLower.includes('clear to close');
           const isClosed = !isPending && (sLower.includes('closed') || sLower === 'closed');
-          txUpdates.status = isClosed ? 'Closed' : (isPending ? 'Pending' : status.trim());
+          txUpdates.status = isClosed
+            ? 'Closed'
+            : isPending
+            ? 'Pending'
+            : isListing
+            ? (sLower.includes('signed') ? 'Signed' : 'Live Listing')
+            : status.trim();
         }
 
         if (side) {
@@ -968,6 +975,11 @@ serve(async (req: Request) => {
 
         const insertStatus = status || 'pending';
         const normInsertStatus = insertStatus.toLowerCase();
+        const isListing =
+          normInsertStatus.includes('listing') ||
+          normInsertStatus === 'live listing' ||
+          normInsertStatus === 'signed' ||
+          normInsertStatus === 'active';
         const isPending =
           normInsertStatus.includes('under contract') ||
           normInsertStatus.includes('pending') ||
@@ -977,8 +989,8 @@ serve(async (req: Request) => {
         const isClosed =
           !isPending && (normInsertStatus.includes('closed') || normInsertStatus === 'closed');
 
-        if (!isPending && !isClosed) {
-          console.log(`[Reconciliation] Skipping deal ${sisuTxId} because status '${insertStatus}' is neither pending nor closed.`);
+        if (!isPending && !isClosed && !isListing) {
+          console.log(`[Reconciliation] Skipping deal ${sisuTxId} because status '${insertStatus}' is neither listing, pending nor closed.`);
           continue;
         }
 
@@ -986,7 +998,7 @@ serve(async (req: Request) => {
         const insertClientName = (rawClientName && typeof rawClientName === 'string' && rawClientName.trim()) || 'Unnamed Client';
         const insertCity = (rawCity && typeof rawCity === 'string' && rawCity.trim()) || 'Waynesville';
         const insertState = (rawState && typeof rawState === 'string' && rawState.trim()) || 'MO';
-        const insertSide = side || 'buyer';
+        const insertSide = side || (isListing ? 'seller' : 'buyer');
 
         const KATIE_AGENTS = [
           'amy reid', 'britney rembold', 'erik kean', 'jenette richardson', 
@@ -998,7 +1010,13 @@ serve(async (req: Request) => {
           ? '5580daa6-415d-4385-986a-69bc94421c0c'
           : 'f4436dcc-4d52-4a26-af80-05096b76067e';
 
-        const finalInsertStatus = isClosed ? 'Closed' : (isPending ? 'Pending' : insertStatus);
+        const finalInsertStatus = isClosed
+          ? 'Closed'
+          : isPending
+          ? 'Pending'
+          : isListing
+          ? (normInsertStatus.includes('signed') ? 'Signed' : 'Live Listing')
+          : insertStatus;
 
         const { data: newTx } = await supabase
           .from('transactions')

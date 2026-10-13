@@ -7,6 +7,7 @@ import { MyDealsView } from './routes/MyDealsView';
 import { OpsDashboard } from './routes/OpsDashboard';
 import { AdminSyncDebug } from './routes/AdminSyncDebug';
 import { TransactionHubView } from './routes/TransactionHubView';
+import { ReportsView } from './routes/ReportsView';
 import { AdminTaskMappings } from './components/AdminTaskMappings';
 import { GoogleAuthGate } from './components/GoogleAuthGate';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
@@ -129,6 +130,15 @@ const AuthenticatedLayout: React.FC = () => {
           <div style={{ display: currentPath === '/my-deals' ? 'block' : 'none' }}>
             <RoleGuard allowedRoles={['agent', 'admin', 'tc', 'listing_coordinator']} routeName="/my-deals" onNavigate={handleNavigate}>
               <MyDealsView />
+            </RoleGuard>
+          </div>
+        )}
+
+        {/* Team Reports & Active Listings View */}
+        {(visitedRoutes.has('/reports') || currentPath === '/reports') && (
+          <div style={{ display: currentPath === '/reports' ? 'block' : 'none' }}>
+            <RoleGuard allowedRoles={['agent', 'admin', 'tc', 'listing_coordinator']} routeName="/reports" onNavigate={handleNavigate}>
+              <ReportsView />
             </RoleGuard>
           </div>
         )}
