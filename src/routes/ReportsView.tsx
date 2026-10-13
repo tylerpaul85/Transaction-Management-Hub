@@ -78,6 +78,70 @@ export interface ActiveListingRecord {
   } | null;
 }
 
+export interface ScopeOption {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface ScopeSelectorProps {
+  currentScope: string;
+  onChange: (scope: string) => void;
+  activeTheme: 'amber' | 'purple' | 'emerald';
+  options: ScopeOption[];
+}
+
+export const ScopeSelector: React.FC<ScopeSelectorProps> = ({
+  currentScope,
+  onChange,
+  activeTheme,
+  options,
+}) => {
+  const themeClasses = {
+    amber: {
+      btnActive: 'bg-amber-400 text-slate-950 shadow-sm font-bold',
+      badgeActive: 'bg-black/20 text-slate-950 font-black',
+    },
+    purple: {
+      btnActive: 'bg-purple-500 text-white shadow-sm font-bold',
+      badgeActive: 'bg-black/25 text-purple-100 font-bold',
+    },
+    emerald: {
+      btnActive: 'bg-emerald-400 text-slate-950 shadow-sm font-bold',
+      badgeActive: 'bg-black/20 text-slate-950 font-black',
+    },
+  }[activeTheme];
+
+  return (
+    <div className="flex items-center bg-[#0d121f] p-1 rounded-xl border border-white/10 shrink-0 overflow-x-auto max-w-full">
+      {options.map((opt) => {
+        const isSelected = currentScope === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className={`px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+              isSelected
+                ? themeClasses.btnActive
+                : 'text-slate-400 hover:text-white hover:bg-white/5 font-medium'
+            }`}
+          >
+            <span>{opt.label}</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                isSelected ? themeClasses.badgeActive : 'bg-white/10 text-slate-400'
+              }`}
+            >
+              {opt.count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 export const ReportsView: React.FC = () => {
   const { currentUser, isOps, isAdmin } = useAuth();
 
@@ -104,11 +168,11 @@ export const ReportsView: React.FC = () => {
     '2024': true,
   });
 
-  // Active vs Historical breakdown scope toggles
-  const [priceTierScope, setPriceTierScope] = useState<'active' | 'historical'>('active');
-  const [leaderboardScope, setLeaderboardScope] = useState<'active' | 'historical'>('active');
-  const [marketScope, setMarketScope] = useState<'active' | 'historical'>('active');
-  const [kpiScope, setKpiScope] = useState<'active' | 'historical'>('active');
+  // Multi-year scope toggles ('active' | '2026' | '2025' | '2024' | '2023' | 'all')
+  const [priceTierScope, setPriceTierScope] = useState<string>('active');
+  const [leaderboardScope, setLeaderboardScope] = useState<string>('active');
+  const [marketScope, setMarketScope] = useState<string>('active');
+  const [kpiScope, setKpiScope] = useState<string>('active');
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -292,9 +356,56 @@ export const ReportsView: React.FC = () => {
     return list;
   }, [listings, selectedStatusFilter, selectedAgentFilter, selectedCityFilter, selectedPriceFilter, searchQuery, sortBy]);
 
-  // Key Performance Indicators (KPIs) - supporting Active vs Historical scope
+  // Counts per scope (Active, 2026, 2025, 2024, 2023, All-Time)
+  const scopeCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      active: listings.length,
+      all: allSellerDeals.length,
+    };
+    allSellerDeals.forEach((tx) => {
+      const raw = tx.contract_date || tx.closed_date || tx.listing_date || tx.created_at;
+      if (!raw) return;
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) {
+        const yr = String(d.getFullYear());
+        counts[yr] = (counts[yr] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [listings, allSellerDeals]);
+
+  // Helper to retrieve deals for any given scope
+  const getDealsForScope = (scope: string): ActiveListingRecord[] => {
+    if (scope === 'active') return listings;
+    if (scope === 'all' || scope === 'historical') return allSellerDeals;
+    const targetYr = Number(scope);
+    if (isNaN(targetYr)) return allSellerDeals;
+    return allSellerDeals.filter((tx) => {
+      const raw = tx.contract_date || tx.closed_date || tx.listing_date || tx.created_at;
+      if (!raw) return false;
+      const d = new Date(raw);
+      return !isNaN(d.getTime()) && d.getFullYear() === targetYr;
+    });
+  };
+
+  // Reusable scope option list for selectors
+  const scopeOptions: ScopeOption[] = useMemo(() => {
+    const opts: ScopeOption[] = [
+      { id: 'active', label: 'Active', count: listings.length },
+      { id: '2026', label: '2026 (YTD)', count: scopeCounts['2026'] || 0 },
+      { id: '2025', label: '2025', count: scopeCounts['2025'] || 0 },
+      { id: '2024', label: '2024', count: scopeCounts['2024'] || 0 },
+    ];
+    if (scopeCounts['2023'] && scopeCounts['2023'] > 0) {
+      opts.push({ id: '2023', label: '2023', count: scopeCounts['2023'] });
+    }
+    opts.push({ id: 'all', label: 'All-Time', count: allSellerDeals.length });
+    return opts;
+  }, [listings.length, scopeCounts, allSellerDeals.length]);
+
+  // Key Performance Indicators (KPIs) - supporting Multi-Year & Active scopes
   const kpis = useMemo(() => {
-    const source = kpiScope === 'active' ? listings : allSellerDeals;
+    const source = getDealsForScope(kpiScope);
     const totalCount = source.length;
 
     let totalVolume = 0;
@@ -511,9 +622,9 @@ export const ReportsView: React.FC = () => {
     return `${lineD} L ${lastX.toFixed(1)} ${baseY.toFixed(1)} L ${paddingX.toFixed(1)} ${baseY.toFixed(1)} Z`;
   };
 
-  // Price Tier Distribution (Active vs Historical)
+  // Price Tier Distribution (Multi-Year & Active scopes)
   const priceTiers = useMemo(() => {
-    const source = priceTierScope === 'active' ? listings : allSellerDeals;
+    const source = getDealsForScope(priceTierScope);
     let t1 = 0; // < 150k
     let t2 = 0; // 150k - 250k
     let t3 = 0; // 250k - 350k
@@ -542,9 +653,9 @@ export const ReportsView: React.FC = () => {
     ];
   }, [listings, allSellerDeals, priceTierScope]);
 
-  // City Distribution (Active vs Historical)
+  // City Distribution (Multi-Year & Active scopes)
   const cityAnalytics = useMemo(() => {
-    const source = marketScope === 'active' ? listings : allSellerDeals;
+    const source = getDealsForScope(marketScope);
     const counts: Record<string, { count: number; volume: number; normalizedCity: string }> = {};
 
     source.forEach((l) => {
@@ -575,9 +686,9 @@ export const ReportsView: React.FC = () => {
     return { list: sorted.slice(0, 12), maxCount, totalCount, totalVolume };
   }, [listings, allSellerDeals, marketScope]);
 
-  // Agent Leaderboard (Active vs Historical)
+  // Agent Leaderboard (Multi-Year & Active scopes)
   const agentLeaderboard = useMemo(() => {
-    const source = leaderboardScope === 'active' ? listings : allSellerDeals;
+    const source = getDealsForScope(leaderboardScope);
     const map: Record<string, { name: string; email: string; avatar: string | null; count: number; volume: number; level: number }> = {};
 
     source.forEach((l) => {
@@ -744,57 +855,61 @@ export const ReportsView: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards Bar with Scope Switch */}
+      {/* KPI Cards Bar with Multi-Year Scope Switch */}
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span>{kpiScope === 'active' ? 'Active Inventory Metrics' : 'All-Time Historical Metrics'}</span>
+            <span>
+              {kpiScope === 'active'
+                ? 'Active Inventory Metrics'
+                : kpiScope === 'all'
+                ? 'All-Time Historical Metrics'
+                : `${kpiScope} Annual Metrics`}
+            </span>
           </span>
 
-          <div className="flex items-center bg-[#111726] p-1 rounded-xl border border-white/10">
-            <button
-              onClick={() => setKpiScope('active')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                kpiScope === 'active'
-                  ? 'bg-amber-400 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Active ({listings.length})
-            </button>
-            <button
-              onClick={() => setKpiScope('historical')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                kpiScope === 'historical'
-                  ? 'bg-amber-400 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Historical ({allSellerDeals.length})
-            </button>
-          </div>
+          <ScopeSelector
+            currentScope={kpiScope}
+            onChange={setKpiScope}
+            activeTheme="amber"
+            options={scopeOptions}
+          />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
           <div className="p-4 sm:p-5 bg-[#111726] border border-white/10 rounded-2xl space-y-1.5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                {kpiScope === 'active' ? 'Total Active Listings' : 'Total Seller Deals'}
+                {kpiScope === 'active'
+                  ? 'Total Active Listings'
+                  : kpiScope === 'all'
+                  ? 'Total Seller Deals'
+                  : `${kpiScope} Total Deals`}
               </span>
               <Building className="h-4 w-4 text-emerald-400" />
             </div>
             <p className="text-2xl sm:text-3xl font-black text-white tabular-nums">{kpis.totalCount}</p>
             <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{kpiScope === 'active' ? 'Live on MLS & Sisu' : 'All-time recorded in Sisu'}</span>
+              <span>
+                {kpiScope === 'active'
+                  ? 'Live on MLS & Sisu'
+                  : kpiScope === 'all'
+                  ? 'All-time recorded in Sisu'
+                  : `Recorded in Sisu for ${kpiScope}`}
+              </span>
             </p>
           </div>
 
           <div className="p-4 sm:p-5 bg-[#111726] border border-white/10 rounded-2xl space-y-1.5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                {kpiScope === 'active' ? 'Active Listing Volume' : 'Total Seller Volume'}
+                {kpiScope === 'active'
+                  ? 'Active Listing Volume'
+                  : kpiScope === 'all'
+                  ? 'Total Seller Volume'
+                  : `${kpiScope} Seller Volume`}
               </span>
               <DollarSign className="h-4 w-4 text-amber-400" />
             </div>
@@ -802,14 +917,22 @@ export const ReportsView: React.FC = () => {
               {formatMoney(kpis.totalVolume)}
             </p>
             <p className="text-[11px] text-slate-400">
-              {kpiScope === 'active' ? 'Total inventory value' : 'Total recorded sales & listings'}
+              {kpiScope === 'active'
+                ? 'Total inventory value'
+                : kpiScope === 'all'
+                ? 'Total recorded sales & listings'
+                : `Total production in ${kpiScope}`}
             </p>
           </div>
 
           <div className="p-4 sm:p-5 bg-[#111726] border border-white/10 rounded-2xl space-y-1.5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                {kpiScope === 'active' ? 'Average List Price' : 'Average Seller Price'}
+                {kpiScope === 'active'
+                  ? 'Average List Price'
+                  : kpiScope === 'all'
+                  ? 'Average Seller Price'
+                  : `${kpiScope} Average Price`}
               </span>
               <TrendingUp className="h-4 w-4 text-sky-400" />
             </div>
@@ -817,14 +940,20 @@ export const ReportsView: React.FC = () => {
               {formatMoney(kpis.avgPrice)}
             </p>
             <p className="text-[11px] text-slate-400">
-              {kpiScope === 'active' ? 'Per active listing' : 'Per recorded transaction'}
+              {kpiScope === 'active'
+                ? 'Per active listing'
+                : kpiScope === 'all'
+                ? 'Per recorded transaction'
+                : `Per transaction in ${kpiScope}`}
             </p>
           </div>
 
           <div className="p-4 sm:p-5 bg-[#111726] border border-white/10 rounded-2xl space-y-1.5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                {kpiScope === 'active' ? 'Top Market & Agents' : 'Top Market Territory'}
+                {kpiScope === 'active'
+                  ? 'Top Market & Agents'
+                  : `${kpiScope === 'all' ? 'All-Time' : kpiScope} Top Market`}
               </span>
               <Award className="h-4 w-4 text-purple-400" />
             </div>
@@ -1747,33 +1876,18 @@ export const ReportsView: React.FC = () => {
                   <p className="text-xs text-slate-400 mt-0.5">
                     {priceTierScope === 'active'
                       ? 'Breakdown of active listings across market price categories'
-                      : 'All-time breakdown of 927 seller transactions across price categories'}
+                      : priceTierScope === 'all'
+                      ? `All-time breakdown of ${allSellerDeals.length} seller transactions across price categories`
+                      : `Breakdown of ${scopeCounts[priceTierScope] || 0} seller transactions in ${priceTierScope} across price categories`}
                   </p>
                 </div>
 
-                {/* Scope Switch Button */}
-                <div className="flex items-center bg-[#0d121f] p-1 rounded-xl border border-white/10 shrink-0">
-                  <button
-                    onClick={() => setPriceTierScope('active')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      priceTierScope === 'active'
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Active ({listings.length})
-                  </button>
-                  <button
-                    onClick={() => setPriceTierScope('historical')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      priceTierScope === 'historical'
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Historical ({allSellerDeals.length})
-                  </button>
-                </div>
+                <ScopeSelector
+                  currentScope={priceTierScope}
+                  onChange={setPriceTierScope}
+                  activeTheme="amber"
+                  options={scopeOptions}
+                />
               </div>
 
               <div className="space-y-3 pt-2">
@@ -1808,37 +1922,27 @@ export const ReportsView: React.FC = () => {
                   <p className="text-xs text-slate-400 mt-0.5">
                     {leaderboardScope === 'active'
                       ? 'Agent active inventory share and current dollar volume'
-                      : 'Historical seller transaction volume and closed production from Sisu'}
+                      : leaderboardScope === 'all'
+                      ? 'All-time historical seller volume and closed production from Sisu'
+                      : `Agent production and transaction volume closed or signed in ${leaderboardScope}`}
                   </p>
                 </div>
 
-                {/* Scope Switch Button */}
-                <div className="flex items-center bg-[#0d121f] p-1 rounded-xl border border-white/10 shrink-0">
-                  <button
-                    onClick={() => setLeaderboardScope('active')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      leaderboardScope === 'active'
-                        ? 'bg-purple-500 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Active Inventory
-                  </button>
-                  <button
-                    onClick={() => setLeaderboardScope('historical')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      leaderboardScope === 'historical'
-                        ? 'bg-purple-500 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Historical (All-Time)
-                  </button>
-                </div>
+                <ScopeSelector
+                  currentScope={leaderboardScope}
+                  onChange={setLeaderboardScope}
+                  activeTheme="purple"
+                  options={scopeOptions}
+                />
               </div>
 
               <div className="space-y-2.5 pt-1 overflow-y-auto max-h-72 pr-1">
-                {agentLeaderboard.slice(0, leaderboardScope === 'active' ? 7 : 10).map((agent, rank) => (
+                {agentLeaderboard.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-500">
+                    No transactions recorded for this period.
+                  </div>
+                ) : (
+                  agentLeaderboard.slice(0, leaderboardScope === 'active' ? 7 : 10).map((agent, rank) => (
                   <div
                     key={agent.name}
                     className="p-2.5 rounded-xl bg-[#0d121f] border border-white/5 flex items-center justify-between gap-3 hover:border-amber-500/20 transition-all"
@@ -1873,7 +1977,7 @@ export const ReportsView: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                ))}
+                )))}
               </div>
             </div>
           </div>
@@ -1895,63 +1999,63 @@ export const ReportsView: React.FC = () => {
                 <p className="text-xs text-slate-400 mt-0.5">
                   {marketScope === 'active'
                     ? 'Active listings volume and deal count segmented across Missouri market territories'
-                    : 'All-time historical seller volume and transaction intake across Missouri market territories'}
+                    : marketScope === 'all'
+                    ? 'All-time historical seller volume and transaction intake across Missouri market territories'
+                    : `${marketScope} seller transaction volume segmented across Missouri market territories`}
                 </p>
               </div>
 
-              {/* Scope Switch Button */}
-              <div className="flex items-center bg-[#0d121f] p-1 rounded-xl border border-white/10 shrink-0">
-                <button
-                  onClick={() => setMarketScope('active')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    marketScope === 'active'
-                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Active ({listings.length})
-                </button>
-                <button
-                  onClick={() => setMarketScope('historical')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    marketScope === 'historical'
-                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Historical ({allSellerDeals.length})
-                </button>
-              </div>
+              <ScopeSelector
+                currentScope={marketScope}
+                onChange={setMarketScope}
+                activeTheme="emerald"
+                options={scopeOptions}
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-2">
-              {cityAnalytics.list.map((c) => (
-                <div
-                  key={c.city}
-                  className="p-4 rounded-xl bg-[#0d121f] border border-white/5 space-y-2 hover:border-amber-500/30 transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-white">{c.city}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                      {c.count} {c.count === 1 ? 'deal' : 'deals'}
-                    </span>
-                  </div>
-                  <div className="pt-1">
-                    <span className="text-xs font-mono font-black text-emerald-400 block tabular-nums">
-                      {formatMoney(c.volume)}
-                    </span>
-                    <span className="text-[10px] text-slate-500 block">
-                      {marketScope === 'active' ? 'Active market inventory' : 'Total historical volume'}
-                    </span>
-                  </div>
+              {cityAnalytics.list.length === 0 ? (
+                <div className="col-span-full py-8 text-center text-xs text-slate-500">
+                  No market territory data recorded for this period.
                 </div>
-              ))}
+              ) : (
+                cityAnalytics.list.map((c) => (
+                  <div
+                    key={c.city}
+                    className="p-4 rounded-xl bg-[#0d121f] border border-white/5 space-y-2 hover:border-amber-500/30 transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-white">{c.city}</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                        {c.count} {c.count === 1 ? 'deal' : 'deals'}
+                      </span>
+                    </div>
+                    <div className="pt-1">
+                      <span className="text-xs font-mono font-black text-emerald-400 block tabular-nums">
+                        {formatMoney(c.volume)}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block">
+                        {marketScope === 'active'
+                          ? 'Active market inventory'
+                          : marketScope === 'all'
+                          ? 'Total historical volume'
+                          : `${marketScope} volume`}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Geographical Distribution Footer */}
             <div className="flex items-center justify-between pt-3 border-t border-white/5 text-[11px] text-slate-500 font-mono flex-wrap gap-2">
               <span>
-                {marketScope === 'active' ? 'Active Territory Volume:' : 'Historical Territory Volume:'} {cityAnalytics.totalCount} deals tracked
+                {marketScope === 'active'
+                  ? 'Active Territory Volume:'
+                  : marketScope === 'all'
+                  ? 'Historical Territory Volume:'
+                  : `${marketScope} Territory Volume:`}{' '}
+                {cityAnalytics.totalCount} deals tracked
               </span>
               <span>
                 Total Territory Volume: {formatMoney(cityAnalytics.totalVolume)}
