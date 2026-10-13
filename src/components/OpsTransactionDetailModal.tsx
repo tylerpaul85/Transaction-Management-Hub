@@ -120,11 +120,11 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
 
   // Milestones local state
   const [milestones, setMilestones] = useState<OpsMilestone[]>(() => {
-    // Ensure all 13 standard milestones exist
+    // Ensure all standard milestones exist based on side (seller has both termite ordered & received; buyer has received)
     const map = new Map<string, OpsMilestone>();
     transaction.milestones.forEach((m) => map.set(m.milestone_type, m));
 
-    return ALL_MILESTONES_CONFIG.map((cfg) => {
+    return getAllMilestonesConfig(side).map((cfg) => {
       const existing = map.get(cfg.type);
       if (existing) return existing;
       return {
@@ -141,14 +141,14 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
     });
   });
 
-  // Re-sync milestones when parent transaction updates in real-time
+  // Re-sync milestones when parent transaction updates in real-time or side changes
   useEffect(() => {
     if (!transaction.milestones) return;
     const map = new Map<string, OpsMilestone>();
     transaction.milestones.forEach((m) => map.set(m.milestone_type, m));
 
     setMilestones((prev) =>
-      ALL_MILESTONES_CONFIG.map((cfg) => {
+      getAllMilestonesConfig(side).map((cfg) => {
         const remote = map.get(cfg.type);
         if (remote) return remote;
         const existingLocal = prev.find((p) => p.milestone_type === cfg.type);
@@ -166,7 +166,7 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
         };
       })
     );
-  }, [transaction.milestones]);
+  }, [transaction.milestones, side]);
 
   const [activeTab, setActiveTab] = useState<'sheet' | 'other_agent' | 'audit'>('sheet');
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -574,14 +574,15 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {milestones.map((m) => {
+                      {(() => {
                         const sideConfigs = getAllMilestonesConfig(side);
-                        const config =
-                          sideConfigs.find((c) => c.type === m.milestone_type) || {
-                            label: m.milestone_type,
-                            description: '',
-                            parentGroup: undefined as 'inspection' | 'appraisal' | undefined,
-                          };
+                        return milestones.map((m) => {
+                          const config =
+                            sideConfigs.find((c) => c.type === m.milestone_type) || {
+                              label: m.milestone_type,
+                              description: '',
+                              parentGroup: undefined as 'inspection' | 'appraisal' | undefined,
+                            };
 
                         const isNa = m.status === 'na' || m.status === 'waived';
                         const isComplete = m.status === 'satisfied' || m.status === 'complete';
@@ -693,8 +694,9 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                             </td>
                           </tr>
                         );
-                      })}
-                    </tbody>
+                      });
+                    })()}
+                  </tbody>
                   </table>
                 </div>
               </div>
@@ -729,6 +731,19 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                         inspection_ordred: 'Inspection Ordered',
                         inspection_ordered: 'Inspection Ordered',
                         inspection_satisfieds_63: 'Inspection Satisfied',
+                        termite_inspection_ordereds_63: 'Termite Inspection Ordered',
+                        termite_inspection_ordered_63: 'Termite Inspection Ordered',
+                        termite_inspection_ordered: 'Termite Inspection Ordered',
+                        'termite_inspection_ordered?_-_internal_use': 'Termite Inspection Ordered',
+                        'termite_inspection_ordered? - internal use': 'Termite Inspection Ordered',
+                        'termite_inspection_ordered - internal use': 'Termite Inspection Ordered',
+                        termite_inspection_receiveds_63: 'Termite Inspection Received',
+                        termite_inspection_received_63: 'Termite Inspection Received',
+                        termite_inspection_received: 'Termite Inspection Received',
+                        'termite_inspection_received?_-_internal_use': 'Termite Inspection Received',
+                        'termite_inspection_received? - internal use': 'Termite Inspection Received',
+                        'termite_inspection_received - internal use': 'Termite Inspection Received',
+                        termite_inspection: 'Termite Inspection Received',
                         insurance_obtaineds_63: 'Insurance Obtained',
                         earnest_money_depositeds_63: 'Earnest Money Deposited',
                         title_commitment_s_38_clearance: 'Title Commitment & Clearance',

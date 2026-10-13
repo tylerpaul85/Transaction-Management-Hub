@@ -192,11 +192,11 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
 
             // Calculate milestone steps from live milestones
             const defaultNewListing = buildDefaultSellerNewListingRoadmap();
-            const defaultUnderContract = buildDefaultUnderContractRoadmap();
+            const defaultUnderContract = buildDefaultUnderContractRoadmap(isSeller ? 'seller' : 'buyer');
 
             const liveMilestones = t.milestones || [];
             const completedCount = liveMilestones.filter((m: any) => m.status === 'satisfied' || m.status === 'complete').length;
-            const totalMilestones = liveMilestones.length > 0 ? liveMilestones.length : 13;
+            const totalMilestones = liveMilestones.length > 0 ? liveMilestones.length : (isSeller ? 13 : 12);
             const percentage = Math.round((completedCount / totalMilestones) * 100);
 
             return {
@@ -1236,7 +1236,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                 >
                   <span>Listing Under Contract</span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#182238] text-slate-300 font-mono tabular-nums">
-                    {selectedTransaction.roadmaps.under_contract?.length || 11}
+                    {selectedTransaction.roadmaps.under_contract?.length || 13}
                   </span>
                 </button>
 
@@ -1274,7 +1274,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                 >
                   <span>Buyer Roadmap</span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#182238] text-slate-300 font-mono tabular-nums">
-                    5
+                    {selectedTransaction.roadmaps.buyer_roadmap?.length || 6}
                   </span>
                 </button>
 
@@ -1288,7 +1288,7 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                 >
                   <span>Under Contract Escrow</span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#182238] text-slate-300 font-mono tabular-nums">
-                    11
+                    {selectedTransaction.roadmaps.under_contract?.length || 12}
                   </span>
                 </button>
 

@@ -45,6 +45,8 @@ export const ACTIVE_MILESTONES_SET = new Set([
   'inspection_ordered',
   'inspection_notice_sent',
   'inspection_10day',
+  'termite_inspection_ordered',
+  'termite_inspection_received',
   'financing_contingency',
   'appraisal_received',
   'appraisal_satisfied',
@@ -65,6 +67,8 @@ export function getMilestoneLabels(side?: 'buyer' | 'seller'): Record<string, st
       ? 'Inspection Notice Received? - Listing'
       : 'Inspection Notice Sent? - Buyer',
     inspection_10day: 'Inspection Satisfied',
+    termite_inspection_ordered: 'Termite Inspection Ordered',
+    termite_inspection_received: 'Termite Inspection Received',
     financing_contingency: 'Financing / Loan Commitment',
     appraisal_received: 'Appraisal Received',
     appraisal_satisfied: 'Appraisal Satisfied',
@@ -90,6 +94,20 @@ export function getMilestoneOrderSequence(side?: 'buyer' | 'seller') {
       label: isSeller ? 'Inspection Notice Received? - Listing' : 'Inspection Notice Sent? - Buyer',
     },
     { key: 'inspection_10day', shortLabel: 'Inspection Satisfied', label: 'Inspection Satisfied' },
+    ...(isSeller
+      ? [
+          {
+            key: 'termite_inspection_ordered',
+            shortLabel: 'Termite Ordered',
+            label: 'Termite Inspection Ordered',
+          },
+        ]
+      : []),
+    {
+      key: 'termite_inspection_received',
+      shortLabel: 'Termite Received',
+      label: 'Termite Inspection Received',
+    },
     { key: 'appraisal_received', shortLabel: 'Appraisal Received', label: 'Appraisal Received' },
     { key: 'financing_contingency', shortLabel: 'Financing', label: 'Financing / Loan Commitment' },
     { key: 'appraisal_satisfied', shortLabel: 'Appraisal Satisfied', label: 'Appraisal Satisfied' },
@@ -133,6 +151,23 @@ export function getFieldStatus(
         'inspection_notice_sent?_-_internal_use',
       ],
       inspection_10day: ['inspection_satisfieds_63', 'inspection_satisfied', 'inspection_satisfied?_-_internal_use'],
+      termite_inspection_ordered: [
+        'termite_inspection_ordereds_63',
+        'termite_inspection_ordered_63',
+        'termite_inspection_ordered',
+        'termite_inspection_ordered?_-_internal_use',
+        'termite_inspection_ordered? - internal use',
+        'termite_inspection_ordered - internal use',
+      ],
+      termite_inspection_received: [
+        'termite_inspection_receiveds_63',
+        'termite_inspection_received_63',
+        'termite_inspection_received',
+        'termite_inspection_received?_-_internal_use',
+        'termite_inspection_received? - internal use',
+        'termite_inspection_received - internal use',
+        'termite_inspection',
+      ],
       financing_contingency: [
         'financing_/_loan_commitment_-_internal_use',
         'financing_loan_commitment_internal_use',

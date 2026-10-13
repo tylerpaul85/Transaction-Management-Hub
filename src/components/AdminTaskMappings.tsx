@@ -53,11 +53,13 @@ export const AdminTaskMappings: React.FC = () => {
   const [manualMilestoneField, setManualMilestoneField] = useState<string>('earnest_money');
   const [isSavingManual, setIsSavingManual] = useState<boolean>(false);
 
-  // Quick-test suggestions (matching the 10 Sisu form custom fields)
+  // Quick-test suggestions (matching Sisu form custom fields)
   const TEST_SUGGESTIONS = [
     { name: 'Earnest money Deposited? (internal use)', defaultField: 'earnest_money' },
     { name: 'Inspection ordred? - Internal Use', defaultField: 'inspection_ordered' },
     { name: 'Inspection Satisfied? - Internal Use', defaultField: 'inspection_10day' },
+    { name: 'Termite Inspection Ordered', defaultField: 'termite_inspection_ordered' },
+    { name: 'Termite Inspection Received', defaultField: 'termite_inspection_received' },
     { name: 'Financing / Loan Commitment - internal use', defaultField: 'financing_contingency' },
     { name: 'Appraisal Received (internal use)', defaultField: 'appraisal_received' },
     { name: 'Appraisal Satisfied (internal use)', defaultField: 'appraisal_satisfied' },

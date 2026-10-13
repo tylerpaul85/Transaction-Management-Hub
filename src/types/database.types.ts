@@ -14,6 +14,8 @@ export type MilestoneType =
   | 'inspection_ordered'
   | 'inspection_notice_sent'
   | 'inspection_10day'
+  | 'termite_inspection_ordered'
+  | 'termite_inspection_received'
   | 'sale_contingency'
   | 'financing_contingency'
   | 'appraisal_ordered'

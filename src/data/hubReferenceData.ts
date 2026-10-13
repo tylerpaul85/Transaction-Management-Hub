@@ -114,8 +114,9 @@ export function buildDefaultSellerNewListingRoadmap(): HubRoadmapStep[] {
   ];
 }
 
-export function buildDefaultUnderContractRoadmap(): HubRoadmapStep[] {
-  return [
+export function buildDefaultUnderContractRoadmap(side: 'buyer' | 'seller' = 'seller'): HubRoadmapStep[] {
+  const isSeller = side === 'seller';
+  const steps: HubRoadmapStep[] = [
     {
       id: 'step-uc-1',
       roadmapCategory: 'under_contract',
@@ -156,6 +157,34 @@ export function buildDefaultUnderContractRoadmap(): HubRoadmapStep[] {
       updatedAt: '08/04/2025',
       order: 4,
     },
+  ];
+
+  if (isSeller) {
+    steps.push({
+      id: 'step-uc-termite-ordered',
+      roadmapCategory: 'under_contract',
+      title: 'Termite Inspection Ordered',
+      description: 'Wood-destroying insect (WDI) / termite inspection booked with certified pest inspector.',
+      status: 'completed',
+      date: '08-06-2025',
+      updatedAt: '08/06/2025',
+      order: steps.length + 1,
+    });
+  }
+
+  // Both seller and buyer receive the termite inspection report
+  steps.push({
+    id: 'step-uc-termite-received',
+    roadmapCategory: 'under_contract',
+    title: 'Termite Inspection Received',
+    description: 'Official termite inspection clearance report delivered to title and lender.',
+    status: 'completed',
+    date: '08-08-2025',
+    updatedAt: '08/08/2025',
+    order: steps.length + 1,
+  });
+
+  const remainingSteps: Omit<HubRoadmapStep, 'order'>[] = [
     {
       id: 'step-uc-5',
       roadmapCategory: 'under_contract',
@@ -164,7 +193,6 @@ export function buildDefaultUnderContractRoadmap(): HubRoadmapStep[] {
       status: 'completed',
       date: '08-12-2025',
       updatedAt: '08/12/2025',
-      order: 5,
     },
     {
       id: 'step-uc-6',
@@ -174,7 +202,6 @@ export function buildDefaultUnderContractRoadmap(): HubRoadmapStep[] {
       status: 'completed',
       date: '08-18-2025',
       updatedAt: '08/18/2025',
-      order: 6,
     },
     {
       id: 'step-uc-7',
@@ -184,7 +211,6 @@ export function buildDefaultUnderContractRoadmap(): HubRoadmapStep[] {
       status: 'completed',
       date: '08-20-2025',
       updatedAt: '08/20/2025',
-      order: 7,
     },
     {
       id: 'step-uc-8',
@@ -194,7 +220,6 @@ export function buildDefaultUnderContractRoadmap(): HubRoadmapStep[] {
       status: 'completed',
       date: '08-22-2025',
       updatedAt: '08/22/2025',
-      order: 8,
     },
     {
       id: 'step-uc-9',
@@ -204,7 +229,6 @@ export function buildDefaultUnderContractRoadmap(): HubRoadmapStep[] {
       status: 'completed',
       date: '08-24-2025',
       updatedAt: '08/24/2025',
-      order: 9,
     },
     {
       id: 'step-uc-10',
@@ -214,7 +238,6 @@ export function buildDefaultUnderContractRoadmap(): HubRoadmapStep[] {
       status: 'completed',
       date: '08-26-2025',
       updatedAt: '08/26/2025',
-      order: 10,
     },
     {
       id: 'step-uc-11',
@@ -224,9 +247,17 @@ export function buildDefaultUnderContractRoadmap(): HubRoadmapStep[] {
       status: 'completed',
       date: '08-27-2025',
       updatedAt: '08/27/2025',
-      order: 11,
     },
   ];
+
+  remainingSteps.forEach((s) => {
+    steps.push({
+      ...s,
+      order: steps.length + 1,
+    });
+  });
+
+  return steps;
 }
 
 export function buildDefaultBuyerRoadmap(): HubRoadmapStep[] {
@@ -280,6 +311,16 @@ export function buildDefaultBuyerRoadmap(): HubRoadmapStep[] {
       date: '07-18-2025',
       updatedAt: '07/18/2025',
       order: 5,
+    },
+    {
+      id: 'step-br-6',
+      roadmapCategory: 'buyer_roadmap',
+      title: 'Termite Inspection Received',
+      description: 'Official wood-destroying insect (WDI) / termite inspection clearance received and verified.',
+      status: 'completed',
+      date: '07-28-2025',
+      updatedAt: '07/28/2025',
+      order: 6,
     },
   ];
 }

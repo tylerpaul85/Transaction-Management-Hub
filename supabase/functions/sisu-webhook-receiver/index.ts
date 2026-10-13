@@ -15,6 +15,8 @@ const MILESTONE_KEYS = [
   'inspection_ordered',
   'inspection_notice_sent',
   'inspection_10day',
+  'termite_inspection_ordered',
+  'termite_inspection_received',
   'appraisal_received',
   'financing_contingency',
   'appraisal_satisfied',
@@ -1567,6 +1569,24 @@ serve(async (req: Request) => {
         const targets: string[] = [];
         if (normalizedKey.includes('earnest') || normalizedKey.includes('emd') || rawNormalized.includes('earnest')) {
           targets.push('earnest_money');
+        } else if (
+          normalizedKey.includes('termite') ||
+          rawNormalized.includes('termite') ||
+          normalizedKey.includes('wdi') ||
+          rawNormalized.includes('wdi') ||
+          normalizedKey.includes('pest') ||
+          rawNormalized.includes('pest')
+        ) {
+          if (
+            normalizedKey.includes('ordr') ||
+            normalizedKey.includes('order') ||
+            rawNormalized.includes('ordr') ||
+            rawNormalized.includes('order')
+          ) {
+            targets.push('termite_inspection_ordered');
+          } else {
+            targets.push('termite_inspection_received');
+          }
         } else if (normalizedKey.includes('inspection') || rawNormalized.includes('inspection')) {
           if (
             normalizedKey.includes('notice') ||

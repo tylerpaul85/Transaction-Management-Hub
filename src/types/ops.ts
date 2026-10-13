@@ -90,6 +90,20 @@ export function getMilestoneOrder(side?: 'buyer' | 'seller' | 'dual' | string): 
       shortLabel: isSeller ? 'Inspection Notice Received' : 'Inspection Notice Sent',
     },
     { type: 'inspection_10day', label: 'Inspection Satisfied', shortLabel: 'Inspection Satisfied' },
+    ...(isSeller
+      ? [
+          {
+            type: 'termite_inspection_ordered' as MilestoneType,
+            label: 'Termite Inspection Ordered',
+            shortLabel: 'Termite Ordered',
+          },
+        ]
+      : []),
+    {
+      type: 'termite_inspection_received' as MilestoneType,
+      label: 'Termite Inspection Received',
+      shortLabel: 'Termite Received',
+    },
     { type: 'appraisal_received', label: 'Appraisal Received', shortLabel: 'Appraisal Received' },
     { type: 'financing_contingency', label: 'Financing / Loan Commitment', shortLabel: 'Financing / Loan' },
     { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', shortLabel: 'Appraisal Satisfied' },
@@ -124,6 +138,26 @@ export function getAllMilestonesConfig(side?: 'buyer' | 'seller' | 'dual' | stri
       parentGroup: 'inspection',
     },
     { type: 'inspection_10day', label: 'Inspection Satisfied', shortLabel: 'Inspection Satisfied', description: 'Contractual inspection deadline and repair resolution', isSubItem: true, parentGroup: 'inspection' },
+    ...(isSeller
+      ? [
+          {
+            type: 'termite_inspection_ordered' as MilestoneType,
+            label: 'Termite Inspection Ordered',
+            shortLabel: 'Termite Ordered',
+            description: 'Wood-destroying insect (WDI) / termite inspection booked with certified pest inspector',
+            isSubItem: true,
+            parentGroup: 'inspection' as const,
+          },
+        ]
+      : []),
+    {
+      type: 'termite_inspection_received' as MilestoneType,
+      label: 'Termite Inspection Received',
+      shortLabel: 'Termite Received',
+      description: 'Official termite / wood-destroying insect (WDI) clearance report received',
+      isSubItem: true,
+      parentGroup: 'inspection' as const,
+    },
     { type: 'appraisal_received', label: 'Appraisal Received', shortLabel: 'Appraisal Received', description: 'Appraisal report delivered to buyer/lender', isSubItem: true, parentGroup: 'appraisal' },
     { type: 'financing_contingency', label: 'Financing / Loan Commitment', shortLabel: 'Financing / Loan', description: 'Mortgage lender approval condition deadline' },
     { type: 'appraisal_satisfied', label: 'Appraisal Satisfied', shortLabel: 'Appraisal Satisfied', description: 'Appraisal valuation condition met', isSubItem: true, parentGroup: 'appraisal' },
@@ -136,7 +170,7 @@ export function getAllMilestonesConfig(side?: 'buyer' | 'seller' | 'dual' | stri
   ];
 }
 
-export const ALL_MILESTONES_CONFIG = getAllMilestonesConfig('buyer');
+export const ALL_MILESTONES_CONFIG = getAllMilestonesConfig('seller');
 
 /**
  * Universal evaluator for Sisu 4-choice values (Yes, No, In Progress, N/A)
