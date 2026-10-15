@@ -1354,7 +1354,7 @@ serve(async (req: Request) => {
       const hasFullCustomState = Object.keys(fullCustom).length > 0;
 
       // Helper: evaluate Sisu 4-choice field value (Yes, No, In Progress, N/A)
-      const evaluateStatusValue = (val: any): 'complete' | 'in_progress' | 'na' | 'pending' => {
+      const evaluateStatusValue = (val: any): 'complete' | 'in_progress' | 'na' | 'no' | 'pending' => {
         if (val === null || val === undefined) return 'pending';
         const strVal = String(val).trim().toLowerCase();
         if (
@@ -1410,16 +1410,15 @@ serve(async (req: Request) => {
           return 'complete';
         }
 
-        // Option 2 ("No") -> "1", "no", "false", "n", "pending", boolean false
+        // Option 2 ("No") -> "1", "no", "false", "n", boolean false
         if (
           strVal === '1' ||
           strVal === 'no' ||
           strVal === 'false' ||
           strVal === 'n' ||
-          strVal === 'pending' ||
           val === false
         ) {
-          return 'pending';
+          return 'no';
         }
 
         return 'pending';
@@ -1480,6 +1479,10 @@ serve(async (req: Request) => {
             mappingMap.get(rawNormalized);
 
           if (matched) return [matched.milestone_field];
+
+          if (normalizedKey.includes('company') || normalizedKey.includes('deadline')) {
+            return [];
+          }
 
           const targets: string[] = [];
           if (normalizedKey.includes('earnest') || normalizedKey.includes('emd') || rawNormalized.includes('earnest')) {
@@ -1613,6 +1616,8 @@ serve(async (req: Request) => {
               const notes =
                 evalStatus === 'complete'
                   ? `Completed via Sisu form: ${key}`
+                  : evalStatus === 'no'
+                  ? `Marked No via Sisu form: ${key}`
                   : evalStatus === 'in_progress'
                   ? `In progress via Sisu form: ${key}`
                   : evalStatus === 'na'
@@ -1675,11 +1680,13 @@ serve(async (req: Request) => {
             if (
               existingM.notes &&
               (existingM.notes.startsWith('Completed via Sisu form: ') ||
+               existingM.notes.startsWith('Marked No via Sisu form: ') ||
                existingM.notes.startsWith('In progress via Sisu form: ') ||
                existingM.notes.startsWith('N/A via Sisu form: '))
             ) {
               const originatingKey = existingM.notes
                 .replace('Completed via Sisu form: ', '')
+                .replace('Marked No via Sisu form: ', '')
                 .replace('In progress via Sisu form: ', '')
                 .replace('N/A via Sisu form: ', '')
                 .trim();
@@ -1693,6 +1700,8 @@ serve(async (req: Request) => {
                   const notes =
                     evalStatus === 'complete'
                       ? `Completed via Sisu form: ${originatingKey}`
+                      : evalStatus === 'no'
+                      ? `Marked No via Sisu form: ${originatingKey}`
                       : evalStatus === 'in_progress'
                       ? `In progress via Sisu form: ${originatingKey}`
                       : evalStatus === 'na'

@@ -252,6 +252,7 @@ export const MyDealsView: React.FC = () => {
               gci: t.gci ?? t.custom_fields?.gci ?? null,
               commission_rate: t.commission_rate ?? t.custom_fields?.commission_rate ?? null,
               price: t.price ?? t.custom_fields?.price ?? null,
+              custom_fields: t.custom_fields || null,
               flagged_for_review: false,
               created_at: t.created_at,
               updated_at: t.updated_at,
@@ -504,6 +505,8 @@ export const MyDealsView: React.FC = () => {
           stepStatus = 'in_progress';
         } else if (matchMilestone.status === 'satisfied' || matchMilestone.status === 'complete') {
           stepStatus = 'completed';
+        } else if (matchMilestone.status === 'no') {
+          stepStatus = 'no';
         } else if (
           matchMilestone.status === 'in_progress' ||
           matchMilestone.status === 'ordered' ||
@@ -1559,7 +1562,7 @@ export const MyDealsView: React.FC = () => {
                           <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider block">
                             Milestone Track
                           </span>
-                          <MilestoneDotSequence milestones={tx.milestones} side={tx.side} />
+                          <MilestoneDotSequence milestones={tx.milestones} side={tx.side} customFields={tx.custom_fields} />
                         </div>
 
                         {/* Key Dates & Assigned TC */}

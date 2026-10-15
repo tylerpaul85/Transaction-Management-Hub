@@ -1,17 +1,69 @@
 import React, { useState } from 'react';
 import { OpsMilestone, getMilestoneOrder, getAllMilestonesConfig } from '../types/ops';
-import { Check, Clock, Minus, Circle } from 'lucide-react';
+import { Check, Clock, Minus, Circle, X } from 'lucide-react';
 
 interface MilestoneDotSequenceProps {
   milestones: OpsMilestone[];
   side?: 'buyer' | 'seller' | 'dual' | string;
   onMilestoneClick?: (milestone: OpsMilestone) => void;
+  customFields?: Record<string, any> | null;
 }
+
+const CF_MAP: Record<string, string[]> = {
+  earnest_money: ['earnest_money_depositeds_63', 'earnest_money_deposited', 'earnest_money_deposited?_(internal_use)'],
+  inspection_ordered: ['inspection_completeds_63', 'inspection_completed', 'inspection_ordred?_-_internal_use', 'inspection_ordered?_-_internal_use', 'inspection_ordered'],
+  inspection_notice_sent: [
+    'inspection_notice_sent?_-_internal',
+    'inspection_notice_sent',
+    'inspection_notice_received?_-_listing',
+    'inspection_notice_received',
+    'inspection_notice_received_listing',
+    'inspection_notice_receiveds_63__-_listing',
+    'inspection_notice_sents_63_-_internal',
+    'inspection_notice_received?_-_internal_use',
+    'inspection_notice_sent?_-_buyer',
+    'inspection_notice_sent?_-_internal_use',
+  ],
+  inspection_10day: ['inspection_satisfieds_63', 'inspection_satisfied', 'inspection_satisfied?_-_internal_use'],
+  termite_inspection_ordered: [
+    'termite_inspection_ordereds_63',
+    'termite_inspection_ordered_63',
+    'termite_inspection_ordered',
+    'termite_inspection_ordered?_-_internal_use',
+    'termite_inspection_ordered? - internal use',
+    'termite_inspection_ordered - internal use',
+  ],
+  termite_inspection_received: [
+    'termite_inspection_receiveds_63',
+    'termite_inspection_received_63',
+    'termite_inspection_received',
+    'termite_inspection_received?_-_internal_use',
+    'termite_inspection_received? - internal use',
+    'termite_inspection_received - internal use',
+    'termite_inspection',
+  ],
+  financing_contingency: [
+    'financing_/_loan_commitment_-_internal_use',
+    'financing_/_loan_commitment__(internal_use)',
+    'financing_loan_commitment_internal_use',
+    'financing_loan_commitment',
+    'financing_/_loan_commitment_(internal_use)',
+  ],
+  appraisal_received: ['appraisal_received', 'appraisal_received_internal_use', 'appraisal_received_(internal_use)'],
+  appraisal_satisfied: ['appraisal_satisfied', 'appraisal_satisfied_internal_use', 'appraisal_satisfied_(internal_use)'],
+  insurance_binder: ['insurance_obtaineds_63', 'insurance_obtained', 'insurance_obtained_internal_use'],
+  title: ['title_commitment_s_38_clearance', 'title_commitment_clearance_internal_use', 'title_commitment', 'title_commitment_&_clearance_-_internal_use'],
+  cds_obtained: ['cds_obtained_-_internal', 'cds_obtained'],
+  ctc: ['clear-to-close_(ctc)', 'clear_to_close_internal_use', 'clear-to-close', 'clear_to_close', 'clear-to-close_(internal_use)'],
+  closing_scheduled: ['closing_scheduled_-_internal_use', 'closing_scheduled'],
+  walk_through: ['final_walkthrough', 'final_walkthrough_internal_use', 'final_walkthrough_(internal_use)'],
+};
 
 export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
   milestones,
   side = 'buyer',
   onMilestoneClick,
+  customFields,
 }) => {
   const [hoveredType, setHoveredType] = useState<string | null>(null);
 
@@ -30,6 +82,13 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
           badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
           label: 'Complete',
           icon: <Check className="w-2.5 h-2.5 flex-shrink-0 text-emerald-400 stroke-[3]" />,
+        };
+      case 'no':
+        return {
+          pill: 'bg-rose-500/20 text-rose-300 border-rose-500/50 hover:bg-rose-500/30 shadow-sm shadow-rose-500/20',
+          badge: 'bg-rose-500/25 text-rose-200 border-rose-500/50',
+          label: 'No',
+          icon: <X className="w-2.5 h-2.5 flex-shrink-0 text-rose-300 stroke-[3]" />,
         };
       case 'pending_tc_approval':
         return {
@@ -66,12 +125,42 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
     }
   };
 
-  const resolveEffectiveStatus = (m?: OpsMilestone) => {
-    if (!m) return 'pending';
-    if (m.notes && m.notes.includes('"pending_tc_approval"')) {
-      return 'pending_tc_approval';
+  const resolveEffectiveStatus = (m?: OpsMilestone, itemType?: string) => {
+    if (m) {
+      if (m.notes && m.notes.includes('"pending_tc_approval"')) {
+        return 'pending_tc_approval';
+      }
+      if (m.status === 'no') return 'no';
+      if (m.status === 'complete' || m.status === 'satisfied') return 'complete';
+      if (m.status === 'in_progress' || m.status === 'ordered' || m.status === 'notice_sent') return 'in_progress';
+      if (m.status === 'na' || m.status === 'waived') return 'na';
     }
-    return m.status || 'pending';
+
+    // Check customFields if milestone is pending or not yet created
+    if (customFields && itemType && CF_MAP[itemType]) {
+      const keys = CF_MAP[itemType];
+      for (const k of keys) {
+        if (k in customFields) {
+          const v = customFields[k];
+          if (v === null || v === undefined) continue;
+          const s = String(v).trim().toLowerCase();
+          if (s === '1' || s === 'no' || s === 'false' || v === false) {
+            return 'no';
+          }
+          if (s === '0' || s === 'yes' || s === 'true' || s === 'complete' || s === 'satisfied' || v === true) {
+            return 'complete';
+          }
+          if (s === '2' || s === 'in progress' || s === 'in_progress') {
+            return 'in_progress';
+          }
+          if (s === '3' || s === 'n/a' || s === 'na' || s === 'waived') {
+            return 'na';
+          }
+        }
+      }
+    }
+
+    return m?.status || 'pending';
   };
 
   return (
@@ -84,12 +173,13 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
         if (item.subTypes && item.subTypes.length > 0) {
           const subMilestones = item.subTypes.map((st) => {
             const m = milestoneMap.get(st);
-            const status = resolveEffectiveStatus(m);
+            const status = resolveEffectiveStatus(m, st);
             return {
               type: st,
               milestone: m,
               status,
               isDone: status === 'complete' || status === 'satisfied',
+              isNo: status === 'no',
               isPendingApproval: status === 'pending_tc_approval',
               isInProgress: status === 'in_progress' || status === 'ordered' || status === 'notice_sent',
               isNa: status === 'na' || status === 'waived',
@@ -99,6 +189,7 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
           const activeSub = subMilestones.filter((sm) => !sm.isNa);
           const allDone = activeSub.length > 0 && activeSub.every((sm) => sm.isDone);
           const anyPendingApproval = subMilestones.some((sm) => sm.isPendingApproval);
+          const anyNo = subMilestones.some((sm) => sm.isNo);
           const anyInProgress = subMilestones.some((sm) => sm.isInProgress || sm.isDone);
           const allNa = subMilestones.every((sm) => sm.isNa);
 
@@ -106,6 +197,8 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
             displayStatus = 'complete';
           } else if (anyPendingApproval) {
             displayStatus = 'pending_tc_approval';
+          } else if (anyNo) {
+            displayStatus = 'no';
           } else if (allNa) {
             displayStatus = 'na';
           } else if (anyInProgress) {
@@ -123,11 +216,11 @@ export const MilestoneDotSequence: React.FC<MilestoneDotSequenceProps> = ({
             };
           });
 
-          // Primary milestone to open when clicked is the first active pending/in-progress sub-item
+          // Primary milestone to open when clicked is the first active pending/no/in-progress sub-item
           const nextActionableSub = subMilestones.find((sm) => !sm.isDone && !sm.isNa);
           primaryMilestone = nextActionableSub?.milestone || subMilestones[0]?.milestone || primaryMilestone;
         } else {
-          displayStatus = resolveEffectiveStatus(primaryMilestone);
+          displayStatus = resolveEffectiveStatus(primaryMilestone, item.type);
         }
 
         const styles = getStatusStyles(displayStatus);

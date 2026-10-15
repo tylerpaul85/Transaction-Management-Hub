@@ -587,13 +587,14 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                         const isNa = m.status === 'na' || m.status === 'waived';
                         const isComplete = m.status === 'satisfied' || m.status === 'complete';
                         const isInProgress = m.status === 'in_progress' || m.status === 'notice_sent' || m.status === 'ordered';
+                        const isNo = m.status === 'no';
 
                         return (
                           <tr key={m.milestone_type} className={`hover:bg-[#0d121f]/40 transition-colors ${isNa ? 'opacity-50' : ''}`}>
                             {/* Milestone Name */}
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
-                                <span className={`font-semibold block ${isNa ? 'text-slate-400 line-through' : 'text-slate-100'}`}>
+                                <span className={`font-semibold block ${isNa ? 'text-slate-400 line-through' : isNo ? 'text-rose-200' : 'text-slate-100'}`}>
                                   {config.label}
                                 </span>
                                 {config.parentGroup && (
@@ -647,6 +648,8 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border cursor-pointer ${
                                   isComplete
                                     ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                    : isNo
+                                    ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
                                     : isInProgress
                                     ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
                                     : isNa
@@ -655,9 +658,10 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                                 }`}
                               >
                                 <option value="complete">Complete (Yes)</option>
+                                <option value="no">No</option>
                                 <option value="in_progress">In Progress</option>
                                 <option value="na">N/A (Not Applicable)</option>
-                                <option value="pending">Pending (No)</option>
+                                <option value="pending">Pending</option>
                                 <option value="waived">Waived</option>
                               </select>
                             </td>

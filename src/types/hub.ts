@@ -6,7 +6,7 @@ export type RoadmapTabType =
   | 'buyer_roadmap'
   | 'buyer_guide';
 
-export type StepStatus = 'completed' | 'in_progress' | 'pending' | 'locked' | 'waived';
+export type StepStatus = 'completed' | 'in_progress' | 'pending' | 'locked' | 'waived' | 'no';
 
 export interface HubRoadmapStep {
   id: string;

@@ -1156,7 +1156,7 @@ export const OpsDashboard: React.FC = () => {
                         <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
                           Milestone Track:
                         </span>
-                        <MilestoneDotSequence milestones={tx.milestones} side={tx.side} onMilestoneClick={() => setSelectedTx(tx)} />
+                        <MilestoneDotSequence milestones={tx.milestones} side={tx.side} customFields={tx.custom_fields} onMilestoneClick={() => setSelectedTx(tx)} />
                       </div>
 
                       {/* Footer Actions */}
@@ -1232,7 +1232,7 @@ export const OpsDashboard: React.FC = () => {
                           </td>
 
                           <td className="py-3 px-4">
-                            <MilestoneDotSequence milestones={tx.milestones} side={tx.side} onMilestoneClick={() => setSelectedTx(tx)} />
+                            <MilestoneDotSequence milestones={tx.milestones} side={tx.side} customFields={tx.custom_fields} onMilestoneClick={() => setSelectedTx(tx)} />
                           </td>
 
                           <td className="py-3 px-4 text-xs">

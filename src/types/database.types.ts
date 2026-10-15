@@ -37,7 +37,8 @@ export type MilestoneStatus =
   | 'satisfied'
   | 'complete'
   | 'waived'
-  | 'na';
+  | 'na'
+  | 'no';
 
 export type MilestoneSource = 'sisu' | 'manual';
 

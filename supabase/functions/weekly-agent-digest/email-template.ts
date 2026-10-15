@@ -125,12 +125,13 @@ export function getFieldStatus(
   mType: string,
   milestones?: Array<{ milestone_type: string; status: string }>,
   customFields?: Record<string, any> | null
-): 'complete' | 'in_progress' | 'na' | 'pending' {
+): 'complete' | 'in_progress' | 'na' | 'no' | 'pending' {
   const list = milestones || [];
   const found = list.find((m) => m.milestone_type === mType);
   if (found && found.status) {
     const s = found.status.toLowerCase().trim();
     if (s === 'complete' || s === 'satisfied') return 'complete';
+    if (s === 'no') return 'no';
     if (s === 'in_progress') return 'in_progress';
     if (s === 'na' || s === 'waived') return 'na';
     if (s === 'pending') return 'pending';
@@ -199,7 +200,7 @@ export function getFieldStatus(
           return 'na';
         }
         if (str === '1' || str === 'no' || str === 'false' || v === false) {
-          return 'pending';
+          return 'no';
         }
       }
     }
@@ -225,7 +226,7 @@ export function renderMilestoneSequenceHtml(
   const sequence = getMilestoneOrderSequence(side);
 
   const pillsHtml = sequence.map((item, idx) => {
-    let status: 'complete' | 'in_progress' | 'na' | 'pending' = 'pending';
+    let status: 'complete' | 'in_progress' | 'na' | 'no' | 'pending' = 'pending';
     let isHalf = false;
 
     if ((item as any).subKeys && (item as any).subKeys.length > 0) {
@@ -236,6 +237,8 @@ export function renderMilestoneSequenceHtml(
         status = 'na';
       } else if (nonNa.every((s: string) => s === 'complete')) {
         status = 'complete';
+      } else if (nonNa.some((s: string) => s === 'no')) {
+        status = 'no';
       } else if (nonNa.some((s: string) => s === 'complete' || s === 'in_progress')) {
         status = 'in_progress';
         isHalf = true;
@@ -256,6 +259,10 @@ export function renderMilestoneSequenceHtml(
       bg = '#064e3b';
       text = '#6ee7b7';
       border = '#059669';
+    } else if (status === 'no') {
+      bg = '#4c0519';
+      text = '#fda4af';
+      border = '#f43f5e';
     } else if (status === 'in_progress') {
       bg = '#0c4a6e';
       text = '#7dd3fc';
@@ -289,6 +296,7 @@ export function renderMilestoneSequenceHtml(
       <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #1e293b; font-size: 9.5px; color: #94a3b8; line-height: 1.4;">
         <span style="color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;">Milestone Key:</span>
         <span style="display: inline-block; margin-right: 8px;"><span style="color: #34d399; font-weight: bold;">●</span> Done</span>
+        <span style="display: inline-block; margin-right: 8px;"><span style="color: #f43f5e; font-weight: bold;">●</span> No</span>
         <span style="display: inline-block; margin-right: 8px;"><span style="color: #38bdf8; font-weight: bold;">●</span> In Progress</span>
         <span style="display: inline-block; margin-right: 8px;"><span style="color: #fbbf24; font-weight: bold;">●</span> Upcoming / Open</span>
         <span style="display: inline-block;"><span style="color: #64748b; font-weight: bold;">●</span> N/A</span>
@@ -449,6 +457,7 @@ export function renderAgentDigestEmail(params: DigestEmailParams): {
               <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #94a3b8; line-height: 1.5;">
                 <span style="color: #f8fafc; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; margin-right: 6px;">Status Guide:</span>
                 <span style="display: inline-block; margin-right: 8px;"><span style="color: #34d399; font-weight: bold;">●</span> <strong>Green:</strong> Done</span>
+                <span style="display: inline-block; margin-right: 8px;"><span style="color: #f43f5e; font-weight: bold;">●</span> <strong>Red:</strong> No</span>
                 <span style="display: inline-block; margin-right: 8px;"><span style="color: #38bdf8; font-weight: bold;">●</span> <strong>Blue:</strong> In Progress</span>
                 <span style="display: inline-block; margin-right: 8px;"><span style="color: #fbbf24; font-weight: bold;">●</span> <strong>Orange:</strong> Upcoming (Not Due Yet)</span>
                 <span style="display: inline-block;"><span style="color: #64748b; font-weight: bold;">●</span> <strong>Grey:</strong> N/A</span>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { HubRoadmapStep } from '../../types/hub';
-import { Check, Clock, Lock, ChevronDown, Calendar, Undo2, ShieldCheck } from 'lucide-react';
+import { Check, Clock, Lock, ChevronDown, Calendar, Undo2, ShieldCheck, X } from 'lucide-react';
 
 interface RoadmapStepCardProps {
   step: HubRoadmapStep;
@@ -37,17 +37,18 @@ export const RoadmapStepCard: React.FC<RoadmapStepCardProps> = ({
   const [dateInput, setDateInput] = useState(step.date || '');
 
   const isCompleted = step.status === 'completed';
+  const isNo = step.status === 'no';
   const isInProgress = step.status === 'in_progress';
   const isLocked = step.status === 'locked';
   const isPendingApproval = step.approvalData?.approvalStatus === 'pending_tc_approval';
-  const isCurrent = !isCompleted && !isPendingApproval && (isActive || isInProgress);
+  const isCurrent = !isCompleted && !isNo && !isPendingApproval && (isActive || isInProgress);
 
   const handleActionClick = () => {
     if (isPendingApproval) {
       onRequestApproval?.(step);
       return;
     }
-    if (!isCompleted && onRequestApproval) {
+    if (!isCompleted && !isNo && onRequestApproval) {
       onRequestApproval(step);
     } else {
       onToggleStatus?.(step.id);
@@ -68,6 +69,14 @@ export const RoadmapStepCard: React.FC<RoadmapStepCardProps> = ({
         node: 'bg-emerald-500 text-slate-950 border-emerald-500',
         card: 'bg-[#111726]/60 border-white/[0.06] hover:border-white/15',
         title: 'text-slate-300',
+      }
+    : isNo
+    ? {
+        label: 'No',
+        chip: 'bg-rose-500/20 text-rose-300 border-rose-500/50',
+        node: 'bg-[#2a0e17] text-rose-300 border-rose-500/70',
+        card: 'bg-[#111726] border-rose-500/40 hover:border-rose-500/60 shadow-sm shadow-rose-500/10',
+        title: 'text-rose-200',
       }
     : isPendingApproval
     ? {
@@ -109,7 +118,7 @@ export const RoadmapStepCard: React.FC<RoadmapStepCardProps> = ({
       {/* Timeline rail */}
       <div className="relative flex flex-col items-center flex-shrink-0 w-8">
         <div
-          className={`w-px h-5 ${isFirst ? 'opacity-0' : isCompleted ? 'bg-emerald-500/50' : 'bg-white/10'}`}
+          className={`w-px h-5 ${isFirst ? 'opacity-0' : isCompleted ? 'bg-emerald-500/50' : isNo ? 'bg-rose-500/50' : 'bg-white/10'}`}
         />
         <button
           type="button"
@@ -119,6 +128,8 @@ export const RoadmapStepCard: React.FC<RoadmapStepCardProps> = ({
         >
           {isCompleted ? (
             <Check className="h-4 w-4 stroke-[3]" />
+          ) : isNo ? (
+            <X className="h-4 w-4 stroke-[3]" />
           ) : isPendingApproval ? (
             <Clock className="h-4 w-4" />
           ) : isLocked ? (
@@ -128,7 +139,7 @@ export const RoadmapStepCard: React.FC<RoadmapStepCardProps> = ({
           )}
         </button>
         <div
-          className={`w-px flex-1 ${isLast ? 'opacity-0' : isCompleted ? 'bg-emerald-500/50' : 'bg-white/10'}`}
+          className={`w-px flex-1 ${isLast ? 'opacity-0' : isCompleted ? 'bg-emerald-500/50' : isNo ? 'bg-rose-500/50' : 'bg-white/10'}`}
         />
       </div>
 
