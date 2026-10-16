@@ -1,0 +1,54 @@
+{
+  "name": "MSREG Hub — Transaction Management",
+  "short_name": "MSREG Hub",
+  "description": "Real Estate Transaction Management, Escrow Roadmaps & Production Intelligence Hub for Matt Smith Real Estate Group",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": [
+    "business",
+    "productivity",
+    "finance"
+  ],
+  "shortcuts": [
+    {
+      "name": "My Deals",
+      "url": "/",
+      "description": "View active deals and milestone roadmap"
+    },
+    {
+      "name": "Financial Radar",
+      "url": "/?tab=financials",
+      "description": "View commission ledger and income pace"
+    }
+  ]
+}

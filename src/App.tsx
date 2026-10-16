@@ -12,6 +12,7 @@ import { AdminTaskMappings } from './components/AdminTaskMappings';
 import { GoogleAuthGate } from './components/GoogleAuthGate';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
 import { CDAPrintModal } from './components/CDAPrintModal';
+import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 import { Loader2 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -196,6 +197,7 @@ export function App() {
   return (
     <AuthProvider>
       <AppGate />
+      <PwaInstallPrompt />
     </AuthProvider>
   );
 }

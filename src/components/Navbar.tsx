@@ -11,6 +11,7 @@ import {
   Bug,
   Compass,
   BarChart3,
+  Smartphone,
 } from 'lucide-react';
 import { getStoredAvatar } from '../utils/avatarStorage';
 
@@ -230,7 +231,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPath }) => {
                       </span>
                     </div>
 
-                    <div className="p-1.5">
+                    <div className="p-1.5 space-y-1">
+                      <button
+                        onClick={() => {
+                          setProfileOpen(false);
+                          window.dispatchEvent(new CustomEvent('msreg-pwa-show-install'));
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-amber-300 hover:bg-amber-500/10 rounded-xl transition-colors font-medium cursor-pointer"
+                      >
+                        <Smartphone className="h-4 w-4 text-amber-400" />
+                        <span>Install MSREG App</span>
+                      </button>
+
                       <button
                         onClick={() => {
                           setProfileOpen(false);

@@ -5,6 +5,20 @@
     <link rel="icon" type="image/png" href="/msreg-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>MSREG Hub — Transaction Management System</title>
+
+    <!-- Progressive Web App (PWA) Manifest & Theme -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#090d16" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Apple iOS PWA Meta Tags & Icons -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MSREG Hub" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
     
     <!-- Google Fonts: Inter, Outfit, JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,5 +28,16 @@
   <body class="bg-[#090d16] text-[#f8fafc] font-sans antialiased selection:bg-amber-500/25 selection:text-amber-100 min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then((reg) => {
+            console.log('[PWA] Service worker registered successfully:', reg.scope);
+          }).catch((err) => {
+            console.warn('[PWA] Service worker registration failed:', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>
