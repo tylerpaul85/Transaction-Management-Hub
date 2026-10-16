@@ -91,20 +91,11 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
     }
   };
 
-  // Get true gross agent paid income with fallback calculations
+  // Get true gross agent paid income from Sisu data (or custom_fields)
   const getGrossIncome = (tx: OpsTransaction): number => {
-    if (tx.gross_agent_paid_income !== null && tx.gross_agent_paid_income !== undefined && !isNaN(tx.gross_agent_paid_income)) {
-      return Number(tx.gross_agent_paid_income);
-    }
-    // Fallback: GCI * commission split (default 70% as standard in Sisu)
-    if (tx.gci !== null && tx.gci !== undefined && !isNaN(tx.gci)) {
-      const split = (tx.commission_rate && tx.commission_rate >= 10) ? tx.commission_rate / 100 : 0.70;
-      return Number(tx.gci) * split;
-    }
-    // Fallback 2: Price * 3% commission * 70% split
-    const price = tx.price || tx.list_price || 0;
-    if (price > 0) {
-      return price * 0.03 * 0.70;
+    const direct = tx.gross_agent_paid_income ?? tx.custom_fields?.gross_agent_paid_income;
+    if (direct !== null && direct !== undefined && !isNaN(Number(direct))) {
+      return Number(direct);
     }
     return 0;
   };
@@ -165,7 +156,12 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
         if (isClosed) {
           totalClosedSelectedYear += income;
           closedCountSelectedYear += 1;
-          totalGciSelectedYear += (tx.gci || (income / 0.45));
+          const directGci = tx.gci ?? tx.custom_fields?.gci;
+          if (directGci !== null && directGci !== undefined && !isNaN(Number(directGci))) {
+            totalGciSelectedYear += Number(directGci);
+          } else if (income > 0) {
+            totalGciSelectedYear += income;
+          }
           totalVolumeSelectedYear += (tx.price || 0);
         } else {
           totalPendingSelectedYear += income;
@@ -925,7 +921,7 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
                 <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
                   <span className="text-slate-400">Estimated Payout:</span>
                   <span className="text-sm font-bold text-amber-400 tabular-nums">
-                    {fmtMoney(income)}
+                    {income > 0 ? fmtMoney(income) : 'Pending Settlement'}
                   </span>
                 </div>
               </div>
@@ -1016,9 +1012,24 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
                   const rawStat = String(tx.status || '').toLowerCase().trim();
                   const isPending = rawStat.includes('pending') || rawStat.includes('contract') || rawStat.includes('escrow');
                   const isClosed = !isPending && (rawStat === 'closed' || rawStat.includes('closed') || (Boolean(tx.closed_date) && (tx.closed_date ?? '') <= new Date().toISOString().slice(0, 10)));
-                  const income = getGrossIncome(tx);
-                  const splitPercent = (tx.commission_rate && tx.commission_rate >= 10) ? tx.commission_rate : 70;
-                  const gciVal = tx.gci || (income / (splitPercent / 100));
+                  
+                  const directIncome = tx.gross_agent_paid_income ?? tx.custom_fields?.gross_agent_paid_income;
+                  const hasDirectIncome = directIncome !== null && directIncome !== undefined && !isNaN(Number(directIncome)) && Number(directIncome) > 0;
+                  const income = hasDirectIncome ? Number(directIncome) : null;
+
+                  const directGci = tx.gci ?? tx.custom_fields?.gci;
+                  const hasDirectGci = directGci !== null && directGci !== undefined && !isNaN(Number(directGci)) && Number(directGci) > 0;
+                  const gciVal = hasDirectGci ? Number(directGci) : (tx.price ? Number(tx.price) * 0.03 : null);
+
+                  // Calculate true split from verified Sisu GCI and Paid Income
+                  let splitDisplay: string = '—';
+                  if (hasDirectIncome && hasDirectGci && Number(directGci) > 0) {
+                    const calc = Math.round((Number(directIncome) / Number(directGci)) * 100);
+                    if (calc > 0 && calc <= 100) {
+                      splitDisplay = `${calc}%`;
+                    }
+                  }
+
                   const dateStr = tx.closed_date || tx.target_closing_date || tx.contract_date || '—';
 
                   return (
@@ -1050,13 +1061,21 @@ export const AgentFinancialRadar: React.FC<AgentFinancialRadarProps> = ({
                         {fmtMoney(tx.price || tx.list_price)}
                       </td>
                       <td className="py-2.5 px-4 text-right text-slate-300 font-mono tabular-nums">
-                        {fmtMoney(gciVal)}
+                        {gciVal !== null ? fmtMoney(gciVal) : '—'}
                       </td>
-                      <td className="py-2.5 px-4 text-right text-slate-400 font-mono tabular-nums">
-                        {splitPercent}%
+                      <td className="py-2.5 px-4 text-right font-mono tabular-nums">
+                        {splitDisplay === '—' ? (
+                          <span className="text-slate-500">—</span>
+                        ) : (
+                          <span className="text-slate-200 font-medium">{splitDisplay}</span>
+                        )}
                       </td>
-                      <td className="py-2.5 px-4 text-right font-bold text-emerald-400 font-mono tabular-nums text-xs">
-                        {fmtMoney(income)}
+                      <td className="py-2.5 px-4 text-right font-mono tabular-nums text-xs">
+                        {income !== null ? (
+                          <span className="font-bold text-emerald-400">{fmtMoney(income)}</span>
+                        ) : (
+                          <span className="text-slate-500 font-normal">—</span>
+                        )}
                       </td>
                     </tr>
                   );
