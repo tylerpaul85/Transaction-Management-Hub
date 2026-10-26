@@ -60,6 +60,22 @@ async function hydrateUserFromProfile(email: string): Promise<AuthUser | null> {
   ];
 
   if (KNOWN_ADMIN_EMAILS.includes(cleanEmail)) {
+    if (p) {
+      try {
+        const nowIso = new Date().toISOString();
+        (supabase.from('profiles') as any)
+          .update({
+            last_active_at: nowIso,
+            last_sign_in_at: nowIso,
+            updated_at: nowIso,
+          })
+          .eq('id', p.id)
+          .then();
+      } catch {
+        // ignore
+      }
+    }
+
     return {
       id: p?.id || 'admin-root',
       email: cleanEmail,
@@ -72,10 +88,15 @@ async function hydrateUserFromProfile(email: string): Promise<AuthUser | null> {
   }
 
   if (p && p.active !== false) {
-    // Touch activity timestamp asynchronously
+    // Touch activity & sign-in timestamp asynchronously
     try {
+      const nowIso = new Date().toISOString();
       (supabase.from('profiles') as any)
-        .update({ updated_at: new Date().toISOString() })
+        .update({
+          last_active_at: nowIso,
+          last_sign_in_at: nowIso,
+          updated_at: nowIso,
+        })
         .eq('id', p.id)
         .then();
     } catch {
@@ -188,6 +209,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (user) {
             setCurrentUser(user);
             setAuthError(null);
+
+            // Record explicit sign-in timestamp from Supabase Auth session
+            const signInTime = session.user.last_sign_in_at || new Date().toISOString();
+            try {
+              (supabase.from('profiles') as any)
+                .update({
+                  last_sign_in_at: signInTime,
+                  last_active_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .ilike('email', session.user.email.toLowerCase().trim())
+                .then();
+            } catch {
+              // ignore
+            }
           } else {
             console.warn(`[Access Denied] ${session.user.email} is not in the profiles allowlist.`);
             await supabase.auth.signOut();

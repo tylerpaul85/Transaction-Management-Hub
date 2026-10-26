@@ -74,22 +74,22 @@ export function formatUserLastActive(dateStr?: string | null): {
 } {
   if (!dateStr) {
     return {
-      label: 'Pending Login',
-      sublabel: 'Invited / Never logged in',
+      label: 'Never Logged In',
+      sublabel: 'Invited • No sign-in recorded',
       isOnline: false,
       statusType: 'never',
-      badgeClass: 'bg-slate-700/40 text-slate-400 border-slate-600/50',
+      badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
     };
   }
 
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) {
     return {
-      label: 'Pending Login',
-      sublabel: 'Invited / Never logged in',
+      label: 'Never Logged In',
+      sublabel: 'Invited • No sign-in recorded',
       isOnline: false,
       statusType: 'never',
-      badgeClass: 'bg-slate-700/40 text-slate-400 border-slate-600/50',
+      badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
     };
   }
 
@@ -151,20 +151,21 @@ export function formatUserLastActive(dateStr?: string | null): {
 
   return {
     label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    sublabel: 'Previous session',
+    sublabel: `at ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
     isOnline: false,
     statusType: 'older',
-    badgeClass: 'bg-slate-800/40 text-slate-500 border-slate-700/40',
+    badgeClass: 'bg-slate-800/60 text-slate-400 border-slate-700/60',
   };
 }
 
 export const AdminUserManagement: React.FC = () => {
   const [profiles, setProfiles] = useState<DbProfile[]>([]);
+  const [userLogins, setUserLogins] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | AppRole>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deactivated' | 'online_today'>('all');
-  const [sortBy, setSortBy] = useState<'recent_active' | 'name' | 'role' | 'newest'>('recent_active');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deactivated' | 'online_today' | 'never_logged_in'>('all');
+  const [sortBy, setSortBy] = useState<'recent_active' | 'never_first' | 'name' | 'role' | 'newest'>('recent_active');
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Modals state
@@ -222,12 +223,29 @@ export const AdminUserManagement: React.FC = () => {
       if (data) {
         setProfiles(data as unknown as DbProfile[]);
       }
+
+      // Query verified Supabase Auth login timestamps via Edge Function
+      try {
+        const { data: authLogins } = await supabase.functions.invoke('send-user-welcome', {
+          body: { action: 'get_user_logins' },
+        });
+        if (authLogins?.logins) {
+          setUserLogins(authLogins.logins);
+        }
+      } catch (authErr) {
+        console.warn('Could not fetch auth login timestamps:', authErr);
+      }
     } catch (err: any) {
       console.error('Error loading profiles list:', err);
       showToast('Could not load user list from database.', 'error');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getUserLastLogin = (p: DbProfile): string | null => {
+    const cleanEmail = (p.email || '').toLowerCase().trim();
+    return p.last_sign_in_at || userLogins[cleanEmail] || p.last_active_at || null;
   };
 
   useEffect(() => {
@@ -586,13 +604,16 @@ export const AdminUserManagement: React.FC = () => {
     let list = profiles.filter((p) => {
       if (roleFilter !== 'all' && p.role !== roleFilter) return false;
 
-      const activeDate = p.last_active_at || p.updated_at || p.created_at;
-      const actInfo = formatUserLastActive(activeDate);
+      const lastLoginDate = getUserLastLogin(p);
+      const actInfo = formatUserLastActive(lastLoginDate);
 
       if (statusFilter === 'active' && !p.active) return false;
       if (statusFilter === 'deactivated' && p.active) return false;
       if (statusFilter === 'online_today') {
         if (!p.active || (actInfo.statusType !== 'online' && actInfo.statusType !== 'today')) return false;
+      }
+      if (statusFilter === 'never_logged_in') {
+        if (actInfo.statusType !== 'never') return false;
       }
 
       if (searchQuery.trim()) {
@@ -608,8 +629,18 @@ export const AdminUserManagement: React.FC = () => {
     // Sorting
     list.sort((a, b) => {
       if (sortBy === 'recent_active') {
-        const dateA = new Date(a.last_active_at || a.updated_at || a.created_at || 0).getTime();
-        const dateB = new Date(b.last_active_at || b.updated_at || b.created_at || 0).getTime();
+        const dateAStr = getUserLastLogin(a);
+        const dateBStr = getUserLastLogin(b);
+        const dateA = dateAStr ? new Date(dateAStr).getTime() : 0;
+        const dateB = dateBStr ? new Date(dateBStr).getTime() : 0;
+        return dateB - dateA;
+      }
+      if (sortBy === 'never_first') {
+        const hasA = getUserLastLogin(a) ? 1 : 0;
+        const hasB = getUserLastLogin(b) ? 1 : 0;
+        if (hasA !== hasB) return hasA - hasB; // 0 (never logged in) first
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
         return dateB - dateA;
       }
       if (sortBy === 'name') {
@@ -629,7 +660,7 @@ export const AdminUserManagement: React.FC = () => {
     });
 
     return list;
-  }, [profiles, roleFilter, statusFilter, searchQuery, sortBy]);
+  }, [profiles, userLogins, roleFilter, statusFilter, searchQuery, sortBy]);
 
   // Statistics
   const totalUsers = profiles.length;
@@ -637,8 +668,12 @@ export const AdminUserManagement: React.FC = () => {
   const activeOps = profiles.filter((p) => (p.role === 'tc' || p.role === 'listing_coordinator') && p.active).length;
   const activeAdmins = profiles.filter((p) => p.role === 'admin' && p.active).length;
   const activeTodayCount = profiles.filter((p) => {
-    const act = formatUserLastActive(p.last_active_at || p.updated_at || p.created_at);
+    const act = formatUserLastActive(getUserLastLogin(p));
     return p.active && (act.statusType === 'online' || act.statusType === 'today');
+  }).length;
+  const neverLoggedInCount = profiles.filter((p) => {
+    const act = formatUserLastActive(getUserLastLogin(p));
+    return act.statusType === 'never';
   }).length;
 
   return (
@@ -670,7 +705,7 @@ export const AdminUserManagement: React.FC = () => {
       )}
 
       {/* Overview Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div className="bg-[#111726] border border-white/10 rounded-2xl p-4 shadow-lg flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
             <Users className="h-5 w-5" />
@@ -685,20 +720,48 @@ export const AdminUserManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[#111726] border border-white/10 rounded-2xl p-4 shadow-lg flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'online_today' ? 'all' : 'online_today')}
+          className={`text-left bg-[#111726] border rounded-2xl p-4 shadow-lg flex items-center gap-3 transition-all cursor-pointer hover:border-emerald-500/40 ${
+            statusFilter === 'online_today' ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-white/10'
+          }`}
+          title="Click to filter users active/logged in today"
+        >
           <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 relative">
             <Radio className="h-5 w-5" />
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
           </div>
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
-              Active Today
+              Logged In Today
             </span>
             <span className="text-xl font-bold text-emerald-400 font-mono tabular-nums">
               {activeTodayCount}
             </span>
           </div>
-        </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'never_logged_in' ? 'all' : 'never_logged_in')}
+          className={`text-left bg-[#111726] border rounded-2xl p-4 shadow-lg flex items-center gap-3 transition-all cursor-pointer hover:border-amber-500/40 ${
+            statusFilter === 'never_logged_in' ? 'border-amber-500/60 bg-amber-500/10' : 'border-white/10'
+          }`}
+          title="Click to filter users who have never logged in yet"
+        >
+          <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
+              Never Logged In
+            </span>
+            <span className="text-xl font-bold text-amber-400 font-mono tabular-nums">
+              {neverLoggedInCount}
+            </span>
+          </div>
+        </button>
 
         <div className="bg-[#111726] border border-white/10 rounded-2xl p-4 shadow-lg flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/30">
@@ -795,6 +858,7 @@ export const AdminUserManagement: React.FC = () => {
             >
               <option value="all">All Statuses</option>
               <option value="online_today">🟢 Active Today / Online</option>
+              <option value="never_logged_in">⚠️ Never Logged In (Pending)</option>
               <option value="active">Active Only</option>
               <option value="deactivated">Deactivated Only</option>
             </select>
@@ -807,7 +871,8 @@ export const AdminUserManagement: React.FC = () => {
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className="bg-transparent text-xs font-semibold text-slate-300 focus:outline-none cursor-pointer"
               >
-                <option value="recent_active" className="bg-[#111726]">Recently Active</option>
+                <option value="recent_active" className="bg-[#111726]">Most Recently Logged In</option>
+                <option value="never_first" className="bg-[#111726]">Never Logged In First</option>
                 <option value="name" className="bg-[#111726]">Name (A-Z)</option>
                 <option value="role" className="bg-[#111726]">System Role</option>
                 <option value="newest" className="bg-[#111726]">Newest Added</option>
@@ -826,7 +891,12 @@ export const AdminUserManagement: React.FC = () => {
                 <th className="py-3.5 px-4 sm:px-6">Team Member</th>
                 <th className="py-3.5 px-4">Workspace Email</th>
                 <th className="py-3.5 px-4">System Role</th>
-                <th className="py-3.5 px-4">Last Active</th>
+                <th className="py-3.5 px-4">
+                  <div className="flex items-center gap-1.5" title="Timestamp of user's most recent login session">
+                    <Clock className="h-3.5 w-3.5 text-amber-400/80" />
+                    <span>Last Logged In</span>
+                  </div>
+                </th>
                 <th className="py-3.5 px-4">Access Status</th>
                 <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
               </tr>
@@ -853,9 +923,9 @@ export const AdminUserManagement: React.FC = () => {
                   const isUpdating = isUpdatingRole === p.id;
                   const isInviting = isSendingInvite === p.id;
 
-                  // Evaluate activity timestamp
-                  const activityDate = p.last_active_at || p.updated_at || p.created_at;
-                  const activityInfo = formatUserLastActive(activityDate);
+                  // Evaluate login timestamp
+                  const lastLoginDate = getUserLastLogin(p);
+                  const activityInfo = formatUserLastActive(lastLoginDate);
 
                   return (
                     <tr
@@ -887,9 +957,17 @@ export const AdminUserManagement: React.FC = () => {
                                     ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
                                     : activityInfo.statusType === 'today'
                                     ? 'bg-emerald-500'
+                                    : activityInfo.statusType === 'never'
+                                    ? 'bg-amber-400/90'
                                     : 'bg-slate-500'
                                 }`}
-                                title={activityInfo.sublabel}
+                                title={
+                                  activityInfo.statusType === 'never'
+                                    ? 'Never logged into the site'
+                                    : lastLoginDate
+                                    ? `Last login: ${new Date(lastLoginDate).toLocaleString()}`
+                                    : activityInfo.sublabel
+                                }
                               />
                             )}
                           </div>
@@ -950,20 +1028,34 @@ export const AdminUserManagement: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Last Active Column with Rich Formatting */}
+                      {/* Last Logged In Column with Rich Formatting */}
                       <td className="py-4 px-4">
-                        <div className="space-y-0.5">
+                        <div
+                          className="space-y-0.5"
+                          title={
+                            lastLoginDate
+                              ? `Exact Last Login: ${new Date(lastLoginDate).toLocaleString('en-US', {
+                                  dateStyle: 'full',
+                                  timeStyle: 'medium',
+                                })}`
+                              : 'User has never signed in to the Transaction Hub'
+                          }
+                        >
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${activityInfo.badgeClass}`}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${activityInfo.badgeClass}`}
                             >
-                              {activityInfo.isOnline && (
+                              {activityInfo.isOnline ? (
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              ) : activityInfo.statusType === 'never' ? (
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                              ) : (
+                                <Clock className="h-3 w-3 opacity-70" />
                               )}
                               <span>{activityInfo.label}</span>
                             </span>
                           </div>
-                          <span className="text-[10px] text-slate-500 font-mono block pl-0.5">
+                          <span className="text-[10px] text-slate-400 font-mono block pl-0.5">
                             {activityInfo.sublabel}
                           </span>
                         </div>
@@ -987,23 +1079,31 @@ export const AdminUserManagement: React.FC = () => {
                       {/* Actions */}
                       <td className="py-4 px-4 sm:px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {/* Resend Invite Button */}
+                          {/* Resend / Send Invite Button */}
                           <button
                             type="button"
                             disabled={isInviting}
                             onClick={() => handleResendInvite(p)}
-                            title="Resend welcome email & sign-in instructions"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold transition-all shadow-sm active:scale-[0.98] disabled:opacity-50"
+                            title={
+                              activityInfo.statusType === 'never'
+                                ? 'Send welcome invite and sign-in link'
+                                : 'Resend welcome email & sign-in instructions'
+                            }
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 ${
+                              activityInfo.statusType === 'never'
+                                ? 'bg-amber-400 text-slate-950 border-amber-300 font-bold hover:bg-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
+                                : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/30'
+                            }`}
                           >
                             {isInviting ? (
                               <>
-                                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 <span>Sending...</span>
                               </>
                             ) : (
                               <>
                                 <Send className="h-3.5 w-3.5" />
-                                <span>Resend Invite</span>
+                                <span>{activityInfo.statusType === 'never' ? 'Send Invite' : 'Resend Invite'}</span>
                               </>
                             )}
                           </button>

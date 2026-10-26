@@ -2,6 +2,7 @@
 // Dispatches a welcome notification email via Resend when an admin adds a user to the profiles allowlist.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,8 +22,53 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { name, email, role, appBaseUrl = 'https://hub.msreg.com', googleDomain = 'msreg.com' } =
-      await req.json();
+    const payload = await req.json();
+
+    // Action: Get auth user login timestamps to audit site login activity
+    if (payload.action === 'get_user_logins') {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+      try {
+        const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000,
+        });
+
+        if (authErr) throw authErr;
+
+        const logins: Record<string, string> = {};
+        for (const user of authData.users || []) {
+          if (user.email && user.last_sign_in_at) {
+            const clean = user.email.toLowerCase().trim();
+            logins[clean] = user.last_sign_in_at;
+            try {
+              await supabaseAdmin
+                .from('profiles')
+                .update({
+                  last_sign_in_at: user.last_sign_in_at,
+                  last_active_at: user.last_sign_in_at,
+                })
+                .ilike('email', clean);
+            } catch {
+              // Ignore if column not yet added
+            }
+          }
+        }
+
+        return new Response(JSON.stringify({ success: true, logins }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message, logins: {} }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    const { name, email, role, appBaseUrl = 'https://hub.msreg.com', googleDomain = 'msreg.com' } = payload;
 
     if (!email) {
       return new Response(JSON.stringify({ error: 'Email is required' }), {
