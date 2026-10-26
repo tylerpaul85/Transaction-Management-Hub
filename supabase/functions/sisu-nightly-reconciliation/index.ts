@@ -137,12 +137,9 @@ async function fetchSisuTransactionTasks(
   ];
 
   const endpoints = [
-    `${sisuApiBaseUrl}/transactions/${sisuTxId}/tasks`,
-    `${sisuApiBaseUrl}/transaction/${sisuTxId}/tasks`,
-    `${sisuApiBaseUrl}/tasks?transaction_id=${sisuTxId}`,
-    `${sisuApiBaseUrl}/tasks?client_id=${sisuTxId}`,
     `${sisuApiBaseUrl}/client/${sisuTxId}/tasks`,
-    `${sisuApiBaseUrl}/client/${sisuTxId}/checklists`,
+    `${sisuApiBaseUrl}/transactions/${sisuTxId}/tasks`,
+    `${sisuApiBaseUrl}/tasks?transaction_id=${sisuTxId}`,
   ];
 
   for (const endpoint of endpoints) {
@@ -154,6 +151,7 @@ async function fetchSisuTransactionTasks(
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
+          signal: AbortSignal.timeout(3000),
         });
 
         if (res.ok) {
@@ -221,6 +219,10 @@ serve(async (req: Request) => {
   const sisuApiBaseUrl = Deno.env.get('SISU_API_BASE_URL') || 'https://api.sisu.co/api/v1';
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  let transactionsChecked = 0;
+  let transactionsUpdated = 0;
+  let conflictsFound = 0;
 
   // Check if request is sending CSV data directly
   let rawBody = '';
@@ -473,33 +475,27 @@ serve(async (req: Request) => {
       const extractedToken = tokenParts.length > 1 ? tokenParts[1] : sisuApiKey;
 
       const authHeaderVariants = [
-        { 'x-api-key': sisuApiKey, 'Authorization': `Bearer ${sisuApiKey}` },
-        { 'x-api-key': extractedToken, 'Authorization': `Bearer ${extractedToken}` },
-        { 'x-api-key': sisuApiKey, 'x-team-id': '1200' },
         { 'Authorization': `Bearer ${sisuApiKey}`, 'x-team-id': '1200' },
-        { 'Authorization': `Bearer ${extractedToken}` },
+        { 'x-api-key': sisuApiKey, 'Authorization': `Bearer ${sisuApiKey}` },
+        { 'Authorization': `Bearer ${extractedToken}`, 'x-team-id': '1200' },
+        { 'x-api-key': extractedToken, 'Authorization': `Bearer ${extractedToken}` },
+        { 'x-api-key': sisuApiKey },
         { 'api-key': sisuApiKey },
       ];
 
       const endpointsToTry = [
-        `https://beta.sisu.co/api/v2/client`,
-        `https://api.sisu.co/api/v2/client`,
-        `https://my.sisu.co/api/v1/client`,
-        `https://services.sisu.co/api/v1/client`,
         `${sisuApiBaseUrl}/client?team_id=1200`,
+        `https://api.sisu.co/api/v1/client?team_id=1200`,
         `${sisuApiBaseUrl}/clients?team_id=1200`,
+        `${sisuApiBaseUrl}/transactions?team_id=1200`,
         `${sisuApiBaseUrl}/team/1200/client`,
         `${sisuApiBaseUrl}/team/1200/clients`,
-        `${sisuApiBaseUrl}/team/1200/transaction`,
         `${sisuApiBaseUrl}/team/1200/transactions`,
-        `${sisuApiBaseUrl}/transaction?team_id=1200`,
-        `${sisuApiBaseUrl}/transactions?team_id=1200`,
+        `https://beta.sisu.co/api/v2/client`,
+        `https://api.sisu.co/api/v2/client`,
+        `https://api.sisu.co/api/v1/client`,
         `${sisuApiBaseUrl}/client`,
         `${sisuApiBaseUrl}/clients`,
-        `${sisuApiBaseUrl}/client/list`,
-        `${sisuApiBaseUrl}/client/list?team_id=1200`,
-        `https://api.sisu.co/api/v1/client?team_id=1200`,
-        `https://api.sisu.co/api/v1/client`,
       ];
 
       let lastError = '';
@@ -513,6 +509,7 @@ serve(async (req: Request) => {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
               },
+              signal: AbortSignal.timeout(4000),
             });
 
             const status = response.status;
@@ -1613,16 +1610,6 @@ serve(async (req: Request) => {
             for (const targetField of targetFields) {
               const existingM = latestMilestoneMap.get(targetField);
               const actualDate = evalStatus === 'complete' ? (existingM?.actual_date || receiptDate) : null;
-              const notes =
-                evalStatus === 'complete'
-                  ? `Completed via Sisu form: ${key}`
-                  : evalStatus === 'no'
-                  ? `Marked No via Sisu form: ${key}`
-                  : evalStatus === 'in_progress'
-                  ? `In progress via Sisu form: ${key}`
-                  : evalStatus === 'na'
-                  ? `N/A via Sisu form: ${key}`
-                  : null;
 
               if (existingM) {
                 const isManual = existingM.source === 'manual';
@@ -1632,13 +1619,14 @@ serve(async (req: Request) => {
                   continue;
                 }
 
+                // PRESERVE TC MEMO COMMENTS:
+                // User notes, TC memos, and task approval metadata must NEVER be overwritten or erased by Sisu reconciliation.
                 await supabase
                   .from('milestones')
                   .update({
                     actual_date: actualDate,
                     status: evalStatus,
                     source: 'sisu',
-                    notes,
                     updated_at: new Date().toISOString(),
                   })
                   .eq('id', existingM.id);
@@ -1648,7 +1636,6 @@ serve(async (req: Request) => {
                   actual_date: actualDate,
                   status: evalStatus,
                   source: 'sisu',
-                  notes,
                 });
               } else {
                 const { data: newM } = await supabase
@@ -1660,7 +1647,7 @@ serve(async (req: Request) => {
                       actual_date: actualDate,
                       status: evalStatus,
                       source: 'sisu',
-                      notes,
+                      notes: null,
                       updated_at: new Date().toISOString(),
                     },
                     { onConflict: 'transaction_id,milestone_type' }
@@ -1671,66 +1658,6 @@ serve(async (req: Request) => {
                 if (newM) latestMilestoneMap.set(targetField, newM);
               }
             }
-          }
-        }
-
-        // State-reconciliation sweep for nightly job: sync if field is present in snapshot
-        if (hasFullCustomState) {
-          for (const [mType, existingM] of latestMilestoneMap.entries()) {
-            if (
-              existingM.notes &&
-              (existingM.notes.startsWith('Completed via Sisu form: ') ||
-               existingM.notes.startsWith('Marked No via Sisu form: ') ||
-               existingM.notes.startsWith('In progress via Sisu form: ') ||
-               existingM.notes.startsWith('N/A via Sisu form: '))
-            ) {
-              const originatingKey = existingM.notes
-                .replace('Completed via Sisu form: ', '')
-                .replace('Marked No via Sisu form: ', '')
-                .replace('In progress via Sisu form: ', '')
-                .replace('N/A via Sisu form: ', '')
-                .trim();
-
-              if (originatingKey in fullCustom) {
-                const currentVal = fullCustom[originatingKey];
-                const evalStatus = evaluateStatusValue(currentVal);
-
-                if (existingM.status !== evalStatus) {
-                  const actualDate = evalStatus === 'complete' ? (existingM.actual_date || receiptDate) : null;
-                  const notes =
-                    evalStatus === 'complete'
-                      ? `Completed via Sisu form: ${originatingKey}`
-                      : evalStatus === 'no'
-                      ? `Marked No via Sisu form: ${originatingKey}`
-                      : evalStatus === 'in_progress'
-                      ? `In progress via Sisu form: ${originatingKey}`
-                      : evalStatus === 'na'
-                      ? `N/A via Sisu form: ${originatingKey}`
-                      : null;
-
-                  await supabase
-                    .from('milestones')
-                    .update({
-                      status: evalStatus,
-                      actual_date: actualDate,
-                      notes,
-                      source: 'sisu',
-                      updated_at: new Date().toISOString(),
-                    })
-                    .eq('id', existingM.id);
-
-                  latestMilestoneMap.set(mType, {
-                    ...existingM,
-                    status: evalStatus,
-                    actual_date: actualDate,
-                    notes,
-                    source: 'sisu',
-                  });
-                }
-              }
-            }
-          }
-        }
 
         if (transactionId) {
           const finalTxUpdates: Record<string, any> = {

@@ -102,6 +102,19 @@ export async function notifyTcOfTaskSubmission(params: {
 
   const subject = `Action Required: Task Completion Approval for ${propertyAddress} — ${taskTitle}`;
 
+  // Dynamically resolve working base URL (prefer active window origin / saved hub url / VITE_APP_URL)
+  const detectedOrigin = (typeof window !== 'undefined' && window.location?.origin) || '';
+  const resolvedAppUrl =
+    (detectedOrigin && !detectedOrigin.includes('localhost') ? detectedOrigin : '') ||
+    (typeof localStorage !== 'undefined' ? localStorage.getItem('msreg_hub_base_url') : null) ||
+    (import.meta as any).env?.VITE_APP_URL ||
+    detectedOrigin ||
+    'https://hub.msreg.com';
+
+  const hubReviewUrl = transactionId
+    ? `${resolvedAppUrl}/hub?tx=${encodeURIComponent(transactionId)}`
+    : `${resolvedAppUrl}/hub`;
+
   const html = `
 <!DOCTYPE html>
 <html>
@@ -149,12 +162,12 @@ export async function notifyTcOfTaskSubmission(params: {
               </div>
 
               <p style="margin: 20px 0 0 0;">
-                Please log into the <strong>Transaction Management Hub</strong> to review and make the final approval:
+                Please click below to review this file directly in the <strong>Transaction Management Hub</strong>:
               </p>
 
               <div style="margin-top: 20px; text-align: center;">
-                <a href="https://hub.msreg.com/agent-deals" style="display: inline-block; background-color: #10b981; color: #022c22; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 10px; text-decoration: none;">
-                  Review & Approve in Hub
+                <a href="${hubReviewUrl}" style="display: inline-block; background-color: #10b981; color: #022c22; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                  Review & Approve in Hub →
                 </a>
               </div>
             </td>
@@ -229,6 +242,7 @@ export async function notifyTcOfTaskSubmission(params: {
         agent_email: effectiveTcEmail,
         subject,
         html,
+        app_base_url: resolvedAppUrl,
         target_agents: uniqueRecipients,
         target_transaction_ids: targetTxIds,
       },

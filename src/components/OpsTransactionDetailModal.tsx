@@ -21,8 +21,25 @@ import {
   RefreshCw,
   Info,
   Trash2,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { parseTaskApproval, encodeTaskApproval, TaskApprovalData } from '../utils/taskApproval';
+
+const getCleanTcMemo = (rawNotes: string | null | undefined): string => {
+  if (!rawNotes) return '';
+  const { cleanNotes } = parseTaskApproval(rawNotes);
+  if (
+    cleanNotes.startsWith('Completed via Sisu form: ') ||
+    cleanNotes.startsWith('Marked No via Sisu form: ') ||
+    cleanNotes.startsWith('In progress via Sisu form: ') ||
+    cleanNotes.startsWith('N/A via Sisu form: ')
+  ) {
+    return '';
+  }
+  return cleanNotes;
+};
 
 interface OpsTransactionDetailModalProps {
   transaction: OpsTransaction;
@@ -561,6 +578,28 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                   </div>
                 </div>
 
+                {(() => {
+                  const pendingApprovalsOnThisTx = milestones.filter(
+                    (m) => parseTaskApproval(m.notes).approvalData?.approvalStatus === 'pending_tc_approval'
+                  );
+                  if (pendingApprovalsOnThisTx.length === 0) return null;
+                  return (
+                    <div className="p-3.5 bg-amber-500/15 border-b border-amber-500/30 flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
+                      <div className="flex items-center gap-2.5">
+                        <Clock className="h-4 w-4 text-amber-400 animate-pulse flex-shrink-0" />
+                        <div>
+                          <span className="text-xs font-bold text-amber-300 block">
+                            {pendingApprovalsOnThisTx.length} Task Completion{pendingApprovalsOnThisTx.length > 1 ? 's' : ''} Submitted by Agent Awaiting TC Verification
+                          </span>
+                          <span className="text-[11px] text-slate-300">
+                            Agent marked: {pendingApprovalsOnThisTx.map((pa) => getAllMilestonesConfig(side).find((c) => c.type === pa.milestone_type)?.label || pa.milestone_type).join(', ')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs sm:text-sm">
                     <thead className="bg-[#0d121f]/70 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-white/10">
@@ -588,6 +627,8 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                         const isComplete = m.status === 'satisfied' || m.status === 'complete';
                         const isInProgress = m.status === 'in_progress' || m.status === 'notice_sent' || m.status === 'ordered';
                         const isNo = m.status === 'no';
+                        const { approvalData, cleanNotes } = parseTaskApproval(m.notes);
+                        const isPendingApproval = approvalData?.approvalStatus === 'pending_tc_approval';
 
                         return (
                           <tr key={m.milestone_type} className={`hover:bg-[#0d121f]/40 transition-colors ${isNa ? 'opacity-50' : ''}`}>
@@ -606,6 +647,36 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                               <span className="text-[11px] text-slate-400">
                                 {config.description}
                               </span>
+
+                              {isPendingApproval && approvalData && (
+                                <div className="mt-1.5 p-2 rounded-lg bg-amber-500/10 border border-amber-500/25 space-y-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
+                                      <Clock className="h-2.5 w-2.5" />
+                                      Pending TC Verification
+                                    </span>
+                                    {approvalData.submittedByName && (
+                                      <span className="text-[10px] text-sky-400 font-medium">by {approvalData.submittedByName}</span>
+                                    )}
+                                  </div>
+                                  {approvalData.details && (
+                                    <p className="text-[11px] text-slate-200 font-medium">
+                                      "{approvalData.details}"
+                                    </p>
+                                  )}
+                                  {approvalData.documentLink && (
+                                    <a
+                                      href={approvalData.documentLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300 font-medium hover:underline pt-0.5"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                      <span>View Attached Document / Loop</span>
+                                    </a>
+                                  )}
+                                </div>
+                              )}
                             </td>
 
                             {/* Target Date */}
@@ -664,6 +735,31 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                                 <option value="pending">Pending</option>
                                 <option value="waived">Waived</option>
                               </select>
+
+                              {isPendingApproval && approvalData && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const today = new Date().toISOString().split('T')[0];
+                                    const updatedApproval: TaskApprovalData = {
+                                      ...approvalData,
+                                      approvalStatus: 'approved',
+                                      tcReviewedBy: 'Assigned TC',
+                                      tcReviewedAt: new Date().toISOString(),
+                                    };
+                                    handleMilestoneChange(m.milestone_type, {
+                                      status: 'complete',
+                                      actual_date: m.actual_date || today,
+                                      notes: encodeTaskApproval(updatedApproval, cleanNotes),
+                                    });
+                                  }}
+                                  className="mt-1.5 w-full px-2 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                                  title="Approve agent submission and mark complete"
+                                >
+                                  <Check className="h-3 w-3 stroke-[3]" />
+                                  <span>Approve</span>
+                                </button>
+                              )}
                             </td>
 
                             {/* Notes */}
@@ -671,12 +767,17 @@ export const OpsTransactionDetailModal: React.FC<OpsTransactionDetailModalProps>
                               <input
                                 type="text"
                                 placeholder="Add TC memo..."
-                                value={m.notes || ''}
-                                onChange={(e) =>
+                                value={getCleanTcMemo(m.notes)}
+                                onChange={(e) => {
+                                  const newMemo = e.target.value;
+                                  const { approvalData } = parseTaskApproval(m.notes);
+                                  const updatedNotes = approvalData
+                                    ? encodeTaskApproval(approvalData, newMemo || null)
+                                    : (newMemo || null);
                                   handleMilestoneChange(m.milestone_type, {
-                                    notes: e.target.value || null,
-                                  })
-                                }
+                                    notes: updatedNotes,
+                                  });
+                                }}
                                 className="w-48 px-2.5 py-1.5 bg-[#0d121f] border border-white/10 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-amber-400"
                               />
                             </td>

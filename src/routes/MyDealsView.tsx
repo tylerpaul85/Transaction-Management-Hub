@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../integrations/supabase/client';
 import { OpsTransaction, resolveTcForAgent, getAllMilestonesConfig, normalizeTcEmailFromAllowlist } from '../types/ops';
@@ -52,6 +52,7 @@ import {
   List,
   Award,
   Edit3,
+  RefreshCw,
 } from 'lucide-react';
 import { HubRoadmapStep, RoadmapTabType, StepStatus } from '../types/hub';
 
@@ -122,9 +123,12 @@ export const MyDealsView: React.FC = () => {
   const [activeApprovalModalStep, setActiveApprovalModalStep] = useState<HubRoadmapStep | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
 
+  // Sisu manual sync state
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
   // Load live agent transactions & agent roster from Supabase
-  useEffect(() => {
-    async function loadLiveAgentDeals() {
+  const loadLiveAgentDeals = useCallback(async () => {
       try {
         const { data: dbAgents } = await (supabase.from('agents') as any)
           .select('id, name, email, phone, role, category, avatar_url, level')
@@ -273,11 +277,12 @@ export const MyDealsView: React.FC = () => {
           setAllDealsList(allMapped);
           setDealsList(allMapped.filter((t) => t.status !== 'closed'));
         }
-      } catch (err) {
-        console.warn('Live agent transactions query error:', err);
-      }
+    } catch (err) {
+      console.warn('Live agent transactions query error:', err);
     }
+  }, []);
 
+  useEffect(() => {
     loadLiveAgentDeals();
 
     const channel = supabase
@@ -293,7 +298,29 @@ export const MyDealsView: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadLiveAgentDeals]);
+
+  // Fast on-demand Sisu sync handler for My Deals
+  const handleSyncFromSisu = async () => {
+    setIsSyncing(true);
+    setSyncFeedback('Syncing live transactions from Sisu CRM...');
+    try {
+      const { data, error } = await supabase.functions.invoke('sisu-nightly-reconciliation');
+      if (error) throw error;
+      await loadLiveAgentDeals();
+      const count = data?.transactions_updated ?? data?.count ?? 0;
+      setSyncFeedback(
+        data?.message || `Successfully synced with Sisu CRM! (${count} deals updated)`
+      );
+    } catch (err: any) {
+      console.warn('Error invoking Sisu reconciliation:', err);
+      setSyncFeedback(`Sync note: ${err.message || 'refreshed local records'}`);
+      await loadLiveAgentDeals();
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncFeedback(null), 6000);
+    }
+  };
 
   // Auto-select logged in user's agent profile if available
   useEffect(() => {
@@ -1085,6 +1112,16 @@ export const MyDealsView: React.FC = () => {
               )}
 
               <button
+                onClick={handleSyncFromSisu}
+                disabled={isSyncing}
+                className="px-3.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs font-semibold text-amber-300 flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                title="Immediately sync latest transactions and payouts from Sisu CRM"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? 'Syncing...' : 'Sync Sisu'}</span>
+              </button>
+
+              <button
                 onClick={handleExportCSV}
                 className="px-3.5 py-1.5 rounded-lg bg-[#111726] hover:bg-[#162035] border border-white/10 text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
               >
@@ -1093,6 +1130,13 @@ export const MyDealsView: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {syncFeedback && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-semibold text-amber-300 flex items-center gap-2 animate-fade-in">
+              <RefreshCw className={`h-4 w-4 text-amber-400 flex-shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{syncFeedback}</span>
+            </div>
+          )}
 
           {emailStatusText && (
             <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs font-semibold text-amber-300 flex items-center gap-2 animate-fade-in">

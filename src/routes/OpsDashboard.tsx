@@ -8,6 +8,7 @@ import { AdminUserManagement } from '../components/AdminUserManagement';
 import { AdminTaskMappings } from '../components/AdminTaskMappings';
 import { AgentDigestEmailModal } from '../components/AgentDigestEmailModal';
 import { AgentRosterManagement } from '../components/AgentRosterManagement';
+import { OpsTaskApprovalsTab } from '../components/OpsTaskApprovalsTab';
 import {
   ListChecks,
   Settings,
@@ -51,10 +52,11 @@ export const OpsDashboard: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncStatusText, setSyncStatusText] = useState<string | null>(null);
 
-  // Main Dashboard View Section: 'escrows' | 'users' | 'tasks' | 'roster'
-  const [activeSection, setActiveSection] = useState<'escrows' | 'users' | 'tasks' | 'roster'>(() => {
+  // Main Dashboard View Section: 'escrows' | 'approvals' | 'users' | 'tasks' | 'roster'
+  const [activeSection, setActiveSection] = useState<'escrows' | 'approvals' | 'users' | 'tasks' | 'roster'>(() => {
     return (sessionStorage.getItem('ops_active_section') as any) || 'escrows';
   });
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
   // Representation Tab: 'all' | 'buyer' | 'seller'
   const [representationTab, setRepresentationTab] = useState<'all' | 'buyer' | 'seller'>(() => {
     return (sessionStorage.getItem('ops_rep_tab') as any) || 'all';
@@ -278,6 +280,117 @@ export const OpsDashboard: React.FC = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const handleOpenTransactionFromApprovals = async (txId: string) => {
+    const existing = transactions.find((t) => t.id === txId);
+    if (existing) {
+      setSelectedTx(existing);
+      return;
+    }
+
+    try {
+      const { data }: any = await (supabase
+        .from('transactions') as any)
+        .select(`
+          *,
+          listing_agent:agents!transactions_listing_agent_id_fkey(name, email),
+          selling_agent:agents!transactions_selling_agent_id_fkey(name, email),
+          assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
+          milestones (*)
+        `)
+        .eq('id', txId)
+        .maybeSingle();
+
+      const row = data as any;
+      if (row) {
+        const leadAgent =
+          row.side === 'seller'
+            ? row.listing_agent || row.selling_agent
+            : row.selling_agent || row.listing_agent;
+        const agentName = leadAgent?.name || row.agent_name || 'Lead Agent';
+        const agentEmail = leadAgent?.email || row.agent_email || 'agent@mattsmithrealestategroup.com';
+        const fallbackTc = resolveTcForAgent(agentName);
+        const tcName =
+          row.assigned_tc?.name ||
+          (row.tc_name && row.tc_name !== 'Unassigned TC' ? row.tc_name : fallbackTc.tc_name);
+        const tcEmail = normalizeTcEmailFromAllowlist(
+          row.assigned_tc?.email || row.tc_email || fallbackTc.tc_email
+        );
+
+        const mappedTx: OpsTransaction = {
+          id: row.id,
+          sisu_transaction_id: row.sisu_transaction_id || undefined,
+          status: row.status,
+          property_address: row.property_address,
+          city: row.city || 'Waynesville',
+          state: row.state || 'MO',
+          zip: row.zip || '65583',
+          side: row.side || 'buyer',
+          client_name: row.client_name || 'Client',
+          client_phone: row.client_phone || undefined,
+          other_party_name: row.other_party_name || undefined,
+          other_party_agent: row.other_party_agent || undefined,
+          other_party_phone: row.other_party_phone || undefined,
+          other_party_email: row.other_party_email || undefined,
+          other_party_brokerage: row.other_party_brokerage || undefined,
+          listing_agent_id: row.listing_agent_id,
+          selling_agent_id: row.selling_agent_id,
+          assigned_tc_id: row.assigned_tc_id,
+          agent_name: agentName,
+          agent_email: agentEmail,
+          tc_name: tcName,
+          tc_email: tcEmail,
+          contract_date: row.contract_date || undefined,
+          target_closing_date: row.target_closing_date || undefined,
+          flagged_for_review: Boolean(row.flagged_for_review),
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          price: row.price || undefined,
+          list_price: row.list_price || undefined,
+          mls_number: row.mls_number || undefined,
+          listing_date: row.listing_date || undefined,
+          photography_status: row.photography_status || 'scheduled',
+          sign_lockbox_status: row.sign_lockbox_status || 'installed',
+          custom_fields: row.custom_fields || undefined,
+          milestones: (row.milestones || []).map((m: any) => ({
+            id: m.id,
+            transaction_id: m.transaction_id,
+            milestone_type: m.milestone_type,
+            target_date: m.target_date,
+            actual_date: m.actual_date,
+            status: m.status,
+            source: m.source,
+            notes: m.notes,
+            updated_at: m.updated_at,
+          })),
+        };
+        setSelectedTx(mappedTx);
+      }
+    } catch (err) {
+      console.warn('Could not fetch historical transaction details:', err);
+    }
+  };
+
+  const handleMilestoneUpdatedFromApprovals = (txId: string, mType: string, newStatus: string) => {
+    setTransactions((prev) =>
+      prev.map((tx) => {
+        if (tx.id !== txId) return tx;
+        return {
+          ...tx,
+          milestones: tx.milestones.map((m) =>
+            m.milestone_type === mType
+              ? {
+                  ...m,
+                  status: newStatus as any,
+                  actual_date: new Date().toISOString().split('T')[0],
+                  updated_at: new Date().toISOString(),
+                }
+              : m
+          ),
+        };
+      })
+    );
+  };
 
   const handleSyncSisu = async () => {
     setIsSyncing(true);
@@ -863,6 +976,24 @@ export const OpsDashboard: React.FC = () => {
               <span>Seller Files ({metrics.sellerEscrows})</span>
             </button>
 
+            {/* Agent Approvals & Task Verification Tab */}
+            <button
+              onClick={() => setActiveSection('approvals')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                activeSection === 'approvals'
+                  ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Clock className="h-3.5 w-3.5 text-amber-400" />
+              <span>Agent Approvals</span>
+              {pendingApprovalsCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/25 text-amber-300 border border-amber-500/40 animate-pulse">
+                  {pendingApprovalsCount}
+                </span>
+              )}
+            </button>
+
             {/* Agent Roster & Directory */}
             <button
               onClick={() => setActiveSection('roster')}
@@ -965,6 +1096,13 @@ export const OpsDashboard: React.FC = () => {
         <AdminUserManagement />
       ) : activeSection === 'tasks' && currentUser.role === 'admin' ? (
         <AdminTaskMappings />
+      ) : activeSection === 'approvals' ? (
+        <OpsTaskApprovalsTab
+          onOpenTransaction={handleOpenTransactionFromApprovals}
+          onMilestoneUpdated={handleMilestoneUpdatedFromApprovals}
+          activeTransactions={transactions}
+          onPendingCountChange={setPendingApprovalsCount}
+        />
       ) : (
         <>
           {/* Search & Filter Toolbar */}

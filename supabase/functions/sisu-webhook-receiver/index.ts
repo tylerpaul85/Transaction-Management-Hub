@@ -1708,25 +1708,16 @@ serve(async (req: Request) => {
             }
 
             const actualDate = evalStatus === 'complete' ? (existingM?.actual_date || receiptDate) : null;
-            const notes =
-              evalStatus === 'complete'
-                ? `Completed via Sisu form: ${key}`
-                : evalStatus === 'no'
-                ? `Marked No via Sisu form: ${key}`
-                : evalStatus === 'in_progress'
-                ? `In progress via Sisu form: ${key}`
-                : evalStatus === 'na'
-                ? `N/A via Sisu form: ${key}`
-                : null;
 
             if (existingM) {
+              // PRESERVE TC MEMO COMMENTS:
+              // User notes, TC memos, and task approval metadata must NEVER be overwritten or erased by Sisu forms.
               await supabase
                 .from('milestones')
                 .update({
                   status: evalStatus,
                   actual_date: actualDate,
                   source: 'sisu',
-                  notes,
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', existingM.id);
@@ -1736,7 +1727,6 @@ serve(async (req: Request) => {
                 status: evalStatus,
                 actual_date: actualDate,
                 source: 'sisu',
-                notes,
               });
             } else {
               const { data: newM } = await supabase
@@ -1748,7 +1738,7 @@ serve(async (req: Request) => {
                     status: evalStatus,
                     actual_date: actualDate,
                     source: 'sisu',
-                    notes,
+                    notes: null,
                     updated_at: new Date().toISOString(),
                   },
                   { onConflict: 'transaction_id,milestone_type' }

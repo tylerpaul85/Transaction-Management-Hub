@@ -50,46 +50,70 @@ const AuthenticatedLayout: React.FC = () => {
     return '/hub';
   };
 
-  const [currentPath, setCurrentPath] = useState<string>(() => {
-    const path = window.location.pathname;
-    // If landing on root or login, redirect to appropriate role home
+  // Normalize path & handle legacy aliases or unknown paths
+  const normalizePath = (path: string): string => {
     if (path === '/' || path === '/login') {
-      const defaultRoute = getDefaultRoute();
-      window.history.replaceState({}, '', defaultRoute);
-      return defaultRoute;
+      return getDefaultRoute();
+    }
+    // Backward compatibility: resolve legacy action request links
+    if (path.startsWith('/agent-deals')) {
+      return currentUser?.role === 'agent' ? '/my-deals' : '/hub';
+    }
+    // Known valid routes
+    const KNOWN_ROUTES = ['/hub', '/ops', '/my-deals', '/reports', '/ops/task-mappings', '/admin/sync-debug'];
+    const isKnown = KNOWN_ROUTES.some((r) => path === r || path.startsWith(`${r}/`));
+    if (!isKnown) {
+      return getDefaultRoute();
     }
     return path;
+  };
+
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    const path = window.location.pathname;
+    const target = normalizePath(path);
+    if (target !== path) {
+      window.history.replaceState({}, '', target + window.location.search);
+    }
+    return target;
   });
 
   const [visitedRoutes, setVisitedRoutes] = useState<Set<string>>(() => new Set([currentPath]));
 
   const handleNavigate = (path: string) => {
-    setCurrentPath(path);
-    window.history.pushState({}, '', path);
+    const target = normalizePath(path);
+    setCurrentPath(target);
+    window.history.pushState({}, '', target);
     setVisitedRoutes((prev) => {
       const next = new Set(prev);
-      next.add(path);
+      next.add(target);
       return next;
     });
   };
 
-  // Sync route on role load if currently on root
+  // Sync route on role load if currently on root, login, or legacy /agent-deals
   useEffect(() => {
-    if (currentUser && (currentPath === '/' || currentPath === '/login')) {
-      const target = getDefaultRoute();
-      setCurrentPath(target);
-      window.history.replaceState({}, '', target);
-      setVisitedRoutes((prev) => {
-        const next = new Set(prev);
-        next.add(target);
-        return next;
-      });
+    if (currentUser) {
+      const path = window.location.pathname;
+      const target = normalizePath(path);
+      if (target !== currentPath || target !== path) {
+        setCurrentPath(target);
+        window.history.replaceState({}, '', target + window.location.search);
+        setVisitedRoutes((prev) => {
+          const next = new Set(prev);
+          next.add(target);
+          return next;
+        });
+      }
     }
   }, [currentUser]);
 
   useEffect(() => {
     const handlePopState = () => {
-      const target = window.location.pathname || getDefaultRoute();
+      const path = window.location.pathname;
+      const target = normalizePath(path);
+      if (target !== path) {
+        window.history.replaceState({}, '', target + window.location.search);
+      }
       setCurrentPath(target);
       setVisitedRoutes((prev) => {
         const next = new Set(prev);

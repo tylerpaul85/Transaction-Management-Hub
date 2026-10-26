@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../integrations/supabase/client';
 import {
@@ -10,7 +10,6 @@ import {
 } from '../types/hub';
 import { resolveTcForAgent, normalizeTcEmailFromAllowlist } from '../types/ops';
 import {
-  REFERENCE_PORTAL_TRANSACTIONS,
   DEFAULT_SERVICES,
   buildDefaultSellerNewListingRoadmap,
   buildDefaultUnderContractRoadmap,
@@ -56,6 +55,7 @@ import {
   Maximize2,
   Printer,
   Copy,
+  RefreshCw,
 } from 'lucide-react';
 
 interface TransactionHubViewProps {
@@ -70,8 +70,8 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
   const { currentUser, isOps, isAdmin, isTc } = useAuth();
   const isOpsOrTc = Boolean(isOps || isAdmin || isTc);
 
-  // All transactions (Reference items from screenshot merged with live Supabase deals)
-  const [transactions, setTransactions] = useState<HubTransactionRecord[]>(REFERENCE_PORTAL_TRANSACTIONS);
+  // All active transactions loaded from live Supabase/Sisu database
+  const [transactions, setTransactions] = useState<HubTransactionRecord[]>([]);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(() => {
     // Check URL search param first, then initialTransactionId; otherwise check sessionStorage or default to null
     const urlParams = new URLSearchParams(window.location.search);
@@ -118,166 +118,210 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
   const [activeApprovalModalStep, setActiveApprovalModalStep] = useState<HubRoadmapStep | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
 
+  // Sisu manual sync state
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
   // Load live Supabase transactions and merge
-  useEffect(() => {
-    async function loadSupabaseTransactions() {
-      try {
-        const { data, error } = await supabase
-          .from('transactions')
-          .select(`
-            *,
-            listing_agent:agents!transactions_listing_agent_id_fkey(name, email, phone),
-            selling_agent:agents!transactions_selling_agent_id_fkey(name, email, phone),
-            assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
-            milestones (*)
-          `)
-          .neq('status', 'Closed')
-          .order('created_at', { ascending: false })
-          .limit(500);
+  const loadSupabaseTransactions = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          listing_agent:agents!transactions_listing_agent_id_fkey(name, email, phone),
+          selling_agent:agents!transactions_selling_agent_id_fkey(name, email, phone),
+          assigned_tc:ops_users!transactions_assigned_tc_id_fkey(name, email),
+          milestones (*)
+        `)
+        .neq('status', 'Closed')
+        .order('created_at', { ascending: false })
+        .limit(500);
 
-        if (error) {
-          console.warn('Could not load live Supabase transactions in Hub:', error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          const activeOnly = data.filter((t: any) => {
-            const s = String(t.status || '').toLowerCase().replace(/_/g, ' ').trim();
-            if (
-              s === 'closed' ||
-              s.includes('closed') ||
-              s === 'lost' ||
-              s.includes('lost') ||
-              s === 'signed' ||
-              s.includes('signed') ||
-              s.includes('release') ||
-              s.includes('cancel') ||
-              s.includes('terminate') ||
-              s.includes('fell through') ||
-              s.includes('archived') ||
-              s.includes('appt') ||
-              s.includes('pipeline') ||
-              s.includes('expired') ||
-              s.includes('showing') ||
-              s.includes('live listing') ||
-              s.includes('listing') ||
-              s.includes('1st time')
-            ) {
-              return false;
-            }
-            return (
-              s.includes('under contract') ||
-              s.includes('pending') ||
-              s.includes('escrow') ||
-              s.includes('closing') ||
-              s.includes('clear to close')
-            );
-          });
-
-          const liveMapped: HubTransactionRecord[] = activeOnly.map((t: any) => {
-            const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
-            const agentName = leadAgent?.name || t.agent_name || 'Shawn McArthur';
-            const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
-            const agentPhone = leadAgent?.phone || '(573) 261-6820';
-            const fallbackTc = resolveTcForAgent(agentName);
-            const tcName = t.assigned_tc?.name || (t.tc_name && t.tc_name !== 'Unassigned TC' ? t.tc_name : fallbackTc.tc_name);
-            const tcEmail = normalizeTcEmailFromAllowlist(t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email);
-
-            const names = (t.client_name || 'Client Name').trim().split(' ');
-            const firstName = names[0] || 'Client';
-            const lastName = names.slice(1).join(' ') || '';
-
-            const isSeller = t.side === 'seller';
-            const price = Number(t.price || t.list_price || 248000);
-
-            // Calculate milestone steps from live milestones
-            const defaultNewListing = buildDefaultSellerNewListingRoadmap();
-            const defaultUnderContract = buildDefaultUnderContractRoadmap(isSeller ? 'seller' : 'buyer');
-
-            const liveMilestones = t.milestones || [];
-            const completedCount = liveMilestones.filter((m: any) => m.status === 'satisfied' || m.status === 'complete').length;
-            const totalMilestones = liveMilestones.length > 0 ? liveMilestones.length : (isSeller ? 13 : 12);
-            const percentage = Math.round((completedCount / totalMilestones) * 100);
-
-            return {
-              id: t.id,
-              sisuId: t.sisu_transaction_id || `S-${t.id.slice(0, 6)}`,
-              createdAt: t.created_at ? new Date(t.created_at).toLocaleDateString('en-US') : '02/20/2024',
-              agent: {
-                role: 'AGENT',
-                name: agentName,
-                company: 'MATT SMITH REAL ESTATE GROUP',
-                phone: agentPhone,
-                email: agentEmail,
-                initials: agentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
-                avatarUrl: getStoredAvatar(leadAgent?.id, agentEmail) || undefined,
-              },
-              tc: {
-                role: 'TC',
-                name: tcName,
-                company: 'MATT SMITH REAL ESTATE GROUP',
-                phone: '(573) 261-3113',
-                email: tcEmail,
-                initials: tcName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
-                avatarUrl: getStoredAvatar(t.assigned_tc?.id, tcEmail) || undefined,
-              },
-              status: (t.status === 'closed' || t.status === 'Closed')
-                ? 'Closed'
-                : (t.status === 'pending' || t.status === 'under_contract' || (t.status || '').toLowerCase().includes('contract') || (t.status || '').toLowerCase().includes('pending'))
-                ? 'Pending'
-                : 'Active',
-              paymentsDetails: 'Verified Escrow',
-              roadmapsAppliedCount: 4,
-              clientFirstName: firstName,
-              clientLastName: lastName,
-              clientFullName: t.client_name || 'Client',
-              transactionType: isSeller ? 'Seller' : 'Buyer',
-              contactEmail: t.client_email || 'client@gmail.com',
-              contactPhone: t.client_phone || '5735550199',
-              addressLine1: t.property_address || 'Address Pending',
-              city: t.city || 'Rolla',
-              state: t.state || 'MO',
-              postalCode: t.zip || '65401',
-              price,
-              mlsId: t.mls_number || '',
-              completionPercentage: percentage || 71,
-              activeRoadmapTab: isSeller ? 'new_listing' : 'buyer_roadmap',
-              roadmaps: {
-                new_listing: defaultNewListing,
-                under_contract: defaultUnderContract,
-                listing_guide: [],
-                selling_guide: [],
-                buyer_roadmap: buildDefaultBuyerRoadmap(),
-                buyer_guide: [],
-              },
-              services: DEFAULT_SERVICES,
-              coopAgent: t.other_party_agent ? {
-                name: t.other_party_agent,
-                email: t.other_party_email || undefined,
-                phone: t.other_party_phone || undefined,
-                brokerage: t.other_party_brokerage || t.other_party_name || undefined,
-                sideRepresented: isSeller ? 'Buyer' : 'Seller',
-              } : undefined,
-            };
-          });
-
-          // Merge: ensure reference records take precedence if matching ID, then add all live Supabase items
-          setTransactions((prev) => {
-            const map = new Map<string, HubTransactionRecord>();
-            // Add live items
-            liveMapped.forEach((item) => map.set(item.id, item));
-            // Add reference items (which include screenshot data)
-            REFERENCE_PORTAL_TRANSACTIONS.forEach((item) => map.set(item.id, item));
-            return Array.from(map.values());
-          });
-        }
-      } catch (err) {
-        console.warn('Error loading live transactions into Hub:', err);
+      if (error) {
+        console.warn('Could not load live Supabase transactions in Hub:', error);
+        return;
       }
-    }
 
-    loadSupabaseTransactions();
+      if (data && data.length > 0) {
+        const activeOnly = data.filter((t: any) => {
+          const s = String(t.status || '').toLowerCase().replace(/_/g, ' ').trim();
+          if (
+            s === 'closed' ||
+            s.includes('closed') ||
+            s === 'lost' ||
+            s.includes('lost') ||
+            s === 'signed' ||
+            s.includes('signed') ||
+            s.includes('release') ||
+            s.includes('cancel') ||
+            s.includes('terminate') ||
+            s.includes('fell through') ||
+            s.includes('archived') ||
+            s.includes('appt') ||
+            s.includes('pipeline') ||
+            s.includes('expired') ||
+            s.includes('showing') ||
+            s.includes('live listing') ||
+            s.includes('listing') ||
+            s.includes('1st time')
+          ) {
+            return false;
+          }
+          return (
+            s.includes('under contract') ||
+            s.includes('pending') ||
+            s.includes('escrow') ||
+            s.includes('closing') ||
+            s.includes('clear to close')
+          );
+        });
+
+        const liveMapped: HubTransactionRecord[] = activeOnly.map((t: any) => {
+          const leadAgent = t.side === 'seller' ? (t.listing_agent || t.selling_agent) : (t.selling_agent || t.listing_agent);
+          const agentName = leadAgent?.name || t.agent_name || 'Shawn McArthur';
+          const agentEmail = leadAgent?.email || t.agent_email || 'agent@mattsmithrealestategroup.com';
+          const agentPhone = leadAgent?.phone || '(573) 261-6820';
+          const fallbackTc = resolveTcForAgent(agentName);
+          const tcName = t.assigned_tc?.name || (t.tc_name && t.tc_name !== 'Unassigned TC' ? t.tc_name : fallbackTc.tc_name);
+          const tcEmail = normalizeTcEmailFromAllowlist(t.assigned_tc?.email || t.tc_email || fallbackTc.tc_email);
+
+          const names = (t.client_name || 'Client Name').trim().split(' ');
+          const firstName = names[0] || 'Client';
+          const lastName = names.slice(1).join(' ') || '';
+
+          const isSeller = t.side === 'seller';
+          const price = Number(t.price || t.list_price || 248000);
+
+          // Calculate milestone steps from live milestones
+          const defaultNewListing = buildDefaultSellerNewListingRoadmap();
+          const defaultUnderContract = buildDefaultUnderContractRoadmap(isSeller ? 'seller' : 'buyer');
+
+          const liveMilestones = t.milestones || [];
+          const completedCount = liveMilestones.filter((m: any) => m.status === 'satisfied' || m.status === 'complete').length;
+          const totalMilestones = liveMilestones.length > 0 ? liveMilestones.length : (isSeller ? 13 : 12);
+          const percentage = Math.round((completedCount / totalMilestones) * 100);
+
+          return {
+            id: t.id,
+            sisuId: t.sisu_transaction_id || `S-${t.id.slice(0, 6)}`,
+            createdAt: t.created_at ? new Date(t.created_at).toLocaleDateString('en-US') : '02/20/2024',
+            agent: {
+              role: 'AGENT',
+              name: agentName,
+              company: 'MATT SMITH REAL ESTATE GROUP',
+              phone: agentPhone,
+              email: agentEmail,
+              initials: agentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+              avatarUrl: getStoredAvatar(leadAgent?.id, agentEmail) || undefined,
+            },
+            tc: {
+              role: 'TC',
+              name: tcName,
+              company: 'MATT SMITH REAL ESTATE GROUP',
+              phone: '(573) 261-3113',
+              email: tcEmail,
+              initials: tcName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+              avatarUrl: getStoredAvatar(t.assigned_tc?.id, tcEmail) || undefined,
+            },
+            status: (t.status === 'closed' || t.status === 'Closed')
+              ? 'Closed'
+              : (t.status === 'pending' || t.status === 'under_contract' || (t.status || '').toLowerCase().includes('contract') || (t.status || '').toLowerCase().includes('pending'))
+              ? 'Pending'
+              : 'Active',
+            paymentsDetails: 'Verified Escrow',
+            roadmapsAppliedCount: 4,
+            clientFirstName: firstName,
+            clientLastName: lastName,
+            clientFullName: t.client_name || 'Client',
+            transactionType: isSeller ? 'Seller' : 'Buyer',
+            contactEmail: t.client_email || 'client@gmail.com',
+            contactPhone: t.client_phone || '5735550199',
+            addressLine1: t.property_address || 'Address Pending',
+            city: t.city || 'Rolla',
+            state: t.state || 'MO',
+            postalCode: t.zip || '65401',
+            price,
+            mlsId: t.mls_number || '',
+            completionPercentage: percentage || 71,
+            activeRoadmapTab: isSeller ? 'new_listing' : 'buyer_roadmap',
+            roadmaps: {
+              new_listing: defaultNewListing,
+              under_contract: defaultUnderContract,
+              listing_guide: [],
+              selling_guide: [],
+              buyer_roadmap: buildDefaultBuyerRoadmap(),
+              buyer_guide: [],
+            },
+            services: DEFAULT_SERVICES,
+            coopAgent: t.other_party_agent ? {
+              name: t.other_party_agent,
+              email: t.other_party_email || undefined,
+              phone: t.other_party_phone || undefined,
+              brokerage: t.other_party_brokerage || t.other_party_name || undefined,
+              sideRepresented: isSeller ? 'Buyer' : 'Seller',
+            } : undefined,
+          };
+        });
+
+        // Set live items from Supabase
+        setTransactions(liveMapped);
+
+        // Clear any stale selected transaction that no longer exists in live dataset
+        setSelectedTransactionId((prevId) => {
+          if (prevId && !liveMapped.some((item) => item.id === prevId)) {
+            return null;
+          }
+          return prevId;
+        });
+      } else {
+        setTransactions([]);
+      }
+    } catch (err) {
+      console.warn('Error loading live transactions into Hub:', err);
+    }
   }, []);
+
+  // Supabase Realtime channel subscription for instant live syncing
+  useEffect(() => {
+    loadSupabaseTransactions();
+
+    const channel = supabase
+      .channel('realtime_hub_transactions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+        loadSupabaseTransactions();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'milestones' }, () => {
+        loadSupabaseTransactions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadSupabaseTransactions]);
+
+  // Fast on-demand Sisu sync handler
+  const handleSyncFromSisu = async () => {
+    setIsSyncing(true);
+    setSyncFeedback('Syncing live transactions from Sisu CRM...');
+    try {
+      const { data, error } = await supabase.functions.invoke('sisu-nightly-reconciliation');
+      if (error) throw error;
+      await loadSupabaseTransactions();
+      const count = data?.transactions_updated ?? data?.count ?? 0;
+      setSyncFeedback(
+        data?.message || `Successfully synced from Sisu CRM! (${count} deals updated)`
+      );
+    } catch (err: any) {
+      console.warn('Error invoking Sisu reconciliation:', err);
+      setSyncFeedback(`Sync note: ${err.message || 'refreshed local records'}`);
+      await loadSupabaseTransactions();
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncFeedback(null), 6000);
+    }
+  };
 
   // Sync URL query param when selected transaction changes
   useEffect(() => {
@@ -831,6 +875,15 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
                 <span>{filteredDirectoryTransactions.length} Active Files</span>
               </div>
               <button
+                onClick={handleSyncFromSisu}
+                disabled={isSyncing}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs font-semibold text-amber-300 flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                title="Immediately sync latest transactions and custom form fields from Sisu CRM"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? 'Syncing...' : 'Sync Sisu'}</span>
+              </button>
+              <button
                 onClick={handleExportCSV}
                 className="px-3.5 py-1.5 rounded-xl bg-[#131b2e] hover:bg-[#182238] border border-white/10 hover:border-white/20 text-xs font-semibold text-sky-400 flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
               >
@@ -839,6 +892,13 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
               </button>
             </div>
           </div>
+
+          {syncFeedback && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs font-semibold text-amber-300 flex items-center gap-2 animate-in fade-in duration-200">
+              <RefreshCw className={`h-4 w-4 text-amber-400 flex-shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{syncFeedback}</span>
+            </div>
+          )}
 
           {/* Unified Search & Filter Toolbar */}
           <div className="bg-[#111726] p-3.5 rounded-2xl border border-white/[0.08] flex flex-wrap items-center justify-between gap-3 shadow-sm">
@@ -1092,6 +1152,16 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
               </div>
 
               <button
+                onClick={handleSyncFromSisu}
+                disabled={isSyncing}
+                className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                title="Sync latest transaction details and custom fields from Sisu CRM"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? 'Syncing...' : 'Sync Sisu'}</span>
+              </button>
+
+              <button
                 onClick={handleCopyLink}
                 className="p-2 rounded-xl bg-[#111726] hover:bg-[#182238] border border-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
                 title="Copy shareable link"
@@ -1108,6 +1178,13 @@ export const TransactionHubView: React.FC<TransactionHubViewProps> = ({
               </button>
             </div>
           </div>
+
+          {syncFeedback && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs font-semibold text-amber-300 flex items-center gap-2 animate-in fade-in duration-200">
+              <RefreshCw className={`h-4 w-4 text-amber-400 flex-shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{syncFeedback}</span>
+            </div>
+          )}
 
           {copyFeedback && (
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs font-semibold text-emerald-300 flex items-center gap-2 animate-in fade-in duration-200">
