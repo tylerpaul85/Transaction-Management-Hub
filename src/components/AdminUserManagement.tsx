@@ -99,29 +99,41 @@ export function formatUserLastActive(dateStr?: string | null): {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffMinutes < 10) {
-    return {
-      label: 'Active Now',
-      sublabel: 'Online right now',
-      isOnline: true,
-      statusType: 'online',
-      badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]',
-    };
-  }
+  const isToday =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
 
-  if (diffMinutes < 60) {
-    return {
-      label: `${diffMinutes}m ago`,
-      sublabel: `Today at ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
-      isOnline: false,
-      statusType: 'today',
-      badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
-    };
-  }
+  const yesterdayDate = new Date(now);
+  yesterdayDate.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getFullYear() === yesterdayDate.getFullYear() &&
+    date.getMonth() === yesterdayDate.getMonth() &&
+    date.getDate() === yesterdayDate.getDate();
 
-  if (diffHours < 24) {
+  if (isToday) {
+    if (diffMinutes < 10) {
+      return {
+        label: 'Active Now',
+        sublabel: 'Online right now',
+        isOnline: true,
+        statusType: 'online',
+        badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]',
+      };
+    }
+
+    if (diffMinutes < 60) {
+      return {
+        label: `${diffMinutes}m ago`,
+        sublabel: `Today at ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
+        isOnline: false,
+        statusType: 'today',
+        badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
+      };
+    }
+
     return {
-      label: `${diffHours}h ago`,
+      label: `${Math.max(1, diffHours)}h ago`,
       sublabel: `Today at ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
       isOnline: false,
       statusType: 'today',
@@ -129,10 +141,10 @@ export function formatUserLastActive(dateStr?: string | null): {
     };
   }
 
-  if (diffDays === 1) {
+  if (isYesterday) {
     return {
       label: 'Yesterday',
-      sublabel: date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      sublabel: `at ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
       isOnline: false,
       statusType: 'recent',
       badgeClass: 'bg-slate-800 text-slate-300 border-slate-700',
@@ -141,7 +153,7 @@ export function formatUserLastActive(dateStr?: string | null): {
 
   if (diffDays < 7) {
     return {
-      label: `${diffDays} days ago`,
+      label: `${Math.max(2, diffDays)} days ago`,
       sublabel: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       isOnline: false,
       statusType: 'days',
